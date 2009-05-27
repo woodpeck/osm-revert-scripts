@@ -51,7 +51,7 @@ BEGIN
     $host .= ":80" unless ($host =~ /:/);
     $ua = LWP::UserAgent->new;
     $ua->credentials($host, "Web Password", $prefs->{username}, $prefs->{password});
-    my $revision = '$Revision:$';
+    my $revision = '$Revision$';
     my $revno = 0;
     $revno = $1 if ($revision =~ /:\s*(\d+)/);
     $ua->agent("osmtools/$revno ($^O, ".$prefs->{instance}.")");
@@ -101,6 +101,7 @@ sub delete
     my $body = shift;
     return $dummy if ($prefs->{dryrun});
     my $req = HTTP::Request->new(DELETE => $prefs->{apiurl}.$url);
+    $req->content($body) if defined($body);
     my $resp = $ua->request($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
