@@ -102,9 +102,9 @@ sub revert
         }
         $osc .= "</osmChange>\n";
         my $res = OsmApi::post("changeset/$changeset/upload", $osc);
-        if (!$res->is_success)
+        if (!($res->is_success))
         {
-            print STDERR "changeset upload failed: ".$resp->status_line."\n";
+            print STDERR "changeset upload failed: ".$res->status_line."\n";
             return undef;
         }
     }
