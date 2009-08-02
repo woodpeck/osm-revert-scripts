@@ -58,7 +58,14 @@ sub revert
 
     my $success = [];
     my $failure = [];
+    # set this to 0 if you want individual API requests rather than a changeset
+    # upload. this will be much slower but may be required if you cannot get all
+    # changes through due to problems.
     my $transaction = 1;
+    # set this to 1 if you have a large number of object creations. this will 
+    # bypass requesting object history for those, and simply try and delete them.
+    # which will fail if the object has been modified since.
+    my $delete_shortcut = 0;
     my $oscpart;
 
     foreach my $operation("delete node", "delete way", "delete relation",
@@ -67,24 +74,49 @@ sub revert
     {
         foreach my $object(@{$objects->{$operation}})
         {
-            my ($dummy, $objtype) = split(/ /, $operation);
+            my ($what, $objtype) = split(/ /, $operation);
             if ($transaction)
             {
                 # this collects all undos in one osc document.
-                my ($action, $xml) = Undo::determine_undo_action($objtype, $object, undef, $undo_changeset, $changeset);
-                return undef unless (defined($action));
-                $oscpart->{$action} .= $xml;
+                if (($delete_shortcut) && ($what eq "create"))
+                {
+
+                    print STDERR "$objtype $object created; shortcut deletion\n";
+                    $oscpart->{"delete"} .= "<$objtype id=\"$object\" lat=\"0\" lon=\"0\" version=\"1\" changeset=\"$changeset\" />\n";
+                }
+                else
+                {
+                    my ($action, $xml) = Undo::determine_undo_action($objtype, $object, undef, $undo_changeset, $changeset);
+                    return undef unless (defined($action));
+                    $oscpart->{$action} .= $xml;
+                }
             }
             else
             {
                 # this does individual undo operations. currently unused!
-                if (Undo::undo($objtype, $object, undef, $undo_changeset, $changeset))
+                if (($delete_shortcut) && ($what eq "create"))
                 {
-                    push(@$success, "$operation $object");
+                    print STDERR "$objtype $object created; shortcut deletion\n";
+                    my $resp = OsmApi::delete("$objtype/$object", "<osm version='0.6'><$objtype id=\"$object\" lat=\"0\" lon=\"0\" version=\"1\" changeset=\"$changeset\" /></osm>");
+                    if (!$resp->is_success)
+                    {
+                        push(@$failure, "$operation $object");
+                    }
+                    else
+                    {
+                        push(@$success, "$operation $object");
+                    }
                 }
                 else
                 {
-                    push(@$failure, "$operation $object");
+                    if (Undo::undo($objtype, $object, undef, $undo_changeset, $changeset))
+                    {
+                        push(@$success, "$operation $object");
+                    }
+                    else
+                    {
+                        push(@$failure, "$operation $object");
+                    }
                 }
             }
         }
