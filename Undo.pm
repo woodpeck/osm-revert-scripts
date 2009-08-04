@@ -29,8 +29,13 @@ use OsmApi;
 #   $what: 'node', 'way', or 'relation'
 #   $id: object id
 #   $undo_user: user whose operation should be undone
+#      (this may also be a hash reference containing multiple user
+#      names as keys, with any non-null value)
+#      (this may be undef)
 #   $undo_changeset: changeset whose operation should be undone
-#   -- note, one of undo_user and undo_changeset may be undef.
+#      (this may also be a hash reference containing multiple changeset
+#      ids as keys, with any non-null value)
+#      (this may be undef)
 #   $changeset: id of changeset to use for undo operation
 # return:
 #   success=1 failure=undef
@@ -84,7 +89,18 @@ sub undo
 
 sub determine_undo_action
 {
-    my ($what, $id, $undo_user, $undo_changeset, $changeset) = @_;
+    my ($what, $id, $undo_users, $undo_changesets, $changeset) = @_;
+
+    # backwards compatibility
+    if (ref($undo_users) ne "HASH" && defined($undo_users))
+    {
+        $undo_users = { $undo_users => 1 };
+    }
+
+    if (ref($undo_changesets) ne "HASH" && defined($undo_changesets))
+    {
+        $undo_changesets = { $undo_changesets => 1 };
+    }
 
     my $undo=0; 
     my $copy=0;
@@ -113,7 +129,7 @@ sub determine_undo_action
             my $user=$1;
             /changeset="(\d+)/;
             my $cs=$1;
-            if ((!defined($undo_user) || ($user eq $undo_user)) && (!defined($undo_changeset) || ($cs == $undo_changeset)))
+            if ((!defined($undo_users) || defined($undo_users->{$user})) && (!defined($undo_changesets) || defined($undo_changesets->{$cs})))
             { 
                 $undo=1;
                 $copy=0; 
@@ -125,45 +141,35 @@ sub determine_undo_action
                 $lastcs = $cs;
                 $undo=0; 
                 $copy=1; 
-                $out=$_; 
+                $out=$_ . "\n"; 
                 $restore_version = $version;
             } 
         } 
         elsif ($copy) 
         { 
-            $out.=$_; 
+            $out.=$_ . "\n"; 
             $copy=0 if (/<\/$what/);
         } 
     }; 
 
     if ($undo)
     {
-        my $msg = "";
-        $msg .= " by $undo_user" if defined($undo_user);
-        $msg .= " in changeset $undo_changeset" if defined($undo_changeset);
         if (length($out))
         {
-            print STDERR "$what $id last edited$msg as v$undo_version; restoring previous version $restore_version by '$lastedit'\n";
+            print STDERR "$what $id last edited as v$undo_version; restoring previous version $restore_version by '$lastedit'\n";
             $out =~ s/version="$restore_version"/version="$undo_version"/;
             $out =~ s/changeset="\d+"/changeset="$changeset"/;
             return ( "modify", $out );
         }
         else
         {
-            print STDERR "$what $id created$msg; deleting\n";
-            return ( "delete", "<$what id='$id' changeset='$changeset' version='$undo_version' lat='0' lon='0' />" );
+            print STDERR "$what $id was created; deleting\n";
+            return ( "delete", "<$what id='$id' changeset='$changeset' version='$undo_version' lat='0' lon='0' />\n" );
         }
     }
     else
     {
-        if (defined($undo_changeset) && $lastcs != $undo_changeset)
-        {
-            print STDERR "$what $id last edited in another changeset ($lastcs)\n";
-        }
-        else
-        {
-            print STDERR "$what $id last edited by someone else ('$lastedit')\n";
-        }
+        print STDERR "$what $id last edited in another changeset/by another user\n";
         return undef;
     }
 }
