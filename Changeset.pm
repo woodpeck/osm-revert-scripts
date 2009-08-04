@@ -41,7 +41,7 @@ sub close($$)
     $comment =~ s/>/&gt;/g;
     $comment =~ s/"/&quot;/g;
 
-    my $revision = '$Revision:$';
+    my $revision = '$Revision$';
     my $revno = 0;
     $revno = $1 if ($revision =~ /:\s*(\d+)/);
 
@@ -62,6 +62,23 @@ EOF
     if (!$resp->is_success)
     {
         print STDERR "cannot close changeset: ".$resp->status_line."\n";
+        return undef;
+    }
+    return 1;
+}
+
+sub upload($$)
+{
+    my ($id, $content) = @_;
+    if (length($content) > 500000)
+    {
+       OsmApi::set_timeout(7200);
+    }
+    my $resp = OsmApi::post("changeset/$id/upload", $content);
+
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot upload changeset: ".$resp->status_line."\n";
         return undef;
     }
     return 1;

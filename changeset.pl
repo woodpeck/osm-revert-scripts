@@ -19,6 +19,20 @@ elsif (($ARGV[0] eq "close") && (scalar(@ARGV)==3))
         print "changeset closed.\n";
     }
 }
+elsif (($ARGV[0] eq "upload") && (scalar(@ARGV)==2))
+{
+    my $body = "";
+    while(<STDIN>) { $body .= $_; }
+    if (length($body) == 0)
+    {
+    	print "usage: $0 upload <id> < content-to-upload\n";
+	exit;
+    }
+    if (Changeset::upload($ARGV[1], $body))
+    {
+        print "changeset uploaded.\n";
+    }
+}
 else
 {
     print "usage: $0 {create|close <id> <comment>}\n";
