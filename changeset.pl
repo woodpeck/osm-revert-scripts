@@ -9,7 +9,7 @@ use Changeset;
 
 if ($ARGV[0] eq "create")
 {
-    my $cs = Changeset::create();
+    my $cs = Changeset::create($ARGV[1]);
     print "changeset created: $cs\n" if defined($cs);
 }
 elsif (($ARGV[0] eq "close") && (scalar(@ARGV)==3))
@@ -35,6 +35,6 @@ elsif (($ARGV[0] eq "upload") && (scalar(@ARGV)==2))
 }
 else
 {
-    print "usage: $0 {create|close <id> <comment>}\n";
+    print "usage: $0 {create [<comment>] | close <id> <comment>}\n";
     exit;
 }

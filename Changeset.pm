@@ -18,9 +18,11 @@ use OsmApi;
 # Parameters: none
 # Returns: changeset id, or undef in case of error (will write error to stderr)
 
-sub create()
+sub create($)
 {
-    my $resp = OsmApi::put("changeset/create", "<osm version='0.6'><changeset></changeset></osm>");
+    my $comment = shift;
+    $comment = (defined($comment)) ? "<tag k=\"comment\" v=\"$comment\" />" : "";
+    my $resp = OsmApi::put("changeset/create", "<osm version='0.6'><changeset>$comment</changeset></osm>");
     if (!$resp->is_success)
     {
         print STDERR "cannot create changeset: ".$resp->status_line."\n";
