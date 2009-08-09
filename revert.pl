@@ -8,6 +8,8 @@ use warnings;
 use Revert;
 use Changeset;
 
+my $revert_creation = 1;
+
 if (scalar(@ARGV) < 1 || scalar(@ARGV) > 2)
 {
     print <<EOF;
@@ -46,7 +48,7 @@ else
 
 if (defined($current_cs))
 {
-    if (Revert::revert($undo_cs, $current_cs)) 
+    if (Revert::revert($undo_cs, $current_cs, $revert_creation)) 
     {
         if ($do_close)
         {

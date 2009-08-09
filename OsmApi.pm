@@ -75,12 +75,7 @@ sub put
 {
     my $url = shift;
     my $body = shift;
-    if ($prefs->{dryrun})
-    {
-        printf STDERR "dry run (not executing): PUT ".$prefs->{apiurl}.$url."\n";
-        printf STDERR "$body\n";
-        return $dummy;
-    }
+    return $dummy if ($prefs->{dryrun});
     my $req = HTTP::Request->new(PUT => $prefs->{apiurl}.$url);
     $req->content($body) if defined($body);
     my $resp = $ua->request($req);
@@ -92,11 +87,7 @@ sub post
 {
     my $url = shift;
     my $body = shift;
-    if ($prefs->{dryrun})
-    {
-        printf STDERR "dry run (not executing): POST ".$prefs->{apiurl}.$url."\n";
-        return $dummy;
-    }
+    return $dummy if ($prefs->{dryrun});
     my $req = HTTP::Request->new(POST => $prefs->{apiurl}.$url);
     $req->content($body) if defined($body);
     my $resp = $ua->request($req);
@@ -108,12 +99,7 @@ sub delete
 {
     my $url = shift;
     my $body = shift;
-    if ($prefs->{dryrun})
-    {
-        printf STDERR "dry run (not executing): DELETE ".$prefs->{apiurl}.$url."\n";
-        printf STDERR "$body\n";
-        return $dummy;
-    }
+    return $dummy if ($prefs->{dryrun});
     my $req = HTTP::Request->new(DELETE => $prefs->{apiurl}.$url);
     $req->content($body) if defined($body);
     my $resp = $ua->request($req);
@@ -130,6 +116,12 @@ sub debuglog
         $response->code(), 
         $response->message(), 
         length($response->content());
+}
+
+sub set_timeout
+{
+    my $to = shift;
+    $ua->timeout($to);
 }
 
 1;

@@ -72,15 +72,14 @@ EOF
 sub upload($$)
 {
     my ($id, $content) = @_;
-    if (length($content) > 500000)
-    {
-       OsmApi::set_timeout(7200);
-    }
+    OsmApi::set_timeout(7200);
+    $content =~ s/changeset="[^"]*"/changeset="$id"/g;
     my $resp = OsmApi::post("changeset/$id/upload", $content);
 
     if (!$resp->is_success)
     {
         print STDERR "cannot upload changeset: ".$resp->status_line."\n";
+        print STDERR $resp->content;
         return undef;
     }
     return 1;
