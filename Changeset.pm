@@ -18,7 +18,7 @@ use OsmApi;
 # Parameters: none
 # Returns: changeset id, or undef in case of error (will write error to stderr)
 
-sub create($)
+sub create
 {
     my $comment = shift;
     $comment = (defined($comment)) ? "<tag k=\"comment\" v=\"$comment\" />" : "";

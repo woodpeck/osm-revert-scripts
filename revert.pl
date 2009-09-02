@@ -42,7 +42,8 @@ if ($current_cs_or_comment =~ /^\d+$/)
 else
 {
     $comment = $current_cs_or_comment;
-    $current_cs = Changeset::create();
+    $comment = "reverting changeset $undo_cs" if ($comment eq "");
+    $current_cs = Changeset::create($comment);
     $do_close = 1;
 }
 
