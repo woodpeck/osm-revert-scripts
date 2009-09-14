@@ -72,8 +72,16 @@ sub revert
         "modify node", "modify way", "modify relation", 
         "create relation", "create way", "create node")
     {
+        my $seen = {};
+
         foreach my $object(@{$objects->{$operation}})
         {
+            # Do not process the same object in the same operation twice.
+            # Allows the script to handle cases where a user has modified
+            # an object twice in the same changeset.
+	    next if exists $seen->{$object};
+	    $seen->{$object} = 1;
+
             my ($what, $objtype) = split(/ /, $operation);
             if ($transaction)
             {
