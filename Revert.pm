@@ -39,6 +39,7 @@ sub revert
 
     my $objects = {};
     my $action;
+    my $seen = {};
 
     foreach (split(/\n/, $resp->content()))
     { 
@@ -48,6 +49,10 @@ sub revert
         }
         elsif (/<(node|way|relation).*\sid=["'](\d+)["']/)
         {
+            $seen->{$1.$2}++;
+            # if an object appears for a second time, ignore it here.
+            # but still count that it appeared twice.
+            next if ($seen->{$1.$2} > 1);
             unshift(@{$objects->{"$action $1"}}, $2);
         }
     }
@@ -61,7 +66,7 @@ sub revert
     # set this to 0 if you want individual API requests rather than a changeset
     # upload. this will be much slower but may be required if you cannot get all
     # changes through due to problems.
-    my $transaction = 1;
+    my $transaction = 0;
     # set this to 1 if you have a large number of object creations. this will 
     # bypass requesting object history for those, and simply try and delete them.
     # which will fail if the object has been modified since.
@@ -76,22 +81,23 @@ sub revert
 
         foreach my $object(@{$objects->{$operation}})
         {
-            # Do not process the same object in the same operation twice.
-            # Allows the script to handle cases where a user has modified
-            # an object twice in the same changeset.
-	    next if exists $seen->{$object};
-	    $seen->{$object} = 1;
-
             my ($what, $objtype) = split(/ /, $operation);
+            # this collects all undos in one osc document.
             if ($transaction)
             {
-                # this collects all undos in one osc document.
-                if (($delete_shortcut) && ($what eq "create"))
+                # the delete shortcut is an optimisation where we don't
+                # retrieve the object history. we can only do this if the
+                # object has been created and not further modified in this
+                # changeset.
+                if (($delete_shortcut) && ($what eq "create") && $seen->{$objtype.$object} == 1)
                 {
 
                     print STDERR "$objtype $object created; shortcut deletion\n";
                     $oscpart->{"delete"} .= "<$objtype id=\"$object\" lat=\"0\" lon=\"0\" version=\"1\" changeset=\"$changeset\" />\n";
                 }
+                # apart from the delete shortcut, we simply retrieve the
+                # object history and see what we have to do to take the
+                # object back to where it was before this changeset.
                 else
                 {
                     my ($action, $xml) = Undo::determine_undo_action($objtype, $object, undef, $undo_changeset, $changeset);
@@ -99,10 +105,10 @@ sub revert
                     $oscpart->{$action} .= $xml;
                 }
             }
+            # this creates individual undo operations. currently unused!
             else
             {
-                # this does individual undo operations. currently unused!
-                if (($delete_shortcut) && ($what eq "create"))
+                if (($delete_shortcut) && ($what eq "create") && $seen->{$objtype.$object} == 1)
                 {
                     print STDERR "$objtype $object created; shortcut deletion\n";
                     my $resp = OsmApi::delete("$objtype/$object", "<osm version='0.6'><$objtype id=\"$object\" lat=\"0\" lon=\"0\" version=\"1\" changeset=\"$changeset\" /></osm>");
