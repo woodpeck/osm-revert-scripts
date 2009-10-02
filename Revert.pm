@@ -30,18 +30,30 @@ sub revert
 {
     my ($undo_changeset, $changeset) = @_;
 
-    my $resp = OsmApi::get("changeset/$undo_changeset/download");
-    if (!$resp->is_success)
+    my $osc;
+    if ($undo_changeset =~ /<osmChange/)
     {
-        print STDERR "changeset $undo_changeset cannot be retrieved: ".$resp->status_line."\n";
-        return undef;
+        $osc = $undo_changeset;
+        $osc =~ /changeset="([^"]*)"/s or die "given osmChange document does not contain a changeset id";
+        $undo_changeset = $1;
+        print "reverting changes from changeset $undo_changeset\n";
+    }
+    else
+    {
+        my $resp = OsmApi::get("changeset/$undo_changeset/download");
+        if (!$resp->is_success)
+        {
+            print STDERR "changeset $undo_changeset cannot be retrieved: ".$resp->status_line."\n";
+            return undef;
+        }
+        $osc = $resp->content();
     }
 
     my $objects = {};
     my $action;
     my $seen = {};
 
-    foreach (split(/\n/, $resp->content()))
+    foreach (split(/\n/, $osc))
     { 
         if (/<(modify|create|delete)/)
         {
@@ -77,7 +89,7 @@ sub revert
         "modify node", "modify way", "modify relation", 
         "create relation", "create way", "create node")
     {
-        my $seen = {};
+        printf("operation: $operation\n");
 
         foreach my $object(@{$objects->{$operation}})
         {

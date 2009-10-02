@@ -16,7 +16,8 @@ if (scalar(@ARGV) < 1 || scalar(@ARGV) > 2)
 usage: $0 <changeset_to_undo> [ <current_changeset> | <comment>]
 
 where 
-  changeset_to_undo : is the id of the changeset you want to revert
+  changeset_to_undo : is the id of the changeset you want to revert,
+     or the minus sign (-) if you want to read a .osc file from stdin
   current_changeset : is the id of a currently open changeset under
      which this action will run.
      If this is given, the changeset will not be closed in order
@@ -33,6 +34,12 @@ my $do_close = 0;
 
 my $current_cs;
 my $comment; 
+
+if ($undo_cs eq "-")
+{
+    $undo_cs = "";
+    $undo_cs .= $_ while(<>);
+}
 
 # what have we got, changeset or comment?
 if ($current_cs_or_comment =~ /^\d+$/)
