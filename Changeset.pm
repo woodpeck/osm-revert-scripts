@@ -49,7 +49,7 @@ sub close($$)
 
     my $resp = OsmApi::put("changeset/$id", <<EOF);
 <osm version='0.6'>
-<changeset>
+<changeset id='$id'>
 <tag k='comment' v=\"$comment\" />
 <tag k='created_by' v='osmtools/$revno ($^O)' />
 </changeset>
@@ -58,6 +58,7 @@ EOF
     if (!$resp->is_success)
     {
         print STDERR "cannot update changeset: ".$resp->status_line."\n";
+        print STDERR $resp->content;
         return undef;
     }
     $resp = OsmApi::put("changeset/$id/close");
@@ -79,7 +80,6 @@ sub upload($$)
     if (!$resp->is_success)
     {
         print STDERR "cannot upload changeset: ".$resp->status_line."\n";
-        print STDERR $resp->content;
         return undef;
     }
     return 1;
