@@ -26,7 +26,21 @@ my ($what, $id, $undo_what, $changeset) = @ARGV;
 my $undo_user;
 my $undo_changeset;
 
-if ($undo_what =~ /^\d+$/) { $undo_changeset=$undo_what; } else { $undo_user = $undo_what; }
+if ($undo_what =~ /^[0-9]+(,[0-9]+)*$/) 
+{ 
+    foreach (split(/,/, $undo_what))
+    {
+        $undo_changeset->{$_} = 1;
+    } 
+} 
+else 
+{ 
+    foreach (split(/,/, $undo_what))
+    {
+        $undo_user->{$_} = 1;
+    } 
+}
 
-Undo::undo($what, $id, $undo_user, $undo_changeset, $changeset);
+exit 1 if (!defined(Undo::undo($what, $id, $undo_user, $undo_changeset, $changeset)));
+exit 0
 

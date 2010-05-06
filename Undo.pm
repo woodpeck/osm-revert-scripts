@@ -38,7 +38,7 @@ use OsmApi;
 #      (this may be undef)
 #   $changeset: id of changeset to use for undo operation
 # return:
-#   success=1 failure=undef
+#   success=1 failure=undef no action necessary=0
 
 sub undo
 {
@@ -47,7 +47,7 @@ sub undo
     my ($action, $xml) = 
         determine_undo_action($what, $id, $undo_user, $undo_changeset, $changeset);
 
-    return undef unless defined ($action);
+    return 0 unless defined ($action);
 
     if ($action eq "modify")
     {
@@ -64,7 +64,7 @@ sub undo
         if (!$resp->is_success)
         {
             print STDERR "$what $id cannot be deleted: ".$resp->status_line."\n";
-            return undef;
+            return ($resp->code == 410) ? 0 : undef;
         }
     }
     else
@@ -109,6 +109,9 @@ sub determine_undo_action
     my $lastcs;
     my $undo_version;
     my $restore_version;
+    my $override_version;
+    my $override = 0;
+    my $force = 0; # if this is set to 1, any object touched by the undo userwill be reverted even if there are later modifications by others
 
     my $resp = OsmApi::get("$what/$id/history");
     if (!$resp->is_success)
@@ -137,12 +140,20 @@ sub determine_undo_action
             } 
             else 
             {
-                $lastedit = $user; 
-                $lastcs = $cs;
-                $undo=0; 
-                $copy=1; 
-                $out=$_ . "\n"; 
-                $restore_version = $version;
+                if ($undo && $force)
+                {
+                    $override = 1;
+                    $override_version = $version;
+                }
+                else
+                {
+                    $undo=0; 
+                    $copy=1; 
+                    $out=$_ . "\n"; 
+                    $restore_version = $version;
+                    $lastedit = $user; 
+                    $lastcs = $cs;
+                }
             } 
         } 
         elsif ($copy) 
@@ -152,8 +163,13 @@ sub determine_undo_action
         } 
     }; 
 
-    if ($undo)
+    if ($undo || $override)
     {
+        if ($override)
+        {
+            $undo_version = $override_version unless ($undo_version > $override_version);
+            print STDERR "$what $id: overriding subsequent changes\n";
+        }
         if (length($out))
         {
             print STDERR "$what $id last edited as v$undo_version; restoring previous version $restore_version by '$lastedit'\n";
@@ -169,7 +185,7 @@ sub determine_undo_action
     }
     else
     {
-        print STDERR "$what $id last edited in another changeset/by another user\n";
+        print STDERR "$what $id last edited in another changeset/by another user ($lastedit/$lastcs)\n";
         return undef;
     }
 }
