@@ -75,8 +75,9 @@ sub put
 {
     my $url = shift;
     my $body = shift;
-    return $dummy if ($prefs->{dryrun});
+    return dummylog("PUT", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(PUT => $prefs->{apiurl}.$url);
+    $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
     my $resp = $ua->request($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
@@ -87,9 +88,10 @@ sub post
 {
     my $url = shift;
     my $body = shift;
-    return $dummy if ($prefs->{dryrun});
+    return dummylog("POST", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(POST => $prefs->{apiurl}.$url);
     $req->content($body) if defined($body);
+    $req->header("Content-type" => "text/xml");
     my $resp = $ua->request($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
@@ -99,8 +101,9 @@ sub delete
 {
     my $url = shift;
     my $body = shift;
-    return $dummy if ($prefs->{dryrun});
+    return dummylog("DELETE", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(DELETE => $prefs->{apiurl}.$url);
+    $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
     my $resp = $ua->request($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
@@ -118,6 +121,13 @@ sub debuglog
         length($response->content());
 }
 
+sub dummylog
+{
+    my ($method, $url, $body) = @_;
+    print STDERR "$method $url\n";
+    print STDERR "$body\n\n";
+    return $dummy;
+}
 sub set_timeout
 {
     my $to = shift;
