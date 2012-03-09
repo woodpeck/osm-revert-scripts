@@ -56,9 +56,9 @@ and how they work, then DO NOT USE THIS SOFTWARE.
 CONFIGURATION
 -------------
 
-You will have to create a file in your home directory containg your
-user name, password, and the URL of the OSM server to use. The URL
-must be complete up to the API version number and the slash afterwards, so:
+You will have to create a file named .osmtoolsrc in your home directory 
+containg your user name, password, and the URL of the OSM server to use. The 
+URL must be complete up to the API version number and the slash afterwards, so:
 
 username=fred
 password=test
