@@ -13,6 +13,7 @@ package OsmApi;
 use strict;
 use warnings;
 use LWP::UserAgent;
+use MIME::Base64;
 
 our $prefs;
 our $ua;
@@ -26,7 +27,7 @@ BEGIN
     open (PREFS, $ENV{HOME}."/.osmtoolsrc") or die "cannot open ". $ENV{HOME}."/.osmtoolsrc";
     while(<PREFS>)
     {
-        if (/^(\S+)\s*=\s*(\S*)/)
+        if (/^(\S+)\s*=\s*(.*)/)
         {
             $prefs->{$1} = $2;
         }
@@ -62,11 +63,34 @@ BEGIN
     $dummy = HTTP::Response->new(200);
 }
 
+sub repeat
+{
+    my $req = shift;
+    my $resp;
+    for (my $i=0; $i<3; $i++)
+    {
+        $resp = $ua->request($req);
+        return $resp unless ($resp->code == 502);
+        sleep 1;
+    }
+    return $resp;
+}
+
 sub get
 {
     my $url = shift;
     my $req = HTTP::Request->new(GET => $prefs->{apiurl}.$url);
-    my $resp = $ua->request($req);
+    my $resp = repeat($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    return($resp);
+}
+
+sub get_with_credentials
+{
+    my $url = shift;
+    my $req = HTTP::Request->new(GET => $prefs->{apiurl}.$url);
+    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
+    my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return($resp);
 }
@@ -79,7 +103,7 @@ sub put
     my $req = HTTP::Request->new(PUT => $prefs->{apiurl}.$url);
     $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
-    my $resp = $ua->request($req);
+    my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
 }
@@ -92,7 +116,7 @@ sub post
     my $req = HTTP::Request->new(POST => $prefs->{apiurl}.$url);
     $req->content($body) if defined($body);
     $req->header("Content-type" => "text/xml");
-    my $resp = $ua->request($req);
+    my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
 }
@@ -105,7 +129,7 @@ sub delete
     my $req = HTTP::Request->new(DELETE => $prefs->{apiurl}.$url);
     $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
-    my $resp = $ua->request($req);
+    my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
 }
