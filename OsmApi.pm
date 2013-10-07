@@ -16,6 +16,7 @@ use LWP::UserAgent;
 use MIME::Base64;
 use HTTP::Cookies;
 use URI::Escape;
+use Term::ReadKey;
 
 our $prefs;
 our $ua;
@@ -38,6 +39,26 @@ BEGIN
         }
     }
     close (PREFS);
+    
+    if (defined($prefs->{username}))
+    {
+        print 'User name: ' . $prefs->{username} . "\n";
+    }
+    else
+    {
+        print 'User name: ';
+        $prefs->{password} = ReadLine(0);
+        print "\n";
+    }
+    
+    unless (defined($prefs->{password}))
+    {
+        print 'Password: ';
+        ReadMode('noecho');
+        $prefs->{password} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
+        ReadMode('restore');
+        print "\n";
+    }
 
     foreach my $required("username","password","apiurl")
     {
