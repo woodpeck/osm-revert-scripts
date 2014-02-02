@@ -34,9 +34,12 @@ sub revert
     if ($undo_changeset =~ /<osmChange/)
     {
         $osc = $undo_changeset;
-        $osc =~ /changeset="([^"]*)"/s or die "given osmChange document does not contain a changeset id";
-        $undo_changeset = $1;
-        print "reverting changes from changeset $undo_changeset\n";
+        $undo_changeset = {};
+        while($osc =~ /changeset="([^"]*)"/gs)
+        {
+            $undo_changeset->{$1}=1;
+        }
+        print "reverting changes from changesets: ".join(",", keys(%$undo_changeset))."\n";
     }
     else
     {
