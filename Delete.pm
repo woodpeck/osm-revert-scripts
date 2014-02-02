@@ -7,6 +7,8 @@
 #
 # Part of the "osmtools" suite of programs
 # Originally written by Frederik Ramm <frederik@remote.org>; public domain
+#
+
 
 package Delete;
 
@@ -18,8 +20,6 @@ use OsmApi;
 our $globalListOfDeletedStuff = {};
 
 # deletes one object
-#
-# fails if the object is not deleted
 #
 # parameters: 
 #   $what: 'node', 'way', or 'relation'
@@ -37,11 +37,14 @@ sub delete
     # this will try to modify any object that contains the object-to-be-deleted
     # by removing the object-to-be-deleted from it
     my $remove_references = 0;
+    # this will delete all objects referencing the object-to-be-deleted.
+    my $cascade = 0;
 
     my $xml = determine_delete_action($what, $id, $changeset, $recurse, 0);
     return undef unless defined ($xml);
 
     my $modify = "";
+    my $delete_cascade = "";
     my $loop = 1;
     while ($loop)
     {
@@ -52,29 +55,66 @@ sub delete
 $modify
 </modify>
 <delete>
+$delete_cascade
+</delete>
+<delete>
 $xml
 </delete>
 </osmChange>
 EOF
-        my $resp = OsmApi::post("changeset/$changeset/upload", "<osmChange version='0.6'>\n<modify>\n$modify\n</modify>\n<delete>\n$xml</delete></osmChange>");
+        my $resp = OsmApi::post("changeset/$changeset/upload", $osc);
         if (!$resp->is_success)
         {
             my $c = $resp->content();
-            if ($remove_references && ($c =~ /still used by (\S+) (\d+)/))
+            print "$c\n";
+            if ($c =~ /(\S+) (\d+) (is )?still used by (\S+) ([0-9,]+)/ || $c =~ /The (\S+) (\d+) (is )?used in (\S+) ([0-9,]+)/)
             {
-                print STDERR "$what $id still used by $1 $2; removing it from there\n";
-                my $obj = OsmApi::get("$1/$2");
-                foreach (split(/\n/, $obj->content()))
-                { 
-                    next if (/<\?xml/);
-                    next if (/<osm/);
-                    next if (/<\/osm/);
-                    next if (/<nd ref="$id"/) && ($what eq "node");
-                    next if (/<member type="$what" ref="$id"/);
-                    s/changeset="\d+"/changeset="$changeset"/;
-                    $modify .= $_;
+                if ($remove_references)
+                {
+                    my ($what2, $id2, $referer, $referer_ids) = (lc($1),$2,$4,$5);
+                    print STDERR "$what2 $id2 still used by $referer $referer_ids; removing it from there\n";
+                    $referer = $1 if ($referer =~ /(.*)s$/);
+                    foreach my $referer_id(split(/,/, $referer_ids))
+                    {
+                        my $obj = OsmApi::get("$referer/$referer_id");
+                        foreach (split(/\n/, $obj->content()))
+                        { 
+                            next if (/<\?xml/);
+                            next if (/<osm/);
+                            next if (/<\/osm/);
+                            next if (/<nd ref="$id2"/) && ($what2 eq "node");
+                            next if (/<member type="$what2" ref="$id2"/);
+                            s/changeset="\d+"/changeset="$changeset"/;
+                            $modify .= $_;
+                        }
+                    }
+                    $loop=1;
+                    print "--$modify--\n";
                 }
-                $loop=1;
+                elsif ($cascade)
+                {
+                    my ($what2, $id2, $referer, $referer_ids) = (lc($1),$2,$4,$5);
+                    print STDERR "$what2 $id2 still used by $referer $referer_ids; removing those\n";
+                    $referer = $1 if ($referer =~ /(.*)s$/);
+                    foreach my $referer_id(split(/,/, $referer_ids))
+                    {
+                        my $obj = OsmApi::get("$referer/$referer_id");
+                        my $del;
+                        foreach (split(/\n/, $obj->content()))
+                        { 
+                            next if (/<\?xml/);
+                            next if (/<osm/);
+                            next if (/<\/osm/);
+                            next if (/<nd/);
+                            next if (/<tag/);
+                            next if (/<member/);
+                            s/changeset="\d+"/changeset="$changeset"/;
+                            $del .= $_;
+                        }
+                        $delete_cascade = $del.$delete_cascade;
+                    }
+                    $loop=1;
+                }
             }
             else
             {
@@ -115,6 +155,8 @@ sub determine_delete_action
         print STDERR "$what $id cannot be retrieved: ".$resp->status_line."\n";
         return undef;
     }
+
+    my $c = $resp->content();
 
     foreach (split(/\n/, $resp->content()))
     { 
@@ -157,7 +199,7 @@ sub determine_delete_action
             if (!defined($globalListOfDeletedStuff->{$_->{type}.$_->{id}}))
             {
                 my $ua = determine_delete_action($_->{type}, $_->{id}, $changeset, 1, $indent + 2);
-                $out = $ua . $out if defined($ua);
+                $out = $out . $ua if defined($ua);
                 $globalListOfDeletedStuff->{$_->{type}.$_->{id}} = 1;
             }
         }
