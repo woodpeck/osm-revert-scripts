@@ -70,7 +70,7 @@ sub repeat
     for (my $i=0; $i<3; $i++)
     {
         $resp = $ua->request($req);
-        return $resp unless ($resp->code == 502);
+        return $resp unless ($resp->code == 502 || $resp->code == 500);
         sleep 1;
     }
     return $resp;
