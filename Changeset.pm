@@ -22,7 +22,7 @@ sub create
 {
     my $comment = shift;
     $comment = (defined($comment)) ? "<tag k=\"comment\" v=\"$comment\" />" : "";
-    my $resp = OsmApi::put("changeset/create", "<osm version='0.6'><changeset>$comment</changeset></osm>");
+    my $resp = OsmApi::put("changeset/create", "<osm version='0.6'><changeset><tag k=\"bot\" v=\"yes\" />$comment</changeset></osm>");
     if (!$resp->is_success)
     {
         print STDERR "cannot create changeset: ".$resp->status_line."\n";
@@ -51,6 +51,7 @@ sub close($$)
 <osm version='0.6'>
 <changeset id='$id'>
 <tag k='comment' v=\"$comment\" />
+<tag k='bot' v=\"yes\" />
 <tag k='created_by' v='osmtools/$revno ($^O)' />
 </changeset>
 </osm>
@@ -80,8 +81,10 @@ sub upload($$)
     if (!$resp->is_success)
     {
         print STDERR "cannot upload changeset: ".$resp->status_line."\n";
+        print STDERR $resp->content."\n";
         return undef;
     }
+    print STDERR $resp->content."\n";
     return 1;
 }
 
