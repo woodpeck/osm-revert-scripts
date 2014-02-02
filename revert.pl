@@ -38,7 +38,7 @@ my $comment;
 if ($undo_cs eq "-")
 {
     $undo_cs = "";
-    $undo_cs .= $_ while(<>);
+    $undo_cs .= $_ while(<STDIN>);
 }
 
 # what have we got, changeset or comment?
