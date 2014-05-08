@@ -253,9 +253,9 @@ sub handle_delete_soft
 {
     foreach my $object(qw/relation way node/)
     {
-        foreach (@{$delete->{$object}})
+        foreach my $id(keys %{$delete->{$object}})
         {
-            my ($id, $lastv) = split("/");
+            my $lastv = $delete->{$object}->{$id};
             my $xml = "<osm generator=\"osmtools\"><$object id=\"$id\" version=\"$lastv\" lat=\"0\" lon=\"0\" changeset=\"$current_cs\" /></osm>";
             my $resp = OsmApi::delete("$object/$id", $xml);
             if (!$resp->is_success)
