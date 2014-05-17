@@ -12,7 +12,7 @@ SINCE=2013-11-01T00:00:00
 # and you'll end up with tons of files called c1234.osc (one
 # for each changeset)
 
-T=`date +%Y-%m-%dT%H:%M:%S`
+T=`date -u +%Y-%m-%dT%H:%M:%S`
 export T
 
 while /bin/true
