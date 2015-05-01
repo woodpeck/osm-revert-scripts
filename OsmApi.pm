@@ -52,7 +52,7 @@ BEGIN
     $host .= ":80" unless ($host =~ /:/);
     $ua = LWP::UserAgent->new;
     $ua->credentials($host, "Web Password", $prefs->{username}, $prefs->{password});
-    my $revision = '$Revision$';
+    my $revision = '$Revision: 30253 $';
     my $revno = 0;
     $revno = $1 if ($revision =~ /:\s*(\d+)/);
     $ua->agent("osmtools/$revno ($^O, ".$prefs->{instance}.")");
@@ -114,8 +114,17 @@ sub post
     my $body = shift;
     return dummylog("POST", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(POST => $prefs->{apiurl}.$url);
-    $req->content($body) if defined($body);
-    $req->header("Content-type" => "text/xml");
+    $req->content($body) if defined($body); 
+    # some not-proper-API-calls will expect HTTP form POST data;
+    # try to determine magically whether we have an XML or form message.
+    if (defined($body) && ($body !~ /^</))
+    {
+        $req->header("Content-type" => "application/x-www-form-urlencoded");
+    }
+    else
+    {
+        $req->header("Content-type" => "text/xml");
+    }
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
@@ -143,6 +152,8 @@ sub debuglog
         $response->code(), 
         $response->message(), 
         length($response->content());
+    print STDERR "Request:\n".$request->content()."\n" if ($prefs->{"debug_request_body"});
+    print STDERR "Response:\n".$response->content()."\n" if ($prefs->{"debug_response_body"});
 }
 
 sub dummylog

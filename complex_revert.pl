@@ -31,7 +31,7 @@ use OsmApi;
 
 use strict;
 
-my $comment = "changeset comment goes here";
+my $comment = "revert undiscussed building import";
 my $revert_type = "top_down"; # or bottom_up - see comments in code below
 
 # no user servicable parts below
@@ -43,6 +43,9 @@ my $delete;
 my $done;
 my $current_cs;
 my $current_count;
+my $touched_cs = {};
+my $used_cs = {};
+my $done_count = 0;
 
 die unless ($revert_type eq 'top_down' || $revert_type eq 'bottom_up');
 
@@ -51,11 +54,11 @@ while(<LOG>)
 {
    my ($o, $i, $r) = split(/ /, $_);
    $done->{$o}->{$i} = 1;
+   $done_count++
 }
 close(LOG);
 
-printf STDERR "%d object IDs read from complex_revert.log - will not touch these again\n", 
-    scalar(keys(%$done));
+print STDERR "$done_count object IDs read from complex_revert.log - will not touch these again\n";
 
 open(LOG, ">> complex_revert.log");
 
@@ -70,6 +73,8 @@ while(<>)
         my ($what, $id) = ($1, $2);
         /version="(\d+)"/;
         my $v = $1;
+        /changeset="(\d+)"/;
+        $touched_cs->{$1}=1;
         $operation->{$what}->{$id}->{$v} = $mode;
     }
 }
@@ -122,6 +127,28 @@ else
 
 handle_delete_soft();
 
+Changeset::close($current_cs);
+
+my $msg = "This changeset has been reverted fully or in part by changeset";
+$msg .= "s" if (scalar(keys(%$used_cs))>1);
+$msg .= " ".join(", ", keys(%$used_cs));
+$msg .= " where the changeset comment is: $comment";
+
+foreach my $id(keys(%$touched_cs))
+{
+    Changeset::comment($id, $msg);
+}
+
+$msg = "This changeset reverts some or all edits made in changeset";
+$msg .= "s" if (scalar(keys(%$touched_cs))>1);
+$msg .= " ".join(", ", keys(%$touched_cs));
+$msg .= ".";
+
+foreach my $id(keys(%$used_cs))
+{
+    Changeset::comment($id, $msg);
+}
+
 # revert_bottom_up is the simple method of reverting stuff - first,
 # all nodes are reverted (which may include undeleting), then all ways,
 # then all relations. The disadvantage of this is that if you have 
@@ -132,6 +159,7 @@ handle_delete_soft();
 sub revert_bottom_up
 {
     $current_cs = Changeset::create($comment);
+    $used_cs->{$current_cs} = 1;
     $current_count = 0;
     foreach my $object(qw/node way relation/)
     {
@@ -162,8 +190,9 @@ sub revert_bottom_up
 
             if ($current_count++ > 40000)
             {
-                Changeset::close($current_cs, $comment);
+                Changeset::close($current_cs);
                 $current_cs = Changeset::create($comment);
+                $used_cs->{$current_cs} = 1;
                 $current_count = 0;
             }
         }
@@ -176,6 +205,7 @@ sub revert_bottom_up
 sub revert_top_down
 {
     $current_cs = Changeset::create($comment);
+    $used_cs->{$current_cs} = 1;
     print LOG "changeset $current_cs created\n";
     $current_count = 0;
     foreach my $object(qw/relation way node/)
@@ -241,9 +271,10 @@ sub revert_top_down_recursive
 
     if ($current_count++ > 40000)
     {
-        Changeset::close($current_cs, $comment);
+        Changeset::close($current_cs);
     	print LOG "changeset $current_cs created\n";
         $current_cs = Changeset::create($comment);
+        $used_cs->{$current_cs} = 1;
         $current_count = 0;
     }
     return;
@@ -270,9 +301,10 @@ sub handle_delete_soft
 
             if ($current_count++ > 40000)
             {
-                Changeset::close($current_cs, $comment);
+                Changeset::close($current_cs);
                 $current_cs = Changeset::create($comment);
-    		print LOG "changeset $current_cs created\n";
+                $used_cs->{$current_cs} = 1;
+                print LOG "changeset $current_cs created\n";
                 $current_count = 0;
             }
         }

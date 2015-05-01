@@ -60,8 +60,7 @@ if (defined($current_cs))
     {
         if ($do_close)
         {
-            $comment = "reverted changeset $undo_cs" if ($comment eq "");
-            Changeset::close($current_cs, $comment);
+            Changeset::close($current_cs);
         }
     }
 }
