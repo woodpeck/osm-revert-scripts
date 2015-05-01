@@ -11,6 +11,7 @@ undo.pl      / Undo.pm      -- undoes one change to one object
 undelete.pl  / Undelete.pm  -- undeletes an object; see comment in-file
                                for differences to undo
 revert.pl    / Revert.pm    -- reverts a whole changeset
+complex_revert.pl           -- reverts a group of interdependent changesets
 
 DESIGN "PHILOSOPHY"
 -------------------
