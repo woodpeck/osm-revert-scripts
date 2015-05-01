@@ -21,7 +21,7 @@ use warnings;
 
 use OsmApi;
 
-our $globalListOfUndeletedStuff = {};
+our $globalListOfUndeletedStuff = { };
 
 # undeletes one object
 #
@@ -31,15 +31,16 @@ our $globalListOfUndeletedStuff = {};
 #   $what: 'node', 'way', or 'relation'
 #   $id: object id
 #   $changeset: id of changeset to use for undelete operation
+#   $key: only undelete something with this (tag) key
 # return:
 #   success=1 failure=undef
 
 sub undelete
 {
-    my ($what, $id, $changeset) = @_;
+    my ($what, $id, $changeset, $key) = @_;
     my $recurse = 1;
 
-    my $xml = determine_undelete_action($what, $id, $changeset, $recurse, 0);
+    my $xml = determine_undelete_action($what, $id, $changeset, $recurse, 0, $key);
     return undef unless defined ($xml);
 
     my $resp = OsmApi::post("changeset/$changeset/upload", "<osmChange version='0.6'>\n<modify>\n$xml</modify></osmChange>");
@@ -65,7 +66,7 @@ sub undelete
 
 sub determine_undelete_action
 {
-    my ($what, $id, $changeset, $recursive, $indent) = @_;
+    my ($what, $id, $changeset, $recursive, $indent, $musthavetag) = @_;
 
     my $copy=0;
     my $out = "";
@@ -131,6 +132,12 @@ sub determine_undelete_action
     if ($deleted)
     {
         print STDERR " "x$indent;
+        if (defined $musthavetag && $out !~ /<tag k="$musthavetag"/)
+	{
+            print STDERR "$what $id deleted but does not have $musthavetag key\n";
+            return undef;
+        }
+
         print STDERR "$what $id deleted by user '$invisible_user'; restoring previous version $visible_version by '$visible_user'\n";
         $out =~ s/version="$visible_version"/version="$invisible_version"/;
         $out =~ s/changeset="\d+"/changeset="$changeset"/;
@@ -142,7 +149,7 @@ sub determine_undelete_action
             {
                 if (!defined($globalListOfUndeletedStuff->{$_->{type}.$_->{id}}))
                 {
-                    my $ua = determine_undelete_action($_->{type}, $_->{id}, $changeset, 1, $indent + 2);
+                    my $ua = determine_undelete_action($_->{type}, $_->{id}, $changeset, 1, $indent + 2, undef);
                     $out = $ua . $out if defined($ua);
                     $globalListOfUndeletedStuff->{$_->{type}.$_->{id}} = 1;
                 }
