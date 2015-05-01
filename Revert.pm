@@ -169,6 +169,21 @@ sub revert
             return undef;
         }
     }
+
+
+    my $msg = "This changeset has been reverted fully or in part by changeset $changeset.";
+
+    if (ref($undo_changeset) eq "")
+    {
+        Changeset::comment($undo_changeset, $msg);
+    }
+    else
+    {
+        foreach my $id(keys(%$undo_changeset))
+        {
+            Changeset::comment($id, $msg);
+        }
+    }
     
     return 1;
 }
