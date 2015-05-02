@@ -33,14 +33,15 @@ sub delete
     my ($what, $id, $changeset) = @_;
     # this will try to remove not only the object but all its members
     # e.g. remove a way plus nodes
-    my $recurse = 0;
+    my $recurse = 1;
     # this will try to modify any object that contains the object-to-be-deleted
     # by removing the object-to-be-deleted from it
     my $remove_references = 0;
     # this will delete all objects referencing the object-to-be-deleted.
     my $cascade = 0;
 
-    my $xml = determine_delete_action($what, $id, $changeset, $recurse, 0);
+    my ($xml, $recurse_xml) = 
+        determine_delete_actiol($what, $id, $changeset, $recurse, 0);
     return undef unless defined ($xml);
 
     my $modify = "";
@@ -59,6 +60,9 @@ $delete_cascade
 </delete>
 <delete>
 $xml
+</delete>
+<delete if-unused="1">
+$recurse_xml
 </delete>
 </osmChange>
 EOF
@@ -144,6 +148,7 @@ sub determine_delete_action
 
     my $copy=0;
     my $out = "";
+    my $recurse_out = "";
     my $members = [];
     my $version;
     my $user;
@@ -198,13 +203,13 @@ sub determine_delete_action
         {
             if (!defined($globalListOfDeletedStuff->{$_->{type}.$_->{id}}))
             {
-                my $ua = determine_delete_action($_->{type}, $_->{id}, $changeset, 1, $indent + 2);
-                $out = $out . $ua if defined($ua);
+                my ($a, $b) = determine_delete_action($_->{type}, $_->{id}, $changeset, 1, $indent + 2);
+                $recurse_out = $recurse_out . $a . $b if defined($a);
                 $globalListOfDeletedStuff->{$_->{type}.$_->{id}} = 1;
             }
         }
     }
-    return $out;
+    return ($out, $recurse_out);
 }
 
 1;
