@@ -15,6 +15,7 @@ use warnings;
 
 use OsmApi;
 use Undo;
+use Changeset;
 
 # downloads a changeset and attempts to undo all changes
 # within that. currently transaction-based, so the revert will 
@@ -43,13 +44,8 @@ sub revert
     }
     else
     {
-        my $resp = OsmApi::get("changeset/$undo_changeset/download");
-        if (!$resp->is_success)
-        {
-            print STDERR "changeset $undo_changeset cannot be retrieved: ".$resp->status_line."\n";
-            return undef;
-        }
-        $osc = $resp->content();
+        $osc = Changeset::download($undo_changeset);
+        return undef unless defined($osc);
     }
 
     my $objects = {};

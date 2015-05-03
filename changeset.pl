@@ -42,6 +42,11 @@ elsif (($ARGV[0] eq "comment") && (scalar(@ARGV)==3))
         print "comment added.\n";
     }
 }
+elsif (($ARGV[0] eq "download") && (scalar(@ARGV)==2))
+{
+    print Changeset::download($ARGV[1]);
+    print "\n";
+}
 else
 {
     print <<EOF;

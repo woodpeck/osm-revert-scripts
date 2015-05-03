@@ -158,4 +158,21 @@ sub upload($$)
     return 1;
 }
 
+# -----------------------------------------------------------------------------
+# Downloads changeset.
+# Paramters: changeset id
+# Returns: changeset contents as string, undef on error
+
+sub download($)
+{
+    my $csid = shift;
+    my $resp = OsmApi::get("changeset/$csid/download");
+    if (!$resp->is_success)
+    {
+        print STDERR "changeset $csid cannot be retrieved: ".$resp->status_line."\n";
+        return undef;
+    }
+    return $resp->content();
+}
+
 1;
