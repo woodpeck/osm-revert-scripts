@@ -8,8 +8,6 @@ use warnings;
 use Revert;
 use Changeset;
 
-my $revert_creation = 1;
-
 if (scalar(@ARGV) < 1 || scalar(@ARGV) > 2)
 {
     print <<EOF;
@@ -34,6 +32,7 @@ my $do_close = 0;
 
 my $current_cs;
 my $comment; 
+my $nontrivial_comment;
 
 if ($undo_cs eq "-")
 {
@@ -50,6 +49,7 @@ if ($current_cs_or_comment =~ /^\d+$/)
 else
 {
     $comment = $current_cs_or_comment;
+    $nontrivial_comment = $comment;
     $comment = "reverting changeset $undo_cs" if ($comment eq "");
     $current_cs = Changeset::create($comment);
     $do_close = 1;
@@ -57,7 +57,7 @@ else
 
 if (defined($current_cs))
 {
-    if (Revert::revert($undo_cs, $current_cs, $revert_creation)) 
+    if (Revert::revert($undo_cs, $current_cs, $nontrivial_comment)) 
     {
         if ($do_close)
         {

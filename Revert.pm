@@ -29,7 +29,7 @@ use Changeset;
 
 sub revert
 {
-    my ($undo_changeset, $changeset) = @_;
+    my ($undo_changeset, $changeset, $comment) = @_;
 
     my $osc;
     if ($undo_changeset =~ /<osmChange/)
@@ -166,8 +166,15 @@ sub revert
         }
     }
 
-
-    my $msg = "This changeset has been reverted fully or in part by changeset $changeset.";
+    my $msg = "This changeset has been reverted fully or in part by changeset $changeset";
+    if (defined($comment))
+    {
+        $msg .= " where the changeset comment is: $comment" 
+    }
+    else
+    {
+        $msg .= ".";
+    }
 
     if (ref($undo_changeset) eq "")
     {
@@ -175,9 +182,9 @@ sub revert
     }
     else
     {
-        foreach my $id(keys(%$undo_changeset))
+        foreach my $other(keys(%$undo_changeset))
         {
-            Changeset::comment($id, $msg);
+            Changeset::comment($other, $msg);
         }
     }
     
