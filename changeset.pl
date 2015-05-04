@@ -55,6 +55,7 @@ Usage:
   $0 close <id> [<comment>]  to close a changeset and optionally set comment
   $0 upload <id> <content>   to upload changes to an open changeset
   $0 comment <id> <comment>  to comment on an existing changeset
+  $0 download <id>           to download and display an existing changeset
 EOF
     exit;
 }
