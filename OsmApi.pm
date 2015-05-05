@@ -14,10 +14,15 @@ use strict;
 use warnings;
 use LWP::UserAgent;
 use MIME::Base64;
+use HTTP::Cookies;
+use URI::Escape;
 
 our $prefs;
 our $ua;
 our $dummy;
+our $noversion;
+our $cookie_jar;
+our $auth_token;
 
 BEGIN
 {
@@ -61,6 +66,42 @@ BEGIN
     $prefs->{debug} = $prefs->{dryrun} unless (defined($prefs->{debug}));
 
     $dummy = HTTP::Response->new(200);
+
+    $prefs->{'weburl'} = $prefs->{'apiurl'};
+    if ($prefs->{'weburl'} =~ /(.*\/)api\/0.6\//)
+    {
+        $prefs->{'weburl'} = $1;
+    }
+}
+
+sub login
+{
+    $ua->cookie_jar($cookie_jar = HTTP::Cookies->new());
+    my $resp = $ua->get($prefs->{'weburl'}."login");
+    die unless($resp->is_success);
+    my $cont = $resp->content;
+    die unless($cont =~ /<meta name="csrf-token" content="(.*)" \/>/);
+    $auth_token = $1;
+    $resp = $ua->post($prefs->{'weburl'}."login", {
+        "authenticity_token" => $auth_token,
+        "utf8" => "\x{2713}",
+        "referer" => "",
+        "commit" => "Login",
+        "username" => $prefs->{'username'}, 
+        "password" => $prefs->{'password'}});
+    die unless($resp->is_redirect);
+}
+
+sub load_web
+{
+    my $form = shift;
+    login() unless defined($cookie_jar);
+    my $resp = $ua->get($prefs->{'weburl'}.$form);
+    return undef unless($resp->is_success);
+    my $cont = $resp->content;
+    return undef unless($cont =~ /<meta name="csrf-token" content="(.*)" \/>/);
+    $auth_token = $1;
+    return 1;
 }
 
 sub repeat
@@ -125,6 +166,29 @@ sub post
     {
         $req->header("Content-type" => "text/xml");
     }
+    my $resp = repeat($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    return $resp;
+}
+
+# modified form of post method, that uses the web base URL
+# and also automatically adds a potentially existing auth token
+# to form post content.
+sub post_web
+{
+    my $url = shift;
+    my $body = shift;
+    return dummylog("POST", $url, $body) if ($prefs->{dryrun});
+    login() unless defined($cookie_jar);
+    my $req = HTTP::Request->new(POST => $prefs->{weburl}.$url);
+    if (defined($auth_token))
+    {
+        $body .= "&" if defined($body);
+        $body .= "authenticity_token=".uri_escape($auth_token);
+        undef $auth_token;
+    }
+    $req->content($body) if defined($body); 
+    $req->header("Content-type" => "application/x-www-form-urlencoded");
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
