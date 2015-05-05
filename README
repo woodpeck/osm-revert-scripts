@@ -11,7 +11,12 @@ undo.pl      / Undo.pm      -- undoes one change to one object
 undelete.pl  / Undelete.pm  -- undeletes an object; see comment in-file
                                for differences to undo
 revert.pl    / Revert.pm    -- reverts a whole changeset
+redact.pl    / Redaction.pm -- creates and applies redactions
+
 complex_revert.pl           -- reverts a group of interdependent changesets
+quickdelnodes.pl            -- deletes many nodes quickly
+
+download_changesets.sh      -- bulk downloads changesets by given user
 
 DESIGN "PHILOSOPHY"
 -------------------
