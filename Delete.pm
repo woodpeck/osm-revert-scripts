@@ -41,7 +41,7 @@ sub delete
     my $cascade = 0;
 
     my ($xml, $recurse_xml) = 
-        determine_delete_actiol($what, $id, $changeset, $recurse, 0);
+        determine_delete_action($what, $id, $changeset, $recurse, 0);
     return undef unless defined ($xml);
 
     my $modify = "";
