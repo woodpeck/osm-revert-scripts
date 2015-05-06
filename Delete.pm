@@ -16,6 +16,7 @@ use strict;
 use warnings;
 
 use OsmApi;
+use Redaction;
 
 our $globalListOfDeletedStuff = {};
 
@@ -30,7 +31,7 @@ our $globalListOfDeletedStuff = {};
 
 sub delete
 {
-    my ($what, $id, $changeset) = @_;
+    my ($what, $id, $changeset, $redaction) = @_;
     # this will try to remove not only the object but all its members
     # e.g. remove a way plus nodes
     my $recurse = 1;
@@ -127,6 +128,24 @@ EOF
             }
         }
     }
+
+    if (defined($redaction))
+    {
+REDACT:
+        foreach my $key(%$globalListOfDeletedStuff)
+        {
+            print "--$key--\n";
+            my ($what, $id) = ($key =~ /(\D+)(\d+)/);
+            my $v = $globalListOfDeletedStuff->{$key};
+            next unless (defined($v));
+            for (my $i=$v; $i>0; $i--)
+            {
+                next REDACT unless Redaction::apply($redaction, $what, $id, $i);
+                printf("redacted $what $id v$i\n");
+            }
+        }
+    }
+
     return 1;
 }
 
@@ -191,6 +210,7 @@ sub determine_delete_action
             }
         } 
     }; 
+    $globalListOfDeletedStuff->{$what.$id} = $version;
 
     print STDERR " "x$indent;
     print STDERR "$what $id last modified by $user (version $version) - deleting\n",
@@ -205,7 +225,6 @@ sub determine_delete_action
             {
                 my ($a, $b) = determine_delete_action($_->{type}, $_->{id}, $changeset, 1, $indent + 2);
                 $recurse_out = $recurse_out . $a . $b if defined($a);
-                $globalListOfDeletedStuff->{$_->{type}.$_->{id}} = 1;
             }
         }
     }
