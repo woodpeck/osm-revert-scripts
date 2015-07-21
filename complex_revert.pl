@@ -141,7 +141,7 @@ foreach my $id(keys(%$touched_cs))
 
 $msg = "This changeset reverts some or all edits made in changeset";
 $msg .= "s" if (scalar(keys(%$touched_cs))>1);
-$msg .= " ".join(", ", keys(%$touched_cs));
+$msg .= " ".join(", ", sort(keys(%$touched_cs)));
 $msg .= ".";
 
 foreach my $id(keys(%$used_cs))
