@@ -103,7 +103,7 @@ sub update($$)
     my ($id, $commit_comment) = @_;
 
     my $resp = OsmApi::put("changeset/$id", "<osm version='0.6'>".
-        xmlnode($commit_comment)."</osm>");
+        xmlnode($id, $commit_comment)."</osm>");
 
     if (!$resp->is_success)
     {
