@@ -32,7 +32,7 @@ BEGIN
     open (PREFS, $ENV{HOME}."/.osmtoolsrc") or die "cannot open ". $ENV{HOME}."/.osmtoolsrc";
     while(<PREFS>)
     {
-        if (/^(\S+)\s*=\s*(.*)/)
+        if (/^([^=]*)=(.*)/)
         {
             $prefs->{$1} = $2;
         }
