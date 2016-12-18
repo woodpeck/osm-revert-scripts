@@ -126,6 +126,15 @@ sub get
     return($resp);
 }
 
+sub exists
+{
+    my $url = shift;
+    my $req = HTTP::Request->new(HEAD => $prefs->{apiurl}.$url);
+    my $resp = repeat($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    return($resp->code < 400);
+}
+
 sub get_with_credentials
 {
     my $url = shift;

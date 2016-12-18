@@ -24,6 +24,7 @@ use OsmApi;
 # then all of these changes will be reverted.
 #
 # fails if the object has been last changed by someone else.
+# (but see "force" flag)
 #
 # parameters: 
 #   $what: 'node', 'way', or 'relation'
@@ -49,11 +50,30 @@ sub undo
 
     return 0 unless defined ($action);
 
+    # set this to 1 if you want the undo script to trim ways or relations by
+    # removing members that are unavailable
+    my $use_available_members = 1;
+
     if ($action eq "modify")
     {
         my $resp = OsmApi::put("$what/$id", "<osm version='0.6'>\n$xml</osm>");
         if (!$resp->is_success)
         {
+            if ($resp->code == 412 && $use_available_members && ($what ne "node"))
+            {
+                my $newxml = remove_unavailable_members($xml);
+                if ($newxml ne $xml)
+                {
+                    $resp = OsmApi::put("$what/$id", "<osm version='0.6'>\n$newxml</osm>");
+                    if (!$resp->is_success)
+                    {
+                        print STDERR "$what $id cannot be uploaded (after trimming): ".$resp->status_line."\n";
+                        return 0;
+                    }
+                    print STDERR "$what $id successfully uploaded after trimming\n";
+                    return 1;
+                }
+            }
             print STDERR "$what $id cannot be uploaded: ".$resp->status_line."\n";
             return undef;
         }
@@ -190,4 +210,26 @@ sub determine_undo_action
     }
 }
 
+sub remove_unavailable_members
+{
+    my $xml = shift;
+    my $out;
+    foreach my $line(split(/\n/, $xml))
+    {
+        print STDERR ">>$line<<\n";
+        if ($line =~ /nd ref="(\d+)"/)
+        {
+            $out .= $line."\n" if (OsmApi::exists("node/$1"));
+        }
+        elsif ($line =~ /member type="(\S+)" ref="(\d+)"/)
+        {
+            $out .= $line."\n" if (OsmApi::exists("$1/$2"));
+        }
+        else
+        {
+            $out .= $line."\n";
+        }
+    }
+    return $out;
+}
 1;
