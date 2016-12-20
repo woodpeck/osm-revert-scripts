@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 
-# This program attempts to revert the sum of all edits in all 
+# This program attempts to revert the sum of all edits in all
 # .osc data read from stdin; typically, you would prepare a
 # directory containing all changesets of one user and then do
-# 
+#
 # cat *.osc | perl complex_revert.pl
 #
 # The order on input is not relevant. Objects for which there's
@@ -14,14 +14,14 @@
 
 # This script will automatically open revert changesets.
 
-# It will not revert objects where the newest version found on 
-# input is not current anymore (i.e. objects that have been 
-# modified in a changeset not given on input. 
+# It will not revert objects where the newest version found on
+# input is not current anymore (i.e. objects that have been
+# modified in a changeset not given on input.
 
 # Also, where the script decides to undelete something or revert
 # something to an earlier state, and this is not possible because
 # some of the member objects required have been deleted meanwhile,
-# in changesets other than those given on input, the script will 
+# in changesets other than those given on input, the script will
 # not attempt to undelete these members.
 
 # Written by Frederik Ramm <frederik@remote.org>, public domain.
@@ -31,8 +31,11 @@ use OsmApi;
 
 use strict;
 
-my $comment = "revert undiscussed building import";
+my $comment = "revert undiscussed building import"; # place your comment here
+
 my $revert_type = "top_down"; # or bottom_up - see comments in code below
+
+my $override = 0; # whether to override subsequent other changes
 
 # no user servicable parts below
 
@@ -62,6 +65,28 @@ print STDERR "$done_count object IDs read from complex_revert.log - will not tou
 
 open(LOG, ">> complex_revert.log");
 
+# This initial reading step just catalogues operations that we've seen
+# on which version of an object - in natural language, something like:
+# "we've seen a delete for version 3 of node #123 and a modify for version
+# 2 of the same node; we've seen a create for version 1 of way #234", etc.
+#
+# Results are record in the hash $operation, which for the above example
+# would result in
+#
+# $operation = {
+#    "node" => {
+#       "123" => {
+#          "2" => "modify",
+#          "3" => "delete"
+#       }
+#    },
+#    "way" => {
+#       "234" => {
+#          "1" => "create"
+#       }
+#    }
+# }
+
 while(<>)
 {
     if (/<(create|modify|delete)>/)
@@ -79,55 +104,80 @@ while(<>)
     }
 }
 
-foreach my $object(qw/node way relation/)
-{
-    foreach my $id(keys %{$operation->{$object}})
+# this part now looks at each individual object and determines what
+# action needs to be taken in order to re-establish the status quo ante.
+# we process all nodes first, then all ways, then all relations, although it
+# doesn't really matter.
+
+foreach my $objecttype(qw/node way relation/)
+{  
+    # process objects in each class in random order
+    foreach my $id(keys %{$operation->{$objecttype}})
     {
+        # for each object, determine the first and last version
+        # (first = lowest version number, last = highest)
+        # we have seen, as well as the corresponding first and
+        # last operations.
         my $firstop;
         my $lastop;
-        my @k = sort(keys(%{$operation->{$object}->{$id}}));
+        my @k = sort(keys(%{$operation->{$objecttype}->{$id}}));
         my $firstv = shift @k;
         my $lastv = pop @k;
         $lastv = $firstv if (!defined $lastv);
-        my $firstop = $operation->{$object}->{$id}->{$firstv};
-        my $lastop = $operation->{$object}->{$id}->{$lastv};
+        my $firstop = $operation->{$objecttype}->{$id}->{$firstv};
+        my $lastop = $operation->{$objecttype}->{$id}->{$lastv};
 
         if ($lastop eq "delete")
         {
             if ($firstop eq "create")
             {
-                # ignore
+                # ignore - object has been created and later deleted so we're fine
             }
             else
             {
+                # object was deleted in the end, so revert to whatever it
+                # was before first touched ($firstv is at least 2 else we'd
+                # have been in the "firstop==create" branch).
                 $firstv--;
-                $restore->{$object}->{$id} =  "$firstv/$lastv";
+                $restore->{$objecttype}->{$id} =  "$firstv/$lastv";
             }
         }
         elsif ($firstop eq "create")
         {
-            $delete->{$object}->{$id} =  "$lastv";
+            # object was created, but not deleted later (else we'd habe been
+            # in the branch above) - delete it.
+            $delete->{$objecttype}->{$id} =  "$lastv";
         }
-        else 
+        else
         {
+            # object was neither created nor deleted, just modified a number
+            # of times (note: any intermediate delete followed by an undelete
+            # would also end up here and be handled correctly). Revert to
+            # whatever it was before first touched.
             $firstv--;
-            $restore->{$object}->{$id} =  "$firstv/$lastv";
+            $restore->{$objecttype}->{$id} =  "$firstv/$lastv";
         }
     }
 }
 
-if ($revert_type eq 'bottom_up') 
+# once we know what we want to do, we first handle all object modifications
+# and undeletions that are recorded in the "restore" hash; there are two methods
+# for this that only differ in ordering. after that, we handle all deletions.
+
+if ($revert_type eq 'bottom_up')
 {
     revert_bottom_up();
 }
 else
 {
-    revert_top_down(); 
+    revert_top_down();
 }
 
 handle_delete_soft();
 
 Changeset::close($current_cs);
+
+# We're done! Now just add comments to all the affected changesets.
 
 my $msg = "This changeset has been reverted fully or in part by changeset";
 $msg .= "s" if (scalar(keys(%$used_cs))>1);
@@ -149,11 +199,15 @@ foreach my $id(keys(%$used_cs))
     Changeset::comment($id, $msg);
 }
 
+# --------------------------------------------------------
+# END OF MAIN PROGRAM
+# --------------------------------------------------------
+
 # revert_bottom_up is the simple method of reverting stuff - first,
 # all nodes are reverted (which may include undeleting), then all ways,
-# then all relations. The disadvantage of this is that if you have 
+# then all relations. The disadvantage of this is that if you have
 # 10k delete ways with 100k deleted nodes, the whole process might take
-# some time, and by the time you start undeleting ways, some mapper 
+# some time, and by the time you start undeleting ways, some mapper
 # might have cleaned up your orphan nodes already.
 
 sub revert_bottom_up
@@ -161,6 +215,7 @@ sub revert_bottom_up
     $current_cs = Changeset::create($comment);
     $used_cs->{$current_cs} = 1;
     $current_count = 0;
+    die ("revert_bottom_up doesn't yet support \$override, use revert_top_down") if ($override);
     foreach my $object(qw/node way relation/)
     {
         foreach my $id(keys %{$restore->{$object}})
@@ -233,7 +288,7 @@ sub revert_top_down_recursive
 
     my $xml = $resp->content;
     foreach (split(/\n/, $xml))
-    { 
+    {
         if (/<nd ref=.(\d+)/)
         {
             if (defined($restore->{'node'}->{$1}) && !defined($done->{'node'}->{$1}))
@@ -258,11 +313,31 @@ sub revert_top_down_recursive
     $resp = OsmApi::put("$object/$id", $xml);
     if (!$resp->is_success)
     {
-        print STDERR "cannot restore $object $id to version $firstv (put): ".$resp->status_line."\n";
-        my $b = $resp->content;
-        $b =~ s/\s+/ /g;
-        print LOG "$object $id ERR PUT ".$resp->status_line." $b\n";
-        return;
+        if ($override && ($resp->code == 409) && ($resp->content =~ /server had: (\d+)/))
+        {
+            my $curv = $1;
+            $xml =~ s/version="$lastv"/version="$curv"/;
+            $resp = OsmApi::put("$object/$id", $xml);
+            if (!$resp->is_success)
+            {
+                print STDERR "cannot restore $object $id to version $firstv (despite override): ".$resp->status_line."\n";
+            }
+            else
+            {
+                print LOG "override later changes on $object $id\n";
+            }
+        }
+        else
+        {
+            print STDERR "cannot restore $object $id to version $firstv (put): ".$resp->status_line."\n";
+        }
+        if (!$resp->is_success)
+        {
+            my $b = $resp->content;
+            $b =~ s/\s+/ /g;
+            print LOG "$object $id ERR PUT ".$resp->status_line." $b\n";
+            return;
+        }
     }
     print LOG "$object $id OK revert to v$firstv\n";
 
@@ -291,11 +366,28 @@ sub handle_delete_soft
             my $resp = OsmApi::delete("$object/$id", $xml);
             if (!$resp->is_success)
             {
-                print STDERR "cannot delete $object $id: ".$resp->status_line."\n";
-                my $b = $resp->content;
-                $b =~ s/\s+/ /g;
-                print LOG "$object $id ERR DELETE ".$resp->status_line." $b\n";
-                next;
+                if ($override && ($resp->code == 409) && ($resp->content =~ /server had: (\d+)/))
+                {
+                    my $curv = $1;
+                    $xml =~ s/version="$lastv"/version="$curv"/;
+                    $resp = OsmApi::delete("$object/$id", $xml);
+                    if (!$resp->is_success)
+                    {
+                        print STDERR "cannot delete $object $id (even after override): ".$resp->status_line."\n";
+                    }
+                    else
+                    {
+                        print LOG "override later changes on $object $id\n";
+                    }
+                }
+                if (!$resp->is_success)
+                {
+                    print STDERR "cannot delete $object $id: ".$resp->status_line."\n";
+                    my $b = $resp->content;
+                    $b =~ s/\s+/ /g;
+                    print LOG "$object $id ERR DELETE ".$resp->status_line." $b\n";
+                    next;
+                }
             }
             print LOG "$object $id OK delete\n";
 
