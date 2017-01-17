@@ -106,14 +106,37 @@ sub apply
         return undef;
     }
 
-    my $resp = OsmApi::post("$otype/$oid/$over/redact?redaction=$rid");
-
-    if (!$resp->is_success)
+    if (defined($over))
     {
-        print STDERR "cannot redact $otype $oid v$over: ".$resp->status_line."\n";
-        return undef;
+        my $resp = OsmApi::post("$otype/$oid/$over/redact?redaction=$rid");
+
+        if (!$resp->is_success)
+        {
+            my $m = $resp->content;
+            $m =~ s/\s+/ /g;
+            print STDERR "cannot redact $otype $oid v$over: ".$resp->status_line.": $m\n";
+            return undef;
+        }
+        return 1;
     }
-    return 1;
+    else
+    {
+        $over = 1;
+        while(1)
+        {
+            my $resp = OsmApi::post("$otype/$oid/$over/redact?redaction=$rid");
+
+            if (!$resp->is_success)
+            {
+                return 1 if ($resp->code == 400);
+                my $m = $resp->content;
+                $m =~ s/\s+/ /g;
+                print STDERR "cannot redact $otype $oid v$over: ".$resp->status_line.": $m\n";
+                return undef;
+            }
+            $over++;
+        }
+    }
 }
 
 1;

@@ -30,7 +30,7 @@ elsif (($ARGV[0] eq "update") && (scalar(@ARGV) == 3))
     my $rd = Redaction::update($ARGV[1], $ARGV[2], $desc);
     print "redaction updated: $rd\n" if defined($rd);
 }
-elsif (($ARGV[0] eq "apply") && (scalar(@ARGV) == 5))
+elsif (($ARGV[0] eq "apply") && (scalar(@ARGV) == 5 || scalar(@ARGV) == 4))
 {
     shift @ARGV;
     my $rd = Redaction::apply(@ARGV);
@@ -50,7 +50,7 @@ Usage:
   $0 create <title>      create redaction; description on stdin; returns id
   $0 update <id> <title> to update; provide description on stdin
   $0 delete <id>         to delete an (unused) redaction
-  $0 apply <id> <objecttype> <objectid> <version> redact the specified object
+  $0 apply <id> <objecttype> <objectid> <version> redact the specified object. If you omit <version>, starts at v1 and redacts all versions except the latest.
 EOF
     exit;
 }
