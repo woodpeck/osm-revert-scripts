@@ -152,6 +152,7 @@ sub put
     return dummylog("PUT", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(PUT => $prefs->{apiurl}.$url);
     $req->header("Content-type" => "text/xml");
+    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
     $req->content($body) if defined($body);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
@@ -164,6 +165,7 @@ sub post
     my $body = shift;
     return dummylog("POST", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(POST => $prefs->{apiurl}.$url);
+    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
     $req->content($body) if defined($body); 
     # some not-proper-API-calls will expect HTTP form POST data;
     # try to determine magically whether we have an XML or form message.
@@ -209,6 +211,7 @@ sub delete
     my $body = shift;
     return dummylog("DELETE", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(DELETE => $prefs->{apiurl}.$url);
+    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
     $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
     my $resp = repeat($req);
