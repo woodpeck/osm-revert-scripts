@@ -5,6 +5,8 @@
 
 use strict;
 use warnings;
+use FindBin; 
+use lib $FindBin::Bin;
 use Undelete;
 
 if (scalar(@ARGV) < 3 || $ARGV[0] !~ /^(node|way|relation)$/)

@@ -4,6 +4,8 @@
 # exports Changeset.pm functionality for command line use.
 
 use strict;
+use FindBin;
+use lib $FindBin::Bin;
 use Changeset;
 
 if ($ARGV[0] eq "create")

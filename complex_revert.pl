@@ -26,10 +26,11 @@
 
 # Written by Frederik Ramm <frederik@remote.org>, public domain.
 
+use strict;
+use FindBin;
+use lib $FindBin::Bin;
 use Changeset;
 use OsmApi;
-
-use strict;
 
 my $comment = "revert undiscussed building import"; # place your comment here
 

@@ -4,6 +4,8 @@
 # exports Redaction.pm functionality for command line use.
 
 use strict;
+use FindBin;
+use lib $FindBin::Bin;
 use Redaction;
 
 if (($ARGV[0] eq "create") && (scalar(@ARGV) == 2))
