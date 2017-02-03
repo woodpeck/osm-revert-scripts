@@ -50,6 +50,7 @@ my $current_count;
 my $touched_cs = {};
 my $used_cs = {};
 my $done_count = 0;
+my $max_changeset_size = 9000;
 
 die unless ($revert_type eq 'top_down' || $revert_type eq 'bottom_up');
 
@@ -244,7 +245,7 @@ sub revert_bottom_up
             }
             print LOG "$object $id OK revert to v$firstv\n";
 
-            if ($current_count++ > 40000)
+            if ($current_count++ > $max_changeset_size)
             {
                 Changeset::close($current_cs);
                 $current_cs = Changeset::create($comment);
@@ -345,7 +346,7 @@ sub revert_top_down_recursive
     # do this even on error, since retrying is no use?
     $done->{$object}->{$id} = 1;
 
-    if ($current_count++ > 40000)
+    if ($current_count++ > $max_changeset_size)
     {
         Changeset::close($current_cs);
     	print LOG "changeset $current_cs created\n";
@@ -392,7 +393,7 @@ sub handle_delete_soft
             }
             print LOG "$object $id OK delete\n";
 
-            if ($current_count++ > 40000)
+            if ($current_count++ > $max_changeset_size)
             {
                 Changeset::close($current_cs);
                 $current_cs = Changeset::create($comment);
