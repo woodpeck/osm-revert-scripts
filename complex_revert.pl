@@ -122,7 +122,7 @@ foreach my $objecttype(qw/node way relation/)
         # last operations.
         my $firstop;
         my $lastop;
-        my @k = sort(keys(%{$operation->{$objecttype}->{$id}}));
+        my @k = sort( { $a <=> $b } keys(%{$operation->{$objecttype}->{$id}}));
         my $firstv = shift @k;
         my $lastv = pop @k;
         $lastv = $firstv if (!defined $lastv);
