@@ -52,7 +52,7 @@ Usage:
   $0 create <title>      create redaction; description on stdin; returns id
   $0 update <id> <title> to update; provide description on stdin
   $0 delete <id>         to delete an (unused) redaction
-  $0 apply <id> <objecttype> <objectid> <version> redact the specified object. If you omit <version>, starts at v1 and redacts all versions except the latest.
+  $0 apply <id> <objecttype> <objectid> [<version>|<username>] redact the specified object. If you omit <version>|<username>, starts at v1 and redacts all versions except the latest. If you specify an username instead of a version, redacts all versions by that user.
 EOF
     exit;
 }
