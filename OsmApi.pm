@@ -52,9 +52,13 @@ BEGIN
         close(PREFS);
     }
 
-    $prefs->{apiurl} =~ m!https?://([^/]+)/!;
-    my $host = $1;
-    $host .= ":80" unless ($host =~ /:/);
+    $prefs->{apiurl} =~ m!(https?)://([^/]+)/!;
+    my $protocol = $1;
+    my $host = $2;
+    if ($host !~ /:/)
+    {
+        $host .= sprintf ":%d", ($protocol eq "https") ? 443 : 80;
+    }
     $ua = LWP::UserAgent->new;
     $ua->credentials($host, "Web Password", $prefs->{username}, $prefs->{password});
     my $revision = '$Revision: 30253 $';
@@ -62,6 +66,8 @@ BEGIN
     $revno = $1 if ($revision =~ /:\s*(\d+)/);
     $ua->agent("osmtools/$revno ($^O, ".$prefs->{instance}.")");
     $ua->timeout(600);
+    push @{$ua->requests_redirectable}, 'POST';
+    push @{$ua->requests_redirectable}, 'PUT';
 
     $prefs->{debug} = $prefs->{dryrun} unless (defined($prefs->{debug}));
 
