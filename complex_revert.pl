@@ -16,7 +16,7 @@
 
 # It will not revert objects where the newest version found on
 # input is not current anymore (i.e. objects that have been
-# modified in a changeset not given on input.
+# modified in a changeset not given on input).
 
 # Also, where the script decides to undelete something or revert
 # something to an earlier state, and this is not possible because
@@ -226,11 +226,28 @@ sub revert_bottom_up
             my $resp = OsmApi::get("$object/$id/$firstv");
             if (!$resp->is_success)
             {
-                print STDERR "cannot restore $object $id to version $firstv (get): ".$resp->status_line."\n";
-                print LOG "$object $id ERR GET ".$resp->code." ".$resp->status_line."\n";
+                print STDERR "cannot load version $firstv of $object $id (get): ".$resp->status_line."\n";
+                print LOG "$object $id ERR GET1 ".$resp->code." ".$resp->status_line."\n";
                 next;
             }
             my $xml = $resp->content;
+
+            # check if modification is required; current version might be identical to 
+            # what we're planning to revert to?
+            my $resp = OsmApi::get("$object/$id/$lastv");
+            if (!$resp->is_success)
+            {
+                print STDERR "cannot load version $lastv of $object $id (get): ".$resp->status_line."\n";
+                print LOG "$object $id ERR GET2 ".$resp->code." ".$resp->status_line."\n";
+                next;
+            }
+            my $current = $resp->content;
+            if (object_equal($xml, $current))
+            {
+                print LOG "$object $id OK no action necessary to go from v$firstv to v$lastv\n";
+                next;
+            }
+            
             $xml =~ s/changeset="\d+"/changeset="$current_cs"/;
             $xml =~ s/version="$firstv"/version="$lastv"/;
             $xml =~ s/visible="no"//;
@@ -283,8 +300,8 @@ sub revert_top_down_recursive
     my $resp = OsmApi::get("$object/$id/$firstv");
     if (!$resp->is_success)
     {
-        print STDERR "cannot restore $object $id to version $firstv (get): ".$resp->status_line."\n";
-        print LOG "$object $id ERR GET ".$resp->status_line."\n";
+        print STDERR "cannot load version $firstv of $object $id (get): ".$resp->status_line."\n";
+        print LOG "$object $id ERR GET1 ".$resp->status_line."\n";
         return;
     }
 
@@ -307,6 +324,22 @@ sub revert_top_down_recursive
                 revert_top_down_recursive($1, $2, $fv, $lv);
             }
         }
+    }
+    
+    # check if modification is required; current version might be identical to 
+    # what we're planning to revert to?
+    my $resp = OsmApi::get("$object/$id/$lastv");
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot load version $lastv of $object $id (get): ".$resp->status_line."\n";
+        print LOG "$object $id ERR GET2 ".$resp->code." ".$resp->status_line."\n";
+        return;
+    }
+    my $current = $resp->content;
+    if (object_equal($xml, $current))
+    {
+        print LOG "$object $id OK no action necessary to go from v$firstv to v$lastv\n";
+        return;
     }
 
     $xml =~ s/changeset="\d+"/changeset="$current_cs"/;
@@ -404,4 +437,59 @@ sub handle_delete_soft
         }
     }
 }
+
+# tests if two OSM objects (in XML represenation) are the same,
+# using a primitive "canonicalization"
+sub object_equal
+{
+    my ($a, $b) = @_;
+    return (canonicalize($a) eq canonicalize($b));
+}
+
+# primitive canonicalization of XML representation into a string
+# that disregards ordering of tags, whitespace, and other unimportant
+# stuff
+sub canonicalize
+{
+    my $o = shift;
+    my @unordered;
+    my @ordered;
+    foreach (split(/\n/, $o))
+    {
+        if (/nd\s+ref=['"](\d+)/)
+        {
+            push(@ordered, "n$1");
+        }
+        elsif (/member.*type=["']([^"']+)/)
+        {
+            my $t=$1;
+            /ref=['"](\d+)/;
+            my $i=$1;
+            /role=['"]([^"']+)/;
+            my $r=$1;
+            push(@ordered, "m$t/$i/$r");
+        }
+        elsif (/<tag .*k=["']([^"']+)/)
+        {
+            my $k=$1;
+            /v=['"]([^"']+)/;
+            my $v=$1;
+            push(@unordered, "t$k/$v");
+        }
+        elsif (/<(node|way|relation)/)
+        {
+            my $ty=$1;
+            my $la;
+            my $lo;
+            my $vi;
+            $la = $1 if (/lat=['"]([^"']+)/);
+            $lo = $1 if (/lon=['"]([^"']+)/);
+            $vi = $1 if (/visible=['"]([^"']+)/);
+            push(@ordered, "$ty/$vi/$la/$lo");
+        }
+    }
+    return join("::", @ordered) . "::" . join("::", sort(@unordered));
+}
+
+
 
