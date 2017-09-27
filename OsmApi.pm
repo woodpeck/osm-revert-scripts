@@ -39,6 +39,8 @@ BEGIN
     }
     close (PREFS);
     
+    $prefs->{username} = $ENV{OSMTOOLS_USERNAME} if (defined($ENV{OSMTOOLS_USERNAME}));
+    
     if (defined($prefs->{username}))
     {
         print 'User name: ' . $prefs->{username} . "\n";
@@ -50,6 +52,8 @@ BEGIN
         $prefs->{password} = ReadLine(0);
         print "\n";
     }
+    
+    $prefs->{password} = $ENV{OSMTOOLS_PASSWORD} if (defined($ENV{OSMTOOLS_PASSWORD}));
     
     unless (defined($prefs->{password}))
     {
