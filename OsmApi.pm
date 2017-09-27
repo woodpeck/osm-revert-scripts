@@ -16,7 +16,6 @@ use LWP::UserAgent;
 use MIME::Base64;
 use HTTP::Cookies;
 use URI::Escape;
-use Term::ReadKey;
 
 our $prefs;
 our $ua;
@@ -46,6 +45,7 @@ BEGIN
     }
     else
     {
+        use Term::ReadKey;
         print 'User name: ';
         $prefs->{password} = ReadLine(0);
         print "\n";
@@ -53,6 +53,7 @@ BEGIN
     
     unless (defined($prefs->{password}))
     {
+        use Term::ReadKey;
         print 'Password: ';
         ReadMode('noecho');
         $prefs->{password} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
