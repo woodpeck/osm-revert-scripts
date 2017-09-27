@@ -38,6 +38,38 @@ BEGIN
         }
     }
     close (PREFS);
+    
+    # override user name and password from environment if given
+    $prefs->{username} = $ENV{OSMTOOLS_USERNAME} if (defined($ENV{OSMTOOLS_USERNAME}));
+    $prefs->{password} = $ENV{OSMTOOLS_PASSWORD} if (defined($ENV{OSMTOOLS_PASSWORD}));
+    
+    # read user name from terminal if not set
+    if (defined($prefs->{username}))
+    {
+        # only print user name if we're about to read password interactively
+        unless (defined($prefs->{password}))
+        {
+            print 'User name: ' . $prefs->{username} . "\n"
+        }
+    }
+    else
+    {
+        use Term::ReadKey;
+        print 'User name: ';
+        $prefs->{username} = ReadLine(0);
+        print "\n";
+    }
+    
+    # read password from terminal if not set
+    unless (defined($prefs->{password}))
+    {
+        use Term::ReadKey;
+        print 'Password: ';
+        ReadMode('noecho');
+        $prefs->{password} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
+        ReadMode('restore');
+        print "\n";
+    }
 
     foreach my $required("username","password","apiurl")
     {
