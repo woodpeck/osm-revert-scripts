@@ -56,7 +56,7 @@ BEGIN
     {
         use Term::ReadKey;
         print 'User name: ';
-        $prefs->{username} = ReadLine(0);
+        $prefs->{username} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
         print "\n";
     }
     
