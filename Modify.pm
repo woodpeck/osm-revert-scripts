@@ -53,7 +53,14 @@ sub modify
         } 
         elsif ($copy) 
         { 
-            $copy=0 if (/<\/$what/);
+            if (/<\/$what/)
+            {
+                foreach my $k(keys %$tags)
+                {
+                   $out .= "<tag k=\"$k\" v=\"".$tags->{$k}."\" />\n";
+                }
+                $copy=0;
+            }
             if (/<tag k=\"([^"]*)" v="([^"]*)" *\/>/)
             {
                 if (defined($tags->{$1}))
@@ -62,6 +69,7 @@ sub modify
                     {
                         $out .= "<tag k=\"$1\" v=\"".$tags->{$1}."\" />\n";
                     }
+                    delete $tags->{$1};
                 }
                 else
                 {
