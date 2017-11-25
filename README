@@ -6,6 +6,7 @@ The scripts require Perl and the LWP module (libwww-perl on Ubuntu et al.).
 PACKAGE CONTENTS
 ----------------
 
+block.pl     / Block.pm     -- creates user blocks
 changeset.pl / Changeset.pm -- opens and closes changesets
 undo.pl      / Undo.pm      -- undoes one change to one object
 undelete.pl  / Undelete.pm  -- undeletes an object; see comment in-file
@@ -81,5 +82,16 @@ Add the "dryrun=0" parameter to the file for live action.
 
 By default, "dry run" also enables "debug" so you are shown the requests
 made. If you want to keep debug mode when setting dryrun=0, explicitly
-set debug=1.
+set debug=1. There's also debug_request_headers and debug_request_body to
+print out details about the HTML messages, and the same for responses.
+
+SCRAPE SCRAPE SCRAPE
+--------------------
+
+Not everything these scripts do is actually exposed in proper API calls; 
+for the creation of redactions and blocks, the scripts have to resort to
+actually "playing browser" and going through OSM's login page, set up a
+session, and then submit the right forms. Needless to say, these hacks are
+more likely to break than proper API access.
+
 
