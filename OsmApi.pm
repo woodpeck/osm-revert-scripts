@@ -115,19 +115,28 @@ BEGIN
 sub login
 {
     $ua->cookie_jar($cookie_jar = HTTP::Cookies->new());
-    my $resp = $ua->get($prefs->{'weburl'}."login");
+    my $req = HTTP::Request->new(GET => $prefs->{weburl}."login");
+    my $resp = $ua->request($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
     die unless($resp->is_success);
     my $cont = $resp->content;
     die unless($cont =~ /<meta name="csrf-token" content="(.*)" \/>/);
     $auth_token = $1;
-    $resp = $ua->post($prefs->{'weburl'}."login", {
-        "authenticity_token" => $auth_token,
-        "utf8" => "\x{2713}",
-        "referer" => "",
-        "commit" => "Login",
-        "username" => $prefs->{'username'}, 
-        "password" => $prefs->{'password'}});
-    die unless($resp->is_redirect);
+    $req = HTTP::Request->new(POST => $prefs->{weburl}."login");
+    $req->content(
+        "authenticity_token=" . uri_escape($auth_token) .
+        "&referer=%2F".
+        "&openid_url=".
+        "&utf8=%E2%9C%93".
+        "&commit=Login".
+        "&username=". uri_escape($prefs->{'username'}).
+        "&password=". uri_escape($prefs->{'password'}));
+    $req->header("Content-type" => "application/x-www-form-urlencoded");
+    $req->header("Content-length" => length($req->content));
+    $resp = $ua->request($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    die unless($resp->content =~ /<head[^>]* data-user="(\d+)"/);
+    print("logged in as user $1\n");
 }
 
 sub load_web
@@ -263,7 +272,9 @@ sub debuglog
         $response->code(), 
         $response->message(), 
         length($response->content());
+    print STDERR "Request Headers:\n".$request->headers_as_string()."\n" if ($prefs->{"debug_request_headers"});
     print STDERR "Request:\n".$request->content()."\n" if ($prefs->{"debug_request_body"});
+    print STDERR "Response Headers:\n".$response->headers_as_string()."\n" if ($prefs->{"debug_response_headers"});
     print STDERR "Response:\n".$response->content()."\n" if ($prefs->{"debug_response_body"});
 }
 
