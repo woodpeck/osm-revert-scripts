@@ -4,6 +4,8 @@
 # exports Note.pm functionality for command line use.
 
 use strict;
+use FindBin;
+use lib $FindBin::Bin;
 use Note;
 
 if (($ARGV[0] eq "hide") && (scalar(@ARGV) == 2))
