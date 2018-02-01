@@ -18,7 +18,7 @@ export T
 while /bin/true
 do
 
-wget -Olist "http://api.openstreetmap.org/api/0.6/changesets?display_name=$USER&time=$SINCE,$T" 
+wget -Olist "https://api.openstreetmap.org/api/0.6/changesets?display_name=$USER&time=$SINCE,$T" 
 T=`grep "<changeset" list|tail -1|cut -d\" -f8`
 
 if grep -q "<changeset" list 
@@ -27,7 +27,7 @@ cat list | grep "<changeset" | cut -d\" -f2 | while read id
 do
     rm -f list
     [ -f c$id.osc ] && exit
-    wget -Oc$id.osc http://api.openstreetmap.org/api/0.6/changeset/$id/download
+    wget -Oc$id.osc https://api.openstreetmap.org/api/0.6/changeset/$id/download
 done
 else
     rm -f list
