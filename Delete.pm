@@ -94,7 +94,6 @@ EOF
                         }
                     }
                     $loop=1;
-                    print "--$modify--\n";
                 }
                 elsif ($cascade)
                 {
@@ -134,7 +133,6 @@ EOF
 REDACT:
         foreach my $key(%$globalListOfDeletedStuff)
         {
-            print "--$key--\n";
             my ($what, $id) = ($key =~ /(\D+)(\d+)/);
             my $v = $globalListOfDeletedStuff->{$key};
             next unless (defined($v));
