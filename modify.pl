@@ -16,7 +16,7 @@ if (scalar(@ARGV) != 4 || $ARGV[0] !~ /^(node|way|relation)$/)
 usage: $0 <node|way|relation> <id> <key>=[<value>][,<key>=[<value>]...] <changeset> 
 
 where 
-  id : OSM id of the object to delete
+  id : OSM id of the object to modify
   key=value : the tag to change (or delete, if value is empty)
   changeset : id of changeset to use for modify action
 EOF
