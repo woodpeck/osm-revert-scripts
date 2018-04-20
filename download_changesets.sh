@@ -15,7 +15,7 @@ SINCE=2013-11-01T00:00:00
 T=`date -u +%Y-%m-%dT%H:%M:%S`
 export T
 
-while /bin/true
+while true
 do
 
 wget -Olist "http://api.openstreetmap.org/api/0.6/changesets?display_name=$USER&time=$SINCE,$T" 
