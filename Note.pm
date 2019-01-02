@@ -36,4 +36,52 @@ sub hide
     return 1;
 }
 
+# -----------------------------------------------------------------------------
+# Reopens the given note.
+# Parameters: Note ID
+# Returns: 1, or undef in case of error (will write error to stderr)
+
+sub reopen
+{
+    my ($id) = @_;
+
+    my $resp = OsmApi::post("notes/$id/reopen");
+
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot reopen note: ".$resp->status_line."\n";
+        return undef;
+    }
+    return 1;
+}
+
+sub get_raw
+{
+    my ($id) = @_;
+    return OsmApi::get_with_credentials("notes/$id");
+}
+
+sub get
+{
+    my ($id) = @_;
+    my $resp = get_raw($id);
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot load note: ".$resp->status_line."\n";
+        return undef;
+    }
+    return $resp->content;
+}
+
+sub create
+{
+    my ($lat, $lon, $text) = @_;
+    my $resp = OsmApi::post("notes", "lat=$lat&lon=$lon&text=".uri_escape($text), 1);
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot create note: ".$resp->status_line."\n";
+        return undef;
+    }
+    return $resp->content;
+}
 1;
