@@ -19,9 +19,9 @@ while true
 do
 
 wget -Olist "https://api.openstreetmap.org/api/0.6/changesets?display_name=$USER&time=$SINCE,$T" 
-T=`grep "<changeset" list|tail -1|cut -d\" -f8`
+T=`grep "<changeset" list | tail -1 | cut -d\" -f4`
 
-if grep -q "<changeset" list 
+if grep -q "<changeset" list
 then
 cat list | grep "<changeset" | cut -d\" -f2 | while read id
 do
