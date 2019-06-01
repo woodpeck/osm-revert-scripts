@@ -92,7 +92,6 @@ BEGIN
         $host .= sprintf ":%d", ($protocol eq "https") ? 443 : 80;
     }
     $ua = LWP::UserAgent->new;
-    $ua->credentials($host, "Web Password", $prefs->{username}, $prefs->{password});
     my $revision = '$Revision: 30253 $';
     my $revno = 0;
     $revno = $1 if ($revision =~ /:\s*(\d+)/);
@@ -154,6 +153,7 @@ sub load_web
 sub repeat
 {
     my $req = shift;
+    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
     my $resp;
     for (my $i=0; $i<3; $i++)
     {
@@ -184,12 +184,8 @@ sub exists
 
 sub get_with_credentials
 {
-    my $url = shift;
-    my $req = HTTP::Request->new(GET => $prefs->{apiurl}.$url);
-    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    return($resp);
+    # get is now with credentials by default
+    return get(@_);
 }
 
 sub put
