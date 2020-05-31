@@ -16,6 +16,7 @@ use LWP::UserAgent;
 use MIME::Base64;
 use HTTP::Cookies;
 use URI::Escape;
+use File::HomeDir;
 
 our $prefs;
 our $ua;
@@ -29,7 +30,7 @@ BEGIN
 
     $prefs = { "dryrun" => 1 };
 
-    open (PREFS, $ENV{HOME}."/.osmtoolsrc") or die "cannot open ". $ENV{HOME}."/.osmtoolsrc";
+    open (PREFS, home()."/.osmtoolsrc") or die "cannot open ". home()."/.osmtoolsrc";
     while(<PREFS>)
     {
         if (/^([^=]*)=(.*)/)
@@ -73,13 +74,13 @@ BEGIN
 
     foreach my $required("username","password","apiurl")
     {
-        die $ENV{HOME}."/.osmtoolsrc does not have $required" unless defined($prefs->{$required});
+        die home()."/.osmtoolsrc does not have $required" unless defined($prefs->{$required});
     }
 
     if (!defined($prefs->{instance}))
     {
         $prefs->{instance} = sprintf "%010x", $$ * rand(100000000);
-        open(PREFS, ">>".$ENV{HOME}."/.osmtoolsrc");
+        open(PREFS, ">>".home()."/.osmtoolsrc");
         printf PREFS "instance=".$prefs->{instance};
         close(PREFS);
     }
