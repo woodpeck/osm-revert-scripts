@@ -29,6 +29,7 @@ BEGIN
 {
 
     $prefs = { "dryrun" => 1 };
+    my $prefs_eol = 1;
 
     open (PREFS, home()."/.osmtoolsrc") or die "cannot open ". home()."/.osmtoolsrc";
     while(<PREFS>)
@@ -37,6 +38,7 @@ BEGIN
         {
             $prefs->{$1} = $2;
         }
+        $prefs_eol = substr ($_, -1) eq "\n";
     }
     close (PREFS);
     
@@ -81,6 +83,7 @@ BEGIN
     {
         $prefs->{instance} = sprintf "%010x", $$ * rand(100000000);
         open(PREFS, ">>".home()."/.osmtoolsrc");
+        printf PREFS "\n" unless $prefs_eol;
         printf PREFS "instance=".$prefs->{instance};
         close(PREFS);
     }
