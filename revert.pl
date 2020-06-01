@@ -33,7 +33,6 @@ my ($undo_cs, $current_cs_or_comment) = @ARGV;
 my $do_close = 0;
 
 my $current_cs;
-my $comment; 
 my $nontrivial_comment;
 
 if ($undo_cs eq "-")
@@ -43,16 +42,15 @@ if ($undo_cs eq "-")
 }
 
 # what have we got, changeset or comment?
-$current_cs_or_comment = "" unless defined($current_cs_or_comment);
 if ($current_cs_or_comment =~ /^\d+$/)
 {
     $current_cs = $current_cs_or_comment;
 }
 else
 {
-    $comment = $current_cs_or_comment;
+    my $comment = $current_cs_or_comment;
     $nontrivial_comment = $comment;
-    $comment = "reverting changeset $undo_cs" if ($comment eq "");
+    $comment = "reverting changeset $undo_cs" unless defined($comment);
     $current_cs = Changeset::create($comment);
     $do_close = 1;
 }
