@@ -282,7 +282,7 @@ sub dummylog
 {
     my ($method, $url, $body) = @_;
     print STDERR "$method $url\n";
-    print STDERR "$body\n\n";
+    print STDERR "$body\n\n" if defined($body);
     return $dummy;
 }
 sub set_timeout
