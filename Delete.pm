@@ -202,7 +202,7 @@ sub determine_delete_action
             {
                 push(@$members, { type => "node", id => $1 });
             }
-            elsif (/<member.*type=.(way|node|relation).*id=.(\d+)/)
+            elsif (/<member.*type=.(way|node|relation).*ref=.(\d+)/)
             {
                 push(@$members, { type => $1, id => $2 });
             }
