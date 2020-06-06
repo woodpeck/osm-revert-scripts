@@ -209,8 +209,10 @@ sub post
 {
     my $url = shift;
     my $body = shift;
+    my $force_credentials = shift;
     return dummylog("POST", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(POST => $prefs->{apiurl}.$url);
+    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password})) if (defined($force_credentials) && $force_credentials);
     $req->content($body) if defined($body); 
     # some not-proper-API-calls will expect HTTP form POST data;
     # try to determine magically whether we have an XML or form message.
