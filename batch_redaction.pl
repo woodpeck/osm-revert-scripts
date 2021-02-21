@@ -6,10 +6,12 @@ use FindBin;
 use lib $FindBin::Bin;
 use OsmApi;
 
-if ($ARGV[0] && (scalar(@ARGV) == 1))
+if ($ARGV[0] && (scalar(@ARGV) == 2))
 {
     my $rid = $ARGV[0];
-    while(<STDIN>)
+    open(FH, '<', $ARGV[1]) or die $!;
+
+    while(<FH>)
     {
         chomp;
         print "redacting $_\n";
@@ -23,12 +25,14 @@ if ($ARGV[0] && (scalar(@ARGV) == 1))
             last;
         }
     }
+
+    close(FH);
 }
 else
 {
     print <<EOF;
 Usage: 
-  $0 <id>                to do redactions from stdin; each line is <otype>/<oid>/<oversion>
+  $0 <id> <filename>     to do redactions from file; each line is <otype>/<oid>/<oversion>
 EOF
     exit;
 }
