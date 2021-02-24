@@ -31,7 +31,16 @@ sub view
         chomp;
         print "viewing $_\n";
         my $resp = OsmApi::get($_.$suffix);
-        print $resp->content;
+        if ($resp->is_success) {
+            print $resp->content;
+            next;
+        }
+        print "appears redacted\n";
+        my $resp2 = OsmApi::get($_.$suffix."?show_redactions=true");
+        if ($resp2->is_success) {
+            print "revealed with show_redactions=true\n";
+            print $resp2->content;
+        }
     }
 
     close(FH);
