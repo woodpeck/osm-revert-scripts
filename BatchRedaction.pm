@@ -52,10 +52,12 @@ sub view
 # Parameters: filename, Redaction ID
 # use empty redaction id to unredact
 # Returns: 1 on success, undef on failure
+# stops on the first failed redaction
 
 sub apply
 {
     my ($filename, $rid) = @_;
+    my $state = 1;
     open(FH, '<', $filename) or return undef;
 
     while(<FH>)
@@ -71,12 +73,13 @@ sub apply
             my $m = $resp->content;
             $m =~ s/\s+/ /g;
             print STDERR "cannot redact $_: ".$resp->status_line.": $m\n";
+            $state = undef;
             last;
         }
     }
 
     close(FH);
-    return 1;
+    return $state;
 }
 
 1;
