@@ -50,6 +50,7 @@ sub view
 # -----------------------------------------------------------------------------
 # Redacts specific versions of elements listed in a file
 # Parameters: filename, Redaction ID
+# use empty redaction id to unredact
 # Returns: 1 on success, undef on failure
 
 sub apply
@@ -61,7 +62,9 @@ sub apply
     {
         chomp;
         print "redacting $_\n";
-        my $resp = OsmApi::post("$_/redact?redaction=$rid");
+        my $path = "$_/redact";
+        $path .= "?redaction=$rid" if defined $rid;
+        my $resp = OsmApi::post($path);
 
         if (!$resp->is_success)
         {
