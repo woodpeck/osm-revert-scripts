@@ -29,17 +29,25 @@ sub view
     while(<FH>)
     {
         chomp;
-        print "viewing $_\n";
         my $resp = OsmApi::get($_.$suffix);
+        my $code = $resp->code;
         if ($resp->is_success) {
+            print "# $_ not redacted\n\n";
             print $resp->content;
-            next;
-        }
-        print "appears redacted\n";
-        my $resp2 = OsmApi::get($_.$suffix."?show_redactions=true");
-        if ($resp2->is_success) {
-            print "revealed with show_redactions=true\n";
-            print $resp2->content;
+            print "\n";
+        } elsif ($code == 404) {
+            print "# $_ not found\n\n";
+        } elsif ($code == 403) {
+            my $resp2 = OsmApi::get($_.$suffix."?show_redactions=true");
+            if ($resp2->is_success) {
+                print "# $_ redacted and can be revealed\n\n";
+                print $resp2->content;
+                print "\n";
+            } else {
+                print "# $_ redacted and cannot be revealed\n\n";
+            }
+        } else {
+            print "# $_ encountered unknown error\n\n";
         }
     }
 
