@@ -26,6 +26,13 @@ sub view
     $suffix //= "";
     open(FH, '<', $filename) or return undef;
 
+    sub print_content
+    {
+        my ($content) = @_;
+        chomp $content;
+        print "$content\n\n";
+    }
+
     while(<FH>)
     {
         chomp;
@@ -33,16 +40,14 @@ sub view
         my $code = $resp->code;
         if ($resp->is_success) {
             print "# $_ not redacted\n\n";
-            print $resp->content;
-            print "\n";
+            print_content $resp->content;
         } elsif ($code == 404) {
             print "# $_ not found\n\n";
         } elsif ($code == 403) {
             my $resp2 = OsmApi::get($_.$suffix."?show_redactions=true");
             if ($resp2->is_success) {
                 print "# $_ redacted and can be revealed\n\n";
-                print $resp2->content;
-                print "\n";
+                print_content $resp2->content;
             } else {
                 print "# $_ redacted and cannot be revealed\n\n";
             }
