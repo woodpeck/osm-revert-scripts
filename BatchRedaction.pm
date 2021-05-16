@@ -91,19 +91,23 @@ sub apply
         return undef;
     }
 
-    my $state = 1;
-    my (@done_elements, @left_elements);
-
-    local $SIG{INT} = sub {
-        print " - interrupting on next element";
-        $state = undef;
-    };
-
+    my @elements;
     open(FH, '<', $filename) or return undef;
     while(<FH>)
     {
         chomp;
+        push @elements, $_;
+    }
+    close(FH);
 
+    my (@done_elements, @left_elements);
+    my $state = 1;
+    local $SIG{INT} = sub {
+        print " - interrupting on next element";
+        $state = undef;
+    };
+    foreach (@elements)
+    {
         if (!$state)
         {
             push @left_elements, $_;
@@ -117,8 +121,8 @@ sub apply
 
         if ($resp->is_success)
         {
-            print " - done\n";
             push @done_elements, $_;
+            print " - done " . @done_elements . "/" . @elements . " elements\n";
         }
         else
         {
@@ -130,7 +134,6 @@ sub apply
             $state = undef;
         }
     }
-    close(FH);
 
     sub write_elements_file
     {
@@ -155,7 +158,6 @@ sub apply
         write_elements_file "$filename.done", @done_elements;
         write_elements_file "$filename.left", @left_elements;
     }
-
     return $state;
 }
 
