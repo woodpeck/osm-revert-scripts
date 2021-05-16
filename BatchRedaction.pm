@@ -93,6 +93,12 @@ sub apply
 
     my $state = 1;
     my (@done_elements, @left_elements);
+
+    local $SIG{INT} = sub {
+        print " - interrupting on next element";
+        $state = undef;
+    };
+
     open(FH, '<', $filename) or return undef;
     while(<FH>)
     {
