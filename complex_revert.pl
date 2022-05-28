@@ -32,7 +32,8 @@ use lib $FindBin::Bin;
 use Changeset;
 use OsmApi;
 
-my $comment = "revert undiscussed building import"; # place your comment here
+my $comment = $ARGV[0];
+shift @ARGV;
 
 my $revert_type = "top_down"; # or bottom_up - see comments in code below
 
@@ -51,6 +52,7 @@ my $touched_cs = {};
 my $used_cs = {};
 my $done_count = 0;
 my $max_changeset_size = 9000;
+my $chunk_size = 500;
 
 die unless ($revert_type eq 'top_down' || $revert_type eq 'bottom_up');
 
@@ -180,6 +182,7 @@ handle_delete_soft();
 Changeset::close($current_cs);
 
 # We're done! Now just add comments to all the affected changesets.
+#exit(0);
 
 my $msg = "This changeset has been reverted fully or in part by changeset";
 $msg .= "s" if (scalar(keys(%$used_cs))>1);
@@ -251,10 +254,10 @@ sub revert_bottom_up
             $xml =~ s/changeset="\d+"/changeset="$current_cs"/;
             $xml =~ s/version="$firstv"/version="$lastv"/;
 
-            if (($xml =~ /visible="false"/) && ($xml =~ /<node/))
-            {
-                $xml =~ s/visible="false"/visible="false" lat="0" lon="0"/;
-            }
+            #if (($xml =~ /visible="false"/) && ($xml =~ /<node/))
+            #{
+            #    $xml =~ s/visible="false"/visible="false" lat="0" lon="0"/;
+            #}
             $resp = OsmApi::put("$object/$id", $xml);
             if (!$resp->is_success)
             {
@@ -348,10 +351,10 @@ sub revert_top_down_recursive
 
     $xml =~ s/changeset="\d+"/changeset="$current_cs"/;
     $xml =~ s/version="$firstv"/version="$lastv"/;
-    if (($xml =~ /visible="false"/) && ($xml =~ /<node/))
-    {
-        $xml =~ s/visible="false"/visible="false" lat="0" lon="0"/;
-    }
+    #if (($xml =~ /visible="false"/) && ($xml =~ /<node/))
+    #{
+    #    $xml =~ s/visible="false"/visible="false" lat="0" lon="0"/;
+    #}
     $resp = OsmApi::put("$object/$id", $xml);
     if (!$resp->is_success)
     {
@@ -397,49 +400,95 @@ sub revert_top_down_recursive
     return;
 }
 
+sub ensure_room_in_cs
+{
+    my $room = shift;
+    $room = 1 unless defined($room);
+    if (($current_count + $room > $max_changeset_size) || (!defined($current_cs)))
+    {
+        if (defined($current_cs))
+        {
+            Changeset::close($current_cs);
+    	    print LOG "changeset $current_cs closed\n";
+        }
+        $current_cs = Changeset::create($comment);
+    	print LOG "changeset $current_cs created\n";
+        $used_cs->{$current_cs} = 1;
+        $current_count = 0;
+    }
+}
+
+sub remaining_room_in_cs
+{
+    return $max_changeset_size - $current_count;
+}
+
 sub handle_delete_soft
 {
     foreach my $object(qw/relation way node/)
     {
-        foreach my $id(keys %{$delete->{$object}})
+        my @idlist = keys %{$delete->{$object}};
+
+        while(scalar(@idlist))
         {
-            my $lastv = $delete->{$object}->{$id};
-            my $xml = "<osm generator=\"osmtools\"><$object id=\"$id\" version=\"$lastv\" lat=\"0\" lon=\"0\" changeset=\"$current_cs\" /></osm>";
-            my $resp = OsmApi::delete("$object/$id", $xml);
-            if (!$resp->is_success)
+            my $num_to_delete = remaining_room_in_cs();
+            if ($num_to_delete < 1)
             {
-                if ($override && ($resp->code == 409) && ($resp->content =~ /server had: (\d+)/))
+                ensure_room_in_cs($chunk_size);
+                $num_to_delete = $chunk_size;
+            }
+            my @to_process = splice(@idlist, 0, $num_to_delete);
+            printf STDERR "deleting a chunk of %d %ss\n", scalar(@to_process), $object;
+
+            while(1)
+            {
+                my $c = "<osmChange version=\"0.6\">\n<delete if-unused=\"1\">\n";
+                foreach my $i(@to_process)
                 {
-                    my $curv = $1;
-                    $xml =~ s/version="$lastv"/version="$curv"/;
-                    $resp = OsmApi::delete("$object/$id", $xml);
-                    if (!$resp->is_success)
+                    my $v = $delete->{$object}->{$i};
+                    next unless defined($v);
+                    $c .= "<$object id=\"$i\" changeset=\"$current_cs\" version=\"$v\" />\n";
+                }
+                $c .= "</delete>\n</osmChange>\n";
+                OsmApi::set_timeout(7200);
+                my $resp = OsmApi::post("changeset/$current_cs/upload", $c);
+
+                if (!$resp->is_success)
+                {
+                    my $c = $resp->content;
+                    if ($c =~ /Version mismatch: Provided \d+, server had: (\d+) of \S+ (\d+)/)
                     {
-                        print STDERR "cannot delete $object $id (even after override): ".$resp->status_line."\n";
+                        if ($override)
+                        {
+                            $delete->{$object}->{$2}=$1;
+                            print STDERR "adjusted $object $2 version to $1\n";
+                            next; # this repeats the action in the "while(1)" loop
+                            # fixme - if this happens a lot then maybe the chunk should be split
+                        } else {
+                            delete $delete->{$object}->{$2}; # do not delete this object
+                            print STDERR "excluded $object $2 from deletion\n";
+                            next; # this repeats the action in the "while(1)" loop
+                            # fixme - if this happens a lot then maybe the chunk should be split
+                        }
                     }
                     else
                     {
-                        print LOG "override later changes on $object $id\n";
+                        print STDERR "cannot upload changeset: ".$resp->status_line."\n";
+                        print STDERR $resp->content."\n";
+                        die;
+                        # fixme should react to "precondition failed" or "gone" events by
+                        # excluding object from batch rather than stopping
                     }
                 }
-                if (!$resp->is_success)
+                else
                 {
-                    print STDERR "cannot delete $object $id: ".$resp->status_line."\n";
-                    my $b = $resp->content;
-                    $b =~ s/\s+/ /g;
-                    print LOG "$object $id ERR DELETE ".$resp->status_line." $b\n";
-                    next;
+                    $current_count += scalar(@to_process); # this may over-count because of if-unused
+                    foreach my $i(@to_process)
+                    {
+                        print LOG "$object $i OK delete\n";
+                    }
+                    last; # breaks from the "while(1)" loop
                 }
-            }
-            print LOG "$object $id OK delete\n";
-
-            if ($current_count++ > $max_changeset_size)
-            {
-                Changeset::close($current_cs);
-                $current_cs = Changeset::create($comment);
-                $used_cs->{$current_cs} = 1;
-                print LOG "changeset $current_cs created\n";
-                $current_count = 0;
             }
         }
     }
