@@ -51,7 +51,7 @@ You will have to create a file named .osmtoolsrc in your home directory containg
 
     username=fred
     password=test
-    apiurl=http://api06.dev.openstreetmap.org/api/0.6/
+    apiurl=https://www.openstreetmap.org/api/0.6/
 
 If your username or password is not specified in your .osmtoolsrc file, these scripts will look for OSMTOOLS_USERNAME and OSMTOOLS_PASSWORD environment variables. As a last resort, you will be prompted for a user name or password on the command line (requires the Term::ReadKey module).
 
