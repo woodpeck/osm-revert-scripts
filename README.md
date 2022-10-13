@@ -47,17 +47,23 @@ These scripts do not have safety nets. Be sure that you feel confident to fix an
 Configuration
 -------------
 
-You will have to create a file named .osmtoolsrc in your home directory containg your user name, password, and the URL of the OSM server to use. The URL must be complete up to the API version number and the slash afterwards, so:
+You will have to create a file named `.osmtoolsrc` in your home directory containing your user name, password, and the URL of the OSM server to use. The URL must be complete up to the API version number and the slash afterwards, so:
 
     username=fred
     password=test
     apiurl=http://api06.dev.openstreetmap.org/api/0.6/
 
-If your username or password is not specified in your .osmtoolsrc file, these scripts will look for OSMTOOLS_USERNAME and OSMTOOLS_PASSWORD environment variables. As a last resort, you will be prompted for a user name or password on the command line (requires the Term::ReadKey module).
+If your username or password is not specified in your `.osmtoolsrc` file, these scripts will look for `OSMTOOLS_USERNAME` and `OSMTOOLS_PASSWORD` environment variables. As a last resort, you will be prompted for a user name or password on the command line (requires the `Term::ReadKey` module).
 
-By default, all tools will run in "dry run" mode, so no changes will be actually written and all write requests will be considered successful. Add the "dryrun=0" parameter to the file for live action.
+By default, all tools will run in "dry run" mode, so no changes will be actually written and all write requests will be considered successful. Add the `dryrun=0` parameter to the file for live action.
 
-By default, "dry run" also enables "debug" so you are shown the requests made. If you want to keep debug mode when setting dryrun=0, explicitly set debug=1. There's also debug_request_headers and debug_request_body to print out details about the HTML messages, and the same for responses.
+By default, "dry run" also enables "debug" so you are shown the requests made. If you want to keep debug mode when setting `dryrun=0`, explicitly set `debug=1`. There's also `debug_request_headers` and `debug_request_body` to print out details about the HTML messages, and the same for responses.
+
+### Local configuration
+
+There's also an alternative way to configure osmtools by reading `.osmtoolsrc` from a local directory instead of your home directory. This allows you to have different configurations ready which is useful if you want to modify the scripts. You may want one configuration ready for a development server (for example, api06.dev.openstreetmap.org) to test your modifications and another one for a live server (for example, api.openstreetmap.org) to use the modified scripts on real data.
+
+To enable reading preferences from a local directory, `.osmtoolsrc` in your *home* directory should have `local=1` set. In this case the rest of preferences in the home directory file is ignored and `.osmtoolsrc` in the current local directory is read instead.
 
 SCRAPE SCRAPE SCRAPE
 --------------------

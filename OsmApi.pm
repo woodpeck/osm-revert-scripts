@@ -27,21 +27,31 @@ our $auth_token;
 
 BEGIN
 {
+    my $prefs_filename = home()."/.osmtoolsrc";
+    my $prefs_eol;
 
-    $prefs = { "dryrun" => 1 };
-    my $prefs_eol = 1;
+    sub read_prefs_file {
+        $prefs = { "dryrun" => 1 };
+        $prefs_eol = 1;
 
-    open (PREFS, home()."/.osmtoolsrc") or die "cannot open ". home()."/.osmtoolsrc";
-    while(<PREFS>)
-    {
-        if (/^([^=]*)=(.*)/)
+        open (PREFS, $prefs_filename) or die "cannot open $prefs_filename";
+        while(<PREFS>)
         {
-            $prefs->{$1} = $2;
+            if (/^([^=]*)=(.*)/)
+            {
+                $prefs->{$1} = $2;
+            }
+            $prefs_eol = substr ($_, -1) eq "\n";
         }
-        $prefs_eol = substr ($_, -1) eq "\n";
+        close (PREFS);
     }
-    close (PREFS);
-    
+
+    read_prefs_file;
+    if ($prefs->{local}) {
+        $prefs_filename = "./.osmtoolsrc";
+        read_prefs_file;
+    }
+
     # override user name and password from environment if given
     $prefs->{username} = $ENV{OSMTOOLS_USERNAME} if (defined($ENV{OSMTOOLS_USERNAME}));
     $prefs->{password} = $ENV{OSMTOOLS_PASSWORD} if (defined($ENV{OSMTOOLS_PASSWORD}));
@@ -76,13 +86,13 @@ BEGIN
 
     foreach my $required("username","password","apiurl")
     {
-        die home()."/.osmtoolsrc does not have $required" unless defined($prefs->{$required});
+        die "$prefs_filename does not have $required" unless defined($prefs->{$required});
     }
 
     if (!defined($prefs->{instance}))
     {
         $prefs->{instance} = sprintf "%010x", $$ * rand(100000000);
-        open(PREFS, ">>".home()."/.osmtoolsrc");
+        open(PREFS, ">>$prefs_filename");
         printf PREFS "\n" unless $prefs_eol;
         printf PREFS "instance=".$prefs->{instance};
         close(PREFS);
@@ -113,6 +123,8 @@ BEGIN
     {
         $prefs->{'weburl'} = $1;
     }
+
+    print STDERR "Read config from $prefs_filename\n" if ($prefs->{debug});
 }
 
 sub login
