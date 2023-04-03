@@ -21,8 +21,6 @@ has_more_changesets=1
 logfile=/dev/stdout
 dry_run=false
 
-USER=$1
-SINCE=2013-11-01T00:00:00
 
 # Parse command-line arguments
 while getopts ":u:s:o:l:d" opt; do
