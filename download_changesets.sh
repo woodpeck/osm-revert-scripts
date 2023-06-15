@@ -13,7 +13,7 @@
 # Variables
 
 user=
-since=2013-11-01T00:00:00
+since=2005-04-09T00:00:00
 end_date=
 output_dir=
 current_time=
