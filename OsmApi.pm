@@ -46,35 +46,7 @@ BEGIN
     $prefs->{username} = $ENV{OSMTOOLS_USERNAME} if (defined($ENV{OSMTOOLS_USERNAME}));
     $prefs->{password} = $ENV{OSMTOOLS_PASSWORD} if (defined($ENV{OSMTOOLS_PASSWORD}));
     
-    # read user name from terminal if not set
-    if (defined($prefs->{username}))
-    {
-        # only print user name if we're about to read password interactively
-        unless (defined($prefs->{password}))
-        {
-            print 'User name: ' . $prefs->{username} . "\n"
-        }
-    }
-    else
-    {
-        use Term::ReadKey;
-        print 'User name: ';
-        $prefs->{username} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
-        print "\n";
-    }
-    
-    # read password from terminal if not set
-    unless (defined($prefs->{password}))
-    {
-        use Term::ReadKey;
-        print 'Password: ';
-        ReadMode('noecho');
-        $prefs->{password} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
-        ReadMode('restore');
-        print "\n";
-    }
-
-    foreach my $required("username","password","apiurl")
+    foreach my $required("apiurl")
     {
         die home()."/.osmtoolsrc does not have $required" unless defined($prefs->{$required});
     }
@@ -115,8 +87,52 @@ BEGIN
     }
 }
 
+sub require_username_and_password
+{
+    # read user name from terminal if not set
+    if (defined($prefs->{username}))
+    {
+        # only print user name if we're about to read password interactively
+        unless (defined($prefs->{password}))
+        {
+            print 'User name: ' . $prefs->{username} . "\n"
+        }
+    }
+    else
+    {
+        use Term::ReadKey;
+        print 'User name: ';
+        $prefs->{username} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
+        print "\n";
+    }
+    
+    # read password from terminal if not set
+    unless (defined($prefs->{password}))
+    {
+        use Term::ReadKey;
+        print 'Password: ';
+        ReadMode('noecho');
+        $prefs->{password} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
+        ReadMode('restore');
+        print "\n";
+    }
+
+    foreach my $required("username","password")
+    {
+        die home()."/.osmtoolsrc does not have $required" unless defined($prefs->{$required});
+    }
+}
+
+sub add_credentials
+{
+    require_username_and_password;
+    my $req = shift;
+    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
+}
+
 sub login
 {
+    require_username_and_password;
     $ua->cookie_jar($cookie_jar = HTTP::Cookies->new());
     my $req = HTTP::Request->new(GET => $prefs->{weburl}."login");
     my $resp = $ua->request($req);
@@ -157,7 +173,6 @@ sub load_web
 sub repeat
 {
     my $req = shift;
-    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
     my $resp;
     for (my $i=0; $i<3; $i++)
     {
@@ -172,6 +187,7 @@ sub get
 {
     my $url = shift;
     my $req = HTTP::Request->new(GET => $prefs->{apiurl}.$url);
+    add_credentials($req);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return($resp);
@@ -181,6 +197,7 @@ sub exists
 {
     my $url = shift;
     my $req = HTTP::Request->new(HEAD => $prefs->{apiurl}.$url);
+    add_credentials($req);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return($resp->code < 400);
@@ -200,6 +217,7 @@ sub put
     my $req = HTTP::Request->new(PUT => $prefs->{apiurl}.$url);
     $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
+    add_credentials($req);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
@@ -209,10 +227,8 @@ sub post
 {
     my $url = shift;
     my $body = shift;
-    my $force_credentials = shift;
     return dummylog("POST", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(POST => $prefs->{apiurl}.$url);
-    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password})) if (defined($force_credentials) && $force_credentials);
     $req->content($body) if defined($body); 
     # some not-proper-API-calls will expect HTTP form POST data;
     # try to determine magically whether we have an XML or form message.
@@ -224,6 +240,7 @@ sub post
     {
         $req->header("Content-type" => "text/xml");
     }
+    add_credentials($req);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
@@ -260,6 +277,7 @@ sub delete
     my $req = HTTP::Request->new(DELETE => $prefs->{apiurl}.$url);
     $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
+    add_credentials($req);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
