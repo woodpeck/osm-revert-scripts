@@ -46,35 +46,7 @@ BEGIN
     $prefs->{username} = $ENV{OSMTOOLS_USERNAME} if (defined($ENV{OSMTOOLS_USERNAME}));
     $prefs->{password} = $ENV{OSMTOOLS_PASSWORD} if (defined($ENV{OSMTOOLS_PASSWORD}));
     
-    # read user name from terminal if not set
-    if (defined($prefs->{username}))
-    {
-        # only print user name if we're about to read password interactively
-        unless (defined($prefs->{password}))
-        {
-            print 'User name: ' . $prefs->{username} . "\n"
-        }
-    }
-    else
-    {
-        use Term::ReadKey;
-        print 'User name: ';
-        $prefs->{username} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
-        print "\n";
-    }
-    
-    # read password from terminal if not set
-    unless (defined($prefs->{password}))
-    {
-        use Term::ReadKey;
-        print 'Password: ';
-        ReadMode('noecho');
-        $prefs->{password} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
-        ReadMode('restore');
-        print "\n";
-    }
-
-    foreach my $required("username","password","apiurl")
+    foreach my $required("apiurl")
     {
         die home()."/.osmtoolsrc does not have $required" unless defined($prefs->{$required});
     }
@@ -115,14 +87,52 @@ BEGIN
     }
 }
 
+sub require_username_and_password
+{
+    # read user name from terminal if not set
+    if (defined($prefs->{username}))
+    {
+        # only print user name if we're about to read password interactively
+        unless (defined($prefs->{password}))
+        {
+            print 'User name: ' . $prefs->{username} . "\n"
+        }
+    }
+    else
+    {
+        use Term::ReadKey;
+        print 'User name: ';
+        $prefs->{username} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
+        print "\n";
+    }
+    
+    # read password from terminal if not set
+    unless (defined($prefs->{password}))
+    {
+        use Term::ReadKey;
+        print 'Password: ';
+        ReadMode('noecho');
+        $prefs->{password} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
+        ReadMode('restore');
+        print "\n";
+    }
+
+    foreach my $required("username","password")
+    {
+        die home()."/.osmtoolsrc does not have $required" unless defined($prefs->{$required});
+    }
+}
+
 sub add_credentials
 {
+    require_username_and_password;
     my $req = shift;
     $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
 }
 
 sub login
 {
+    require_username_and_password;
     $ua->cookie_jar($cookie_jar = HTTP::Cookies->new());
     my $req = HTTP::Request->new(GET => $prefs->{weburl}."login");
     my $resp = $ua->request($req);
