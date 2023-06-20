@@ -115,6 +115,12 @@ BEGIN
     }
 }
 
+sub add_credentials
+{
+    my $req = shift;
+    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
+}
+
 sub login
 {
     $ua->cookie_jar($cookie_jar = HTTP::Cookies->new());
@@ -157,7 +163,6 @@ sub load_web
 sub repeat
 {
     my $req = shift;
-    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
     my $resp;
     for (my $i=0; $i<3; $i++)
     {
@@ -172,6 +177,7 @@ sub get
 {
     my $url = shift;
     my $req = HTTP::Request->new(GET => $prefs->{apiurl}.$url);
+    add_credentials($req);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return($resp);
@@ -181,6 +187,7 @@ sub exists
 {
     my $url = shift;
     my $req = HTTP::Request->new(HEAD => $prefs->{apiurl}.$url);
+    add_credentials($req);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return($resp->code < 400);
@@ -200,6 +207,7 @@ sub put
     my $req = HTTP::Request->new(PUT => $prefs->{apiurl}.$url);
     $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
+    add_credentials($req);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
@@ -222,6 +230,7 @@ sub post
     {
         $req->header("Content-type" => "text/xml");
     }
+    add_credentials($req);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
@@ -258,6 +267,7 @@ sub delete
     my $req = HTTP::Request->new(DELETE => $prefs->{apiurl}.$url);
     $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
+    add_credentials($req);
     my $resp = repeat($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
