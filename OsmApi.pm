@@ -27,6 +27,12 @@ our $dummy;
 our $noversion;
 our $cookie_jar;
 our $auth_token;
+our $oauth2_client_ids = {
+    "api06.dev.openstreetmap.org:443" => "FEGTbR13GBJ8o3Z1FJLFUqcgMYrvmwzEbN2mciMz528",
+    "master.apis.dev.openstreetmap.org:443" => "FEGTbR13GBJ8o3Z1FJLFUqcgMYrvmwzEbN2mciMz528",
+    "www.openstreetmap.org:443" => "j2hkpmK8D3XRgXqU-X0fyaIZsehbTUdfZDE4eg-7JJA",
+    "api.openstreetmap.org:443" => "j2hkpmK8D3XRgXqU-X0fyaIZsehbTUdfZDE4eg-7JJA"
+};
 
 INIT
 {
@@ -83,6 +89,10 @@ INIT
     if ($prefs->{'weburl'} =~ /(.*\/)api\/0.6\//)
     {
         $prefs->{'weburl'} = $1;
+    }
+
+    if (!defined($prefs->{oauth2_client_id}) && defined($oauth2_client_ids->{$host})) {
+        $prefs->{oauth2_client_id} = $oauth2_client_ids->{$host};
     }
 }
 
