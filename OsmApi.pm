@@ -185,7 +185,7 @@ sub require_oauth2_token
 
 sub require_api_access
 {
-    if (defined($prefs->{oauth2_client_id}))
+    if (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id})
     {
         require_oauth2_token;
     }
@@ -199,7 +199,7 @@ sub add_credentials
 {
     require_api_access;
     my $req = shift;
-    if (defined($prefs->{oauth2_client_id}))
+    if (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id})
     {
         $req->header("Authorization" => "Bearer ".$prefs->{oauth2_token});
     }
