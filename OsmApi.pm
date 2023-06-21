@@ -21,17 +21,17 @@ use Bytes::Random::Secure qw(random_bytes);
 use Digest::SHA qw(sha256);
 
 our $prefs;
+our $prefs_eol = 1;
 our $ua;
 our $dummy;
 our $noversion;
 our $cookie_jar;
 our $auth_token;
 
-BEGIN
+INIT
 {
 
     $prefs = { "dryrun" => 1 };
-    my $prefs_eol = 1;
 
     open (PREFS, home()."/.osmtoolsrc") or die "cannot open ". home()."/.osmtoolsrc";
     while(<PREFS>)
@@ -56,10 +56,7 @@ BEGIN
     if (!defined($prefs->{instance}))
     {
         $prefs->{instance} = sprintf "%010x", $$ * rand(100000000);
-        open(PREFS, ">>".home()."/.osmtoolsrc");
-        printf PREFS "\n" unless $prefs_eol;
-        printf PREFS "instance=".$prefs->{instance};
-        close(PREFS);
+        append_pref("instance");
     }
 
     $prefs->{apiurl} =~ m!(https?)://([^/]+)/!;
@@ -87,6 +84,16 @@ BEGIN
     {
         $prefs->{'weburl'} = $1;
     }
+}
+
+sub append_pref
+{
+    my $pref_name = shift;
+    open(PREFS, ">>".home()."/.osmtoolsrc");
+    printf PREFS "\n" unless $prefs_eol;
+    printf PREFS "$pref_name=".$prefs->{$pref_name};
+    close(PREFS);
+    $prefs_eol = 0;
 }
 
 sub require_username_and_password
@@ -159,6 +166,9 @@ sub require_oauth2_token
         $req->header("Content-length" => length($req->content));
         my $resp = $ua->request($req);
         debuglog($req, $resp) if ($prefs->{"debug"});
+        die "no token in code exchange response" unless($resp->content =~ /"access_token":"([^"]+)"/);
+        $prefs->{oauth2_token} = $1;
+        append_pref("oauth2_token");
     }
     die "failed to get oauth2 token" unless (defined($prefs->{oauth2_token}));
 }
