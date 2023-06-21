@@ -13,10 +13,12 @@ package OsmApi;
 use strict;
 use warnings;
 use LWP::UserAgent;
-use MIME::Base64;
+use MIME::Base64 qw(encode_base64 encode_base64url);
 use HTTP::Cookies;
 use URI::Escape;
 use File::HomeDir;
+use Bytes::Random::Secure qw(random_bytes);
+use Digest::SHA qw(sha256);
 
 our $prefs;
 our $ua;
@@ -123,9 +125,59 @@ sub require_username_and_password
     }
 }
 
+sub require_oauth2_token
+{
+    unless (defined($prefs->{oauth2_token}))
+    {
+        my $redirect_uri = "urn:ietf:wg:oauth:2.0:oob";
+        my $scope = "read_prefs write_notes write_api";
+        my $code_verifier = encode_base64url random_bytes(48);
+        my $code_challenge = encode_base64url sha256($code_verifier);
+        my $request_code_url = "$prefs->{weburl}oauth2/authorize?" .
+            "client_id=" . uri_escape($prefs->{oauth2_client_id}) .
+            "&redirect_uri=" . uri_escape($redirect_uri) .
+            "&scope=" . uri_escape($scope) .
+            "&response_type=code" .
+            "&code_challenge=" . uri_escape($code_challenge) .
+            "&code_challenge_method=S256";
+        print "Open the following url:\n$request_code_url\n\n";
+        print "Copy the code here: ";
+        my $code;
+        while ($code = <STDIN>)
+        {
+            chomp $code;
+            last if $code ne "";
+        }
+        my $req = HTTP::Request->new(POST => $prefs->{weburl}."oauth2/token");
+        $req->content(
+            "client_id=" . uri_escape($prefs->{oauth2_client_id}) .
+            "&redirect_uri=" . uri_escape($redirect_uri) .
+            "&grant_type=authorization_code" .
+            "&code=" . uri_escape($code) .
+            "&code_verifier=" . uri_escape($code_verifier));
+        $req->header("Content-type" => "application/x-www-form-urlencoded");
+        $req->header("Content-length" => length($req->content));
+        my $resp = $ua->request($req);
+        debuglog($req, $resp) if ($prefs->{"debug"});
+    }
+    die "failed to get oauth2 token" unless (defined($prefs->{oauth2_token}));
+}
+
+sub require_api_access
+{
+    if (defined($prefs->{oauth2_client_id}))
+    {
+        require_oauth2_token;
+    }
+    else
+    {
+        require_username_and_password;
+    }
+}
+
 sub add_credentials
 {
-    require_username_and_password;
+    require_api_access;
     my $req = shift;
     $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
 }
