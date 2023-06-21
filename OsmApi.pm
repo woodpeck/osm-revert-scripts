@@ -189,7 +189,14 @@ sub add_credentials
 {
     require_api_access;
     my $req = shift;
-    $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
+    if (defined($prefs->{oauth2_client_id}))
+    {
+        $req->header("Authorization" => "Bearer ".$prefs->{oauth2_token});
+    }
+    else
+    {
+        $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
+    }
 }
 
 sub login
