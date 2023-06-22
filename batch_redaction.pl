@@ -15,20 +15,25 @@ elsif (($ARGV[0] eq "view.json") && (scalar(@ARGV) == 2))
 }
 elsif (($ARGV[0] eq "apply") && (scalar(@ARGV) == 3))
 {
-    BatchRedaction::apply($ARGV[1], $ARGV[2]);
+    BatchRedaction::apply($ARGV[1], $ARGV[2], 0);
+}
+elsif (($ARGV[0] eq "apply-skip") && (scalar(@ARGV) == 3))
+{
+    BatchRedaction::apply($ARGV[1], $ARGV[2], 1);
 }
 elsif (($ARGV[0] eq "unapply") && (scalar(@ARGV) == 2))
 {
-    BatchRedaction::apply($ARGV[1]);
+    BatchRedaction::apply($ARGV[1], 0, 0);
 }
 else
 {
     print <<EOF;
 Usage: 
-  $0 view <filename>          to view in xml format osm elements listed in the file
-  $0 view.json <filename>     to view in json format osm elements listed in the file
-  $0 apply <filename> <rid>   to redact elements listed in the file
-  $0 unapply <filename>       to unredact elements listed in the file
+  $0 view <filename>                view in xml format osm elements listed in the file
+  $0 view.json <filename>           view in json format osm elements listed in the file
+  $0 apply <filename> <rid>         redact elements listed in the file, stop immediately on error
+  $0 apply-skip <filename> <rid>    redact elements listed in the file, skip an element on error
+  $0 unapply <filename>             unredact elements listed in the file
 
 where
   filename : name of file listing element versions; each line is <otype>/<oid>/<oversion>
