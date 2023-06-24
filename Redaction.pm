@@ -111,7 +111,7 @@ sub apply
 
     if (defined($over) && ($over =~ /^\d+$/) && ($over>0) && ($over<=65536))
     {
-        my $resp = OsmApi::post("$otype/$oid/$over/redact?redaction=$rid");
+        my $resp = OsmApi::post("$otype/$oid/$over/redact?redaction=$rid", undef, 1);
 
         if (!$resp->is_success)
         {
@@ -145,7 +145,7 @@ sub apply
 
         foreach(@versions_to_redact)
         {
-            my $resp = OsmApi::post("$otype/$oid/$_/redact?redaction=$rid");
+            my $resp = OsmApi::post("$otype/$oid/$_/redact?redaction=$rid", undef, 1);
 
             if (!$resp->is_success)
             {
@@ -168,7 +168,7 @@ sub apply
         $over = 1;
         while(1)
         {
-            my $resp = OsmApi::post("$otype/$oid/$over/redact?redaction=$rid");
+            my $resp = OsmApi::post("$otype/$oid/$over/redact?redaction=$rid", undef, 1);
 
             if (!$resp->is_success)
             {
