@@ -102,20 +102,19 @@ INIT
 sub get
 {
     my $url = shift;
+    my $body = shift;
+    my $privileged = shift;
     my $req = HTTP::Request->new(GET => $prefs->{apiurl}.$url);
-    add_credentials($req);
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    return($resp);
+    return run_api_request($req, $privileged);
 }
 
 sub exists
 {
     my $url = shift;
+    my $body = shift;
+    my $privileged = shift;
     my $req = HTTP::Request->new(HEAD => $prefs->{apiurl}.$url);
-    add_credentials($req);
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
+    my $resp = run_api_request($req, $privileged);
     return($resp->code < 400);
 }
 
@@ -123,20 +122,19 @@ sub put
 {
     my $url = shift;
     my $body = shift;
+    my $privileged = shift;
     return dummylog("PUT", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(PUT => $prefs->{apiurl}.$url);
     $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
-    add_credentials($req);
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    return $resp;
+    return run_api_request($req, $privileged);
 }
 
 sub post
 {
     my $url = shift;
     my $body = shift;
+    my $privileged = shift;
     return dummylog("POST", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(POST => $prefs->{apiurl}.$url);
     $req->content($body) if defined($body); 
@@ -150,24 +148,19 @@ sub post
     {
         $req->header("Content-type" => "text/xml");
     }
-    add_credentials($req);
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    return $resp;
+    return run_api_request($req, $privileged);
 }
 
 sub delete
 {
     my $url = shift;
     my $body = shift;
+    my $privileged = shift;
     return dummylog("DELETE", $url, $body) if ($prefs->{dryrun});
     my $req = HTTP::Request->new(DELETE => $prefs->{apiurl}.$url);
     $req->header("Content-type" => "text/xml");
     $req->content($body) if defined($body);
-    add_credentials($req);
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    return $resp;
+    return run_api_request($req, $privileged);
 }
 
 # Web subs
@@ -247,6 +240,15 @@ sub append_pref
     printf PREFS "$pref_name=".$prefs->{$pref_name};
     close(PREFS);
     $prefs_eol = 0;
+}
+
+sub run_api_request
+{
+    my $req = shift;
+    add_credentials($req);
+    my $resp = repeat($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    return $resp;
 }
 
 sub require_username_and_password
