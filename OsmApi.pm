@@ -311,15 +311,21 @@ sub require_username_and_password
 sub read_existing_oauth2_token
 {
     my $privileged = shift;
-    if (!$privileged && defined($prefs->{"oauth2_token_unprivileged"}))
+    if (!$privileged && defined($prefs->{"oauth2_token_secondary"}))
     {
-        return $prefs->{"oauth2_token_unprivileged"};
+        return $prefs->{"oauth2_token_secondary"};
     }
     if (defined($prefs->{"oauth2_token"}))
     {
         return $prefs->{"oauth2_token"};
     }
     return undef;
+}
+
+sub check_oauth2_token
+{
+    my $token_name = shift;
+    return defined($prefs->{$token_name});
 }
 
 sub request_oauth2_token
