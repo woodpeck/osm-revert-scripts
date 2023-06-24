@@ -69,7 +69,7 @@ sub view
 
 sub apply
 {
-    my ($filename, $rid) = @_;
+    my ($filename, $rid, $skip_errors) = @_;
 
     my $done_exists = -e "$filename.done";
     my $left_exists = -e "$filename.left";
@@ -101,14 +101,14 @@ sub apply
     close(FH);
 
     my (@done_elements, @left_elements);
-    my $state = 1;
+    my $quit = 0;
     local $SIG{INT} = sub {
         print " - interrupting on next element";
-        $state = undef;
+        $quit = 1;
     };
     foreach (@elements)
     {
-        if (!$state)
+        if ($quit)
         {
             push @left_elements, $_;
             next;
@@ -116,7 +116,7 @@ sub apply
 
         print "redacting $_";
         my $path = "$_/redact";
-        $path .= "?redaction=$rid" if defined $rid;
+        $path .= "?redaction=$rid" if $rid;
         my $resp = OsmApi::post($path);
 
         if ($resp->is_success)
@@ -131,7 +131,7 @@ sub apply
             my $m = $resp->content;
             $m =~ s/\s+/ /g;
             print STDERR "cannot redact $_: ".$resp->status_line.": $m\n";
-            $state = undef;
+            $quit = 1 unless $skip_errors;
         }
     }
 
@@ -153,12 +153,12 @@ sub apply
         close $output_fh;
     }
 
-    if (!$state)
+    if (@left_elements)
     {
         write_elements_file "$filename.done", @done_elements;
         write_elements_file "$filename.left", @left_elements;
     }
-    return $state;
+    return !@left_elements;
 }
 
 1;

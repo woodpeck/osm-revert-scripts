@@ -76,7 +76,7 @@ sub get
 sub create
 {
     my ($lat, $lon, $text) = @_;
-    my $resp = OsmApi::post("notes", "lat=$lat&lon=$lon&text=".uri_escape($text), 1);
+    my $resp = OsmApi::post("notes", "lat=$lat&lon=$lon&text=".uri_escape($text));
     if (!$resp->is_success)
     {
         print STDERR "cannot create note: ".$resp->status_line."\n";

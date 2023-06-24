@@ -5,7 +5,7 @@
 # API currently limited to listing max. 100 changesets, 
 # therefore loop required
 
-USER=someuser
+USER=$1
 SINCE=2013-11-01T00:00:00
 
 # no user servicable parts below. run this in empty directory 
@@ -14,24 +14,26 @@ SINCE=2013-11-01T00:00:00
 
 T=`date -u +%Y-%m-%dT%H:%M:%S`
 export T
+EX=0
+export EX
 
-while true
+while [ $EX = 0 ]
 do
+    wget -Olist "https://api.openstreetmap.org/api/0.6/changesets?display_name=$USER&time=$SINCE,$T" 
+    T=`grep "<changeset" list | tail -1 | cut -d\" -f4`
+    T=`date +"%Y-%m-%dT%H:%M:%SZ" -u -d "$T + 1 second"`
 
-wget -Olist "https://api.openstreetmap.org/api/0.6/changesets?display_name=$USER&time=$SINCE,$T" 
-T=`grep "<changeset" list | tail -1 | cut -d\" -f4`
-
-if grep -q "<changeset" list
-then
-cat list | grep "<changeset" | cut -d\" -f2 | while read id
-do
-    rm -f list
-    [ -f c$id.osc ] && exit
-    wget -Oc$id.osc https://api.openstreetmap.org/api/0.6/changeset/$id/download
+    EX=1
+    cat list | grep "<changeset" | cut -d\" -f2 | while read id
+    do
+        if [ -f c$id.osc ]
+        then
+            :
+        else
+            wget -Oc$id.osc https://api.openstreetmap.org/api/0.6/changeset/$id/download
+            EX=0
+        fi
+    done
 done
-else
-    rm -f list
-    exit
-fi
 
-done
+rm -f list
