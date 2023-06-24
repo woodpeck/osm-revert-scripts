@@ -282,12 +282,6 @@ sub exists
     return($resp->code < 400);
 }
 
-sub get_with_credentials
-{
-    # get is now with credentials by default
-    return get(@_);
-}
-
 sub put
 {
     my $url = shift;

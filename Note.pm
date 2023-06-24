@@ -55,16 +55,10 @@ sub reopen
     return 1;
 }
 
-sub get_raw
-{
-    my ($id) = @_;
-    return OsmApi::get_with_credentials("notes/$id");
-}
-
 sub get
 {
     my ($id) = @_;
-    my $resp = get_raw($id);
+    my $resp = OsmApi::get("notes/$id");
     if (!$resp->is_success)
     {
         print STDERR "cannot load note: ".$resp->status_line."\n";
