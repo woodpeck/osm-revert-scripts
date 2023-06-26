@@ -44,7 +44,7 @@ sub view
         } elsif ($code == 404) {
             print "# $_ not found\n\n";
         } elsif ($code == 403) {
-            my $resp2 = OsmApi::get($_.$suffix."?show_redactions=true");
+            my $resp2 = OsmApi::get($_.$suffix."?show_redactions=true", undef, 1);
             if ($resp2->is_success) {
                 print "# $_ redacted and can be revealed\n\n";
                 print_content $resp2->content;
@@ -117,7 +117,7 @@ sub apply
         print "redacting $_";
         my $path = "$_/redact";
         $path .= "?redaction=$rid" if $rid;
-        my $resp = OsmApi::post($path);
+        my $resp = OsmApi::post($path, undef, 1);
 
         if ($resp->is_success)
         {

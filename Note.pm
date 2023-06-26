@@ -26,7 +26,7 @@ sub hide
 {
     my ($id) = @_;
 
-    my $resp = OsmApi::delete("notes/$id");
+    my $resp = OsmApi::delete("notes/$id", undef, 1);
 
     if (!$resp->is_success)
     {
@@ -45,7 +45,7 @@ sub reopen
 {
     my ($id) = @_;
 
-    my $resp = OsmApi::post("notes/$id/reopen");
+    my $resp = OsmApi::post("notes/$id/reopen", undef, 1);
 
     if (!$resp->is_success)
     {
@@ -55,16 +55,10 @@ sub reopen
     return 1;
 }
 
-sub get_raw
-{
-    my ($id) = @_;
-    return OsmApi::get_with_credentials("notes/$id");
-}
-
 sub get
 {
     my ($id) = @_;
-    my $resp = get_raw($id);
+    my $resp = OsmApi::get("notes/$id", undef, 1);
     if (!$resp->is_success)
     {
         print STDERR "cannot load note: ".$resp->status_line."\n";

@@ -96,6 +96,142 @@ INIT
     }
 }
 
+# API subs
+# --------
+
+sub get
+{
+    my $url = shift;
+    my $body = shift;
+    my $privileged = shift;
+    my $req = HTTP::Request->new(GET => $prefs->{apiurl}.$url);
+    return run_api_request($req, $privileged);
+}
+
+sub exists
+{
+    my $url = shift;
+    my $body = shift;
+    my $privileged = shift;
+    my $req = HTTP::Request->new(HEAD => $prefs->{apiurl}.$url);
+    my $resp = run_api_request($req, $privileged);
+    return($resp->code < 400);
+}
+
+sub put
+{
+    my $url = shift;
+    my $body = shift;
+    my $privileged = shift;
+    return dummylog("PUT", $url, $body) if ($prefs->{dryrun});
+    my $req = HTTP::Request->new(PUT => $prefs->{apiurl}.$url);
+    $req->header("Content-type" => "text/xml");
+    $req->content($body) if defined($body);
+    return run_api_request($req, $privileged);
+}
+
+sub post
+{
+    my $url = shift;
+    my $body = shift;
+    my $privileged = shift;
+    return dummylog("POST", $url, $body) if ($prefs->{dryrun});
+    my $req = HTTP::Request->new(POST => $prefs->{apiurl}.$url);
+    $req->content($body) if defined($body); 
+    # some not-proper-API-calls will expect HTTP form POST data;
+    # try to determine magically whether we have an XML or form message.
+    if (defined($body) && ($body !~ /^</))
+    {
+        $req->header("Content-type" => "application/x-www-form-urlencoded");
+    }
+    else
+    {
+        $req->header("Content-type" => "text/xml");
+    }
+    return run_api_request($req, $privileged);
+}
+
+sub delete
+{
+    my $url = shift;
+    my $body = shift;
+    my $privileged = shift;
+    return dummylog("DELETE", $url, $body) if ($prefs->{dryrun});
+    my $req = HTTP::Request->new(DELETE => $prefs->{apiurl}.$url);
+    $req->header("Content-type" => "text/xml");
+    $req->content($body) if defined($body);
+    return run_api_request($req, $privileged);
+}
+
+# Web subs
+# --------
+
+sub login
+{
+    require_username_and_password();
+    $ua->cookie_jar($cookie_jar = HTTP::Cookies->new());
+    my $req = HTTP::Request->new(GET => $prefs->{weburl}."login");
+    my $resp = $ua->request($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    die unless($resp->is_success);
+    my $cont = $resp->content;
+    die unless($cont =~ /<meta name="csrf-token" content="(.*)" \/>/);
+    $auth_token = $1;
+    $req = HTTP::Request->new(POST => $prefs->{weburl}."login");
+    $req->content(
+        "authenticity_token=" . uri_escape($auth_token) .
+        "&referer=%2F".
+        "&openid_url=".
+        "&utf8=%E2%9C%93".
+        "&commit=Login".
+        "&username=". uri_escape($prefs->{'username'}).
+        "&password=". uri_escape($prefs->{'password'}));
+    $req->header("Content-type" => "application/x-www-form-urlencoded");
+    $req->header("Content-length" => length($req->content));
+    $resp = $ua->request($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    die unless($resp->content =~ /<head[^>]* data-user="(\d+)"/);
+    print("logged in as user $1\n");
+}
+
+sub load_web
+{
+    my $form = shift;
+    login() unless defined($cookie_jar);
+    my $resp = $ua->get($prefs->{'weburl'}.$form);
+    return undef unless($resp->is_success);
+    my $cont = $resp->content;
+    return undef unless($cont =~ /<meta name="csrf-token" content="(.*)" \/>/);
+    $auth_token = $1;
+    return 1;
+}
+
+# modified form of post method, that uses the web base URL
+# and also automatically adds a potentially existing auth token
+# to form post content.
+sub post_web
+{
+    my $url = shift;
+    my $body = shift;
+    return dummylog("POST", $url, $body) if ($prefs->{dryrun});
+    login() unless defined($cookie_jar);
+    my $req = HTTP::Request->new(POST => $prefs->{weburl}.$url);
+    if (defined($auth_token))
+    {
+        $body .= "&" if defined($body);
+        $body .= "authenticity_token=".uri_escape($auth_token);
+        undef $auth_token;
+    }
+    $req->content($body) if defined($body); 
+    $req->header("Content-type" => "application/x-www-form-urlencoded");
+    my $resp = repeat($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    return $resp;
+}
+
+# Utility subs
+# ------------
+
 sub append_pref
 {
     my $pref_name = shift;
@@ -104,6 +240,36 @@ sub append_pref
     printf PREFS "$pref_name=".$prefs->{$pref_name};
     close(PREFS);
     $prefs_eol = 0;
+}
+
+sub run_api_request
+{
+    my $req = shift;
+    my $privileged = shift;
+    add_credentials($req, $privileged);
+    my $resp = repeat($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    return $resp;
+}
+
+sub add_credentials
+{
+    my $req = shift;
+    my $privileged = shift;
+    if (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id})
+    {
+        my $token = read_existing_oauth2_token($privileged);
+        if (!$token)
+        {
+            $token = request_oauth2_token("oauth2_token");
+        }
+        $req->header("Authorization" => "Bearer $token");
+    }
+    else
+    {
+        require_username_and_password($privileged);
+        $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
+    }
 }
 
 sub require_username_and_password
@@ -142,111 +308,64 @@ sub require_username_and_password
     }
 }
 
-sub require_oauth2_token
+sub read_existing_oauth2_token
 {
-    unless (defined($prefs->{oauth2_token}))
+    my $privileged = shift;
+    if (!$privileged && defined($prefs->{"oauth2_token_secondary"}))
     {
-        my $redirect_uri = "urn:ietf:wg:oauth:2.0:oob";
-        my $scope = "read_prefs write_notes write_api";
-        my $code_verifier = encode_base64url random_bytes(48);
-        my $code_challenge = encode_base64url sha256($code_verifier);
-        my $request_code_url = "$prefs->{weburl}oauth2/authorize?" .
-            "client_id=" . uri_escape($prefs->{oauth2_client_id}) .
-            "&redirect_uri=" . uri_escape($redirect_uri) .
-            "&scope=" . uri_escape($scope) .
-            "&response_type=code" .
-            "&code_challenge=" . uri_escape($code_challenge) .
-            "&code_challenge_method=S256";
-        print "Open the following url:\n$request_code_url\n\n";
-        print "Copy the code here: ";
-        my $code;
-        while ($code = <STDIN>)
-        {
-            chomp $code;
-            last if $code ne "";
-        }
-        my $req = HTTP::Request->new(POST => $prefs->{weburl}."oauth2/token");
-        $req->content(
-            "client_id=" . uri_escape($prefs->{oauth2_client_id}) .
-            "&redirect_uri=" . uri_escape($redirect_uri) .
-            "&grant_type=authorization_code" .
-            "&code=" . uri_escape($code) .
-            "&code_verifier=" . uri_escape($code_verifier));
-        $req->header("Content-type" => "application/x-www-form-urlencoded");
-        $req->header("Content-length" => length($req->content));
-        my $resp = $ua->request($req);
-        debuglog($req, $resp) if ($prefs->{"debug"});
-        die "no token in code exchange response" unless($resp->content =~ /"access_token":"([^"]+)"/);
-        $prefs->{oauth2_token} = $1;
-        append_pref("oauth2_token");
+        return $prefs->{"oauth2_token_secondary"};
     }
-    die "failed to get oauth2 token" unless (defined($prefs->{oauth2_token}));
+    if (defined($prefs->{"oauth2_token"}))
+    {
+        return $prefs->{"oauth2_token"};
+    }
+    return undef;
 }
 
-sub require_api_access
+sub check_oauth2_token
 {
-    if (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id})
-    {
-        require_oauth2_token;
-    }
-    else
-    {
-        require_username_and_password;
-    }
+    my $token_name = shift;
+    return defined($prefs->{$token_name});
 }
 
-sub add_credentials
+sub request_oauth2_token
 {
-    require_api_access;
-    my $req = shift;
-    if (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id})
+    my $token_name = shift;
+    my $redirect_uri = "urn:ietf:wg:oauth:2.0:oob";
+    my $scope = "read_prefs write_notes write_api";
+    my $code_verifier = encode_base64url random_bytes(48);
+    my $code_challenge = encode_base64url sha256($code_verifier);
+    my $request_code_url = "$prefs->{weburl}oauth2/authorize?" .
+        "client_id=" . uri_escape($prefs->{oauth2_client_id}) .
+        "&redirect_uri=" . uri_escape($redirect_uri) .
+        "&scope=" . uri_escape($scope) .
+        "&response_type=code" .
+        "&code_challenge=" . uri_escape($code_challenge) .
+        "&code_challenge_method=S256";
+    print "Open the following url:\n$request_code_url\n\n";
+    print "Copy the code here: ";
+    my $code;
+    while ($code = <STDIN>)
     {
-        $req->header("Authorization" => "Bearer ".$prefs->{oauth2_token});
+        chomp $code;
+        last if $code ne "";
     }
-    else
-    {
-        $req->header("Authorization" => "Basic ".encode_base64($prefs->{username}.":".$prefs->{password}));
-    }
-}
-
-sub login
-{
-    require_username_and_password;
-    $ua->cookie_jar($cookie_jar = HTTP::Cookies->new());
-    my $req = HTTP::Request->new(GET => $prefs->{weburl}."login");
-    my $resp = $ua->request($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    die unless($resp->is_success);
-    my $cont = $resp->content;
-    die unless($cont =~ /<meta name="csrf-token" content="(.*)" \/>/);
-    $auth_token = $1;
-    $req = HTTP::Request->new(POST => $prefs->{weburl}."login");
+    my $req = HTTP::Request->new(POST => $prefs->{weburl}."oauth2/token");
     $req->content(
-        "authenticity_token=" . uri_escape($auth_token) .
-        "&referer=%2F".
-        "&openid_url=".
-        "&utf8=%E2%9C%93".
-        "&commit=Login".
-        "&username=". uri_escape($prefs->{'username'}).
-        "&password=". uri_escape($prefs->{'password'}));
+        "client_id=" . uri_escape($prefs->{oauth2_client_id}) .
+        "&redirect_uri=" . uri_escape($redirect_uri) .
+        "&grant_type=authorization_code" .
+        "&code=" . uri_escape($code) .
+        "&code_verifier=" . uri_escape($code_verifier));
     $req->header("Content-type" => "application/x-www-form-urlencoded");
     $req->header("Content-length" => length($req->content));
-    $resp = $ua->request($req);
+    my $resp = $ua->request($req);
     debuglog($req, $resp) if ($prefs->{"debug"});
-    die unless($resp->content =~ /<head[^>]* data-user="(\d+)"/);
-    print("logged in as user $1\n");
-}
-
-sub load_web
-{
-    my $form = shift;
-    login() unless defined($cookie_jar);
-    my $resp = $ua->get($prefs->{'weburl'}.$form);
-    return undef unless($resp->is_success);
-    my $cont = $resp->content;
-    return undef unless($cont =~ /<meta name="csrf-token" content="(.*)" \/>/);
-    $auth_token = $1;
-    return 1;
+    die "no token in code exchange response" unless($resp->content =~ /"access_token":"([^"]+)"/);
+    my $token = $1;
+    $prefs->{$token_name} = $token;
+    append_pref($token_name);
+    return $token;
 }
 
 sub repeat
@@ -259,106 +378,6 @@ sub repeat
         return $resp unless ($resp->code == 502 || $resp->code == 500);
         sleep 1;
     }
-    return $resp;
-}
-
-sub get
-{
-    my $url = shift;
-    my $req = HTTP::Request->new(GET => $prefs->{apiurl}.$url);
-    add_credentials($req);
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    return($resp);
-}
-
-sub exists
-{
-    my $url = shift;
-    my $req = HTTP::Request->new(HEAD => $prefs->{apiurl}.$url);
-    add_credentials($req);
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    return($resp->code < 400);
-}
-
-sub get_with_credentials
-{
-    # get is now with credentials by default
-    return get(@_);
-}
-
-sub put
-{
-    my $url = shift;
-    my $body = shift;
-    return dummylog("PUT", $url, $body) if ($prefs->{dryrun});
-    my $req = HTTP::Request->new(PUT => $prefs->{apiurl}.$url);
-    $req->header("Content-type" => "text/xml");
-    $req->content($body) if defined($body);
-    add_credentials($req);
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    return $resp;
-}
-
-sub post
-{
-    my $url = shift;
-    my $body = shift;
-    return dummylog("POST", $url, $body) if ($prefs->{dryrun});
-    my $req = HTTP::Request->new(POST => $prefs->{apiurl}.$url);
-    $req->content($body) if defined($body); 
-    # some not-proper-API-calls will expect HTTP form POST data;
-    # try to determine magically whether we have an XML or form message.
-    if (defined($body) && ($body !~ /^</))
-    {
-        $req->header("Content-type" => "application/x-www-form-urlencoded");
-    }
-    else
-    {
-        $req->header("Content-type" => "text/xml");
-    }
-    add_credentials($req);
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    return $resp;
-}
-
-# modified form of post method, that uses the web base URL
-# and also automatically adds a potentially existing auth token
-# to form post content.
-sub post_web
-{
-    my $url = shift;
-    my $body = shift;
-    return dummylog("POST", $url, $body) if ($prefs->{dryrun});
-    login() unless defined($cookie_jar);
-    my $req = HTTP::Request->new(POST => $prefs->{weburl}.$url);
-    if (defined($auth_token))
-    {
-        $body .= "&" if defined($body);
-        $body .= "authenticity_token=".uri_escape($auth_token);
-        undef $auth_token;
-    }
-    $req->content($body) if defined($body); 
-    $req->header("Content-type" => "application/x-www-form-urlencoded");
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
-    return $resp;
-}
-
-sub delete
-{
-    my $url = shift;
-    my $body = shift;
-    return dummylog("DELETE", $url, $body) if ($prefs->{dryrun});
-    my $req = HTTP::Request->new(DELETE => $prefs->{apiurl}.$url);
-    $req->header("Content-type" => "text/xml");
-    $req->content($body) if defined($body);
-    add_credentials($req);
-    my $resp = repeat($req);
-    debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
 }
 
@@ -384,6 +403,7 @@ sub dummylog
     print STDERR "$body\n\n" if defined($body);
     return $dummy;
 }
+
 sub set_timeout
 {
     my $to = shift;
