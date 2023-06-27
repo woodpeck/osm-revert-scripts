@@ -6,7 +6,7 @@
 # therefore loop required
 
 USER=$1
-SINCE=2023-06-25T20:00:00
+SINCE=2013-11-01T00:00:00
 
 # no user servicable parts below. run this in empty directory 
 # and you'll end up with tons of files called c1234.osc (one
