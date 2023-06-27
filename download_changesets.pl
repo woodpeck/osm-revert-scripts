@@ -6,6 +6,7 @@ use FindBin;
 use lib $FindBin::Bin;
 use Getopt::Long;
 use URI::Escape;
+use HTTP::Date qw(str2time time2isoz);
 use OsmApi;
 
 my $username;
@@ -50,6 +51,9 @@ else
 
 mkdir $output_dirname unless -d $output_dirname;
 
+my %visited_changesets = ();
+
+# metadata download phase
 while (1)
 {
     my $time_arg = "";
@@ -67,13 +71,47 @@ while (1)
         die "changeset metadata fetch failed: " . $resp->status_line;
     }
 
-    $_ = $since_date;
-    tr/-://d;
-    my $list_filename = "$output_dirname/$_.xml";
     my $list_fh;
-    open($list_fh, '>', $list_filename) or die "can't open changeset list file '$list_filename' for writing";
-    print $list_fh $resp->content;
+    my $list = $resp->content;
+    my $list_source = \$list;
+
+    my $id;
+    my $top_created_at;
+    my $created_at;
+    my $closed_at;
+    my $new_changesets_count = 0;
+    open($list_fh, '<', $list_source);
+    while (<$list_fh>)
+    {
+        next unless /<changeset/;
+        /id="(\d+)"/;
+        $id = $1;
+        /created_at="([^"]*)"/;
+        $created_at = $1;
+        next unless defined($id) && defined($created_at);
+        $top_created_at = $created_at unless defined($top_created_at);
+        /closed_at="([^"]*)"/;
+        $closed_at = $1;
+        print "$id $created_at $closed_at\n";
+        if (!$visited_changesets{$id}) {
+            $new_changesets_count++;
+            $visited_changesets{$id} = 1;
+        }
+    }
     close $list_fh;
 
-    last;
+    if (defined($top_created_at))
+    {
+        $_ = $top_created_at;
+        tr/-://d;
+        my $list_filename = "$output_dirname/list_$_.xml";
+        open($list_fh, '>', $list_filename) or die "can't open changeset list file '$list_filename' for writing";
+        print $list_fh $list;
+        close $list_fh;
+    }
+
+    last if $new_changesets_count == 0;
+
+    $to_date = time2isoz(str2time($created_at) + 1);
+    $to_date =~ s/ /T/;
 }
