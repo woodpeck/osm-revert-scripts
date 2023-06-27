@@ -2,7 +2,8 @@ The scripts in this directory together form the "osmtools" suite.
 
 Originally written by Frederik Ramm <frederik@remote.org>, public domain.
 
-The scripts require Perl and the LWP module (libwww-perl on Ubuntu et al.).
+The scripts require Perl and the LWP module.  On Ubuntu, that would be:
+sudo apt install libwww-perl libfile-homedir-perl libterm-readkey-perl libbytes-random-secure-perly
 
 Package Contents
 ----------------
