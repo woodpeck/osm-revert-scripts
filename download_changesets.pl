@@ -54,18 +54,34 @@ else
 
 mkdir $output_dirname unless -d $output_dirname;
 
-# metadata download phase
+# existing metadata check phase
 
+my $updated_to_date = $to_date;
 my %visited_changesets = ();
 my $meta_output_dirname = "$output_dirname/meta";
 mkdir $meta_output_dirname unless -d $meta_output_dirname;
 
+foreach my $list_filename (reverse glob("$meta_output_dirname/*.osm"))
+{
+    my $bottom_created_at;
+    iterate_over_changesets($list_filename, sub {
+        my ($id, $created_at, $closed_at) = @_;
+        $bottom_created_at = $created_at;
+        if (!$visited_changesets{$id}) {
+            $visited_changesets{$id} = 1;
+        }
+    });
+    $updated_to_date = update_to_date($updated_to_date, $bottom_created_at) if defined($bottom_created_at);
+}
+
+# new metadata download phase
+
 while (1)
 {
     my $time_arg = "";
-    if (defined($to_date))
+    if (defined($updated_to_date))
     {
-        $time_arg = "time=" . uri_escape($since_date) . "," . uri_escape($to_date);
+        $time_arg = "time=" . uri_escape($since_date) . "," . uri_escape($updated_to_date);
     }
     else
     {
@@ -103,7 +119,7 @@ while (1)
 
     last if $new_changesets_count == 0;
 
-    $to_date = format_date(time2isoz(str2time($bottom_created_at) + 1));
+    $updated_to_date = update_to_date($updated_to_date, $bottom_created_at);
 }
 
 # changes download phase
@@ -131,6 +147,21 @@ sub iterate_over_changesets
         $handler -> ($id, format_date($created_at), format_date($closed_at));
     }
     close $list_fh;
+}
+
+sub update_to_date
+{
+    my ($to_date, $bottom_created_at) = @_;
+    my $new_timestamp = str2time($bottom_created_at) + 1;
+
+    if (!defined($to_date) || $new_timestamp < str2time($to_date))
+    {
+        return format_date(time2isoz($new_timestamp));
+    }
+    else
+    {
+        return $to_date;
+    }
 }
 
 sub format_date
