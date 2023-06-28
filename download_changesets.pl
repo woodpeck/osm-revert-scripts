@@ -8,6 +8,7 @@ use Getopt::Long;
 use URI::Escape;
 use HTTP::Date qw(str2time time2isoz);
 use OsmApi;
+use Changeset;
 
 my $username;
 my $uid;
@@ -124,10 +125,26 @@ while (1)
 
 # changes download phase
 
+my $changes_output_dirname = "$output_dirname/changes";
+mkdir $changes_output_dirname unless -d $changes_output_dirname;
 foreach my $list_filename (reverse glob("$meta_output_dirname/*.osm"))
 {
-    print "read file $list_filename\n";
+    my $since_timestamp = str2time($since_date);
+    my $to_timestamp = str2time($to_date);
+    iterate_over_changesets($list_filename, sub {
+        my ($id, $created_at, $closed_at) = @_;
+        my $changes_filename = "$changes_output_dirname/$id.osc";
+        return if -f $changes_filename;
+        return if (str2time($closed_at) < $since_timestamp);
+        return if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
+        my $osc = Changeset::download($id) or die "failed to download changeset $id";
+        open(my $fh, '>', $changes_filename) or die "can't open changes file '$changes_filename' for writing";
+        print $fh $osc;
+        close $fh;
+    });
 }
+
+#
 
 sub iterate_over_changesets
 {
