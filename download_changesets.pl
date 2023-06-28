@@ -54,6 +54,10 @@ mkdir $output_dirname unless -d $output_dirname;
 my %visited_changesets = ();
 
 # metadata download phase
+
+my $meta_output_dirname = "$output_dirname/meta";
+mkdir $meta_output_dirname unless -d $meta_output_dirname;
+
 while (1)
 {
     my $time_arg = "";
@@ -78,7 +82,6 @@ while (1)
 
     iterate_over_changesets(\$list, sub {
         my ($id, $created_at, $closed_at) = @_;
-        print "$id $created_at $closed_at\n";
         $bottom_created_at = $created_at;
         $top_created_at = $created_at unless defined($top_created_at);
         if (!$visited_changesets{$id}) {
@@ -91,7 +94,7 @@ while (1)
     {
         $_ = $top_created_at;
         tr/-://d;
-        my $list_filename = "$output_dirname/list_$_.xml";
+        my $list_filename = "$meta_output_dirname/$_.osm";
         open(my $list_fh, '>', $list_filename) or die "can't open changeset list file '$list_filename' for writing";
         print $list_fh $list;
         close $list_fh;
