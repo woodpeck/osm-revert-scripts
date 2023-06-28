@@ -16,6 +16,21 @@ my $since_date = "2001-01-01T00:00:00Z";
 my $to_date;
 my $output_dirname;
 
+if (scalar(@ARGV) == 0)
+{
+    print <<EOF;
+options:
+  --username <username>
+  --uid <uid>
+  --from <date>
+  --to <date>
+  --output <directory>
+
+  either username or uid has to be supplied for the script to run
+EOF
+    exit;
+}
+
 GetOptions(
     "username|u=s" => \$username,
     "id|uid=i" => \$uid,
