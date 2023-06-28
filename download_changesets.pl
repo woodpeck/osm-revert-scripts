@@ -67,51 +67,58 @@ while (1)
     }
 
     my $resp = OsmApi::get("changesets?$user_arg&$time_arg");
-    if (!$resp->is_success) {
+    if (!$resp->is_success)
+    {
         die "changeset metadata fetch failed: " . $resp->status_line;
     }
 
-    my $list_fh;
     my $list = $resp->content;
-    my $list_source = \$list;
-
-    my $id;
-    my $top_created_at;
-    my $created_at;
-    my $closed_at;
+    my ($top_created_at, $bottom_created_at);
     my $new_changesets_count = 0;
-    open($list_fh, '<', $list_source);
-    while (<$list_fh>)
-    {
-        next unless /<changeset/;
-        /id="(\d+)"/;
-        $id = $1;
-        /created_at="([^"]*)"/;
-        $created_at = $1;
-        next unless defined($id) && defined($created_at);
-        $top_created_at = $created_at unless defined($top_created_at);
-        /closed_at="([^"]*)"/;
-        $closed_at = $1;
+
+    iterate_over_changesets(\$list, sub {
+        my ($id, $created_at, $closed_at) = @_;
         print "$id $created_at $closed_at\n";
+        $bottom_created_at = $created_at;
+        $top_created_at = $created_at unless defined($top_created_at);
         if (!$visited_changesets{$id}) {
             $new_changesets_count++;
             $visited_changesets{$id} = 1;
         }
-    }
-    close $list_fh;
+    });
 
     if (defined($top_created_at))
     {
         $_ = $top_created_at;
         tr/-://d;
         my $list_filename = "$output_dirname/list_$_.xml";
-        open($list_fh, '>', $list_filename) or die "can't open changeset list file '$list_filename' for writing";
+        open(my $list_fh, '>', $list_filename) or die "can't open changeset list file '$list_filename' for writing";
         print $list_fh $list;
         close $list_fh;
     }
 
     last if $new_changesets_count == 0;
 
-    $to_date = time2isoz(str2time($created_at) + 1);
+    $to_date = time2isoz(str2time($bottom_created_at) + 1);
     $to_date =~ s/ /T/;
+}
+
+sub iterate_over_changesets
+{
+    my ($list_source, $handler) = @_;
+
+    open my $list_fh, '<', $list_source;
+    while (<$list_fh>)
+    {
+        next unless /<changeset/;
+        /id="(\d+)"/;
+        my $id = $1;
+        /created_at="([^"]*)"/;
+        my $created_at = $1;
+        next unless defined($id) && defined($created_at);
+        /closed_at="([^"]*)"/;
+        my $closed_at = $1;
+        $handler -> ($id, $created_at, $closed_at);
+    }
+    close $list_fh;
 }
