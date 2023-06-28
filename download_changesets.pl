@@ -51,10 +51,9 @@ else
 
 mkdir $output_dirname unless -d $output_dirname;
 
-my %visited_changesets = ();
-
 # metadata download phase
 
+my %visited_changesets = ();
 my $meta_output_dirname = "$output_dirname/meta";
 mkdir $meta_output_dirname unless -d $meta_output_dirname;
 
@@ -104,6 +103,13 @@ while (1)
 
     $to_date = time2isoz(str2time($bottom_created_at) + 1);
     $to_date =~ s/ /T/;
+}
+
+# changes download phase
+
+foreach my $list_filename (reverse glob("$meta_output_dirname/*.osm"))
+{
+    print "read file $list_filename\n";
 }
 
 sub iterate_over_changesets
