@@ -23,6 +23,9 @@ GetOptions(
     "output=s" => \$output_dirname
 ) or die("Error in command line arguments\n");
 
+$since_date = format_date($since_date);
+$to_date = format_date($to_date) if defined($to_date);
+
 my $user_arg;
 if (defined($username))
 {
@@ -92,7 +95,6 @@ while (1)
     if (defined($top_created_at))
     {
         $_ = $top_created_at;
-        tr/-://d;
         my $list_filename = "$meta_output_dirname/$_.osm";
         open(my $list_fh, '>', $list_filename) or die "can't open changeset list file '$list_filename' for writing";
         print $list_fh $list;
@@ -101,8 +103,7 @@ while (1)
 
     last if $new_changesets_count == 0;
 
-    $to_date = time2isoz(str2time($bottom_created_at) + 1);
-    $to_date =~ s/ /T/;
+    $to_date = format_date(time2isoz(str2time($bottom_created_at) + 1));
 }
 
 # changes download phase
@@ -124,10 +125,18 @@ sub iterate_over_changesets
         my $id = $1;
         /created_at="([^"]*)"/;
         my $created_at = $1;
-        next unless defined($id) && defined($created_at);
         /closed_at="([^"]*)"/;
         my $closed_at = $1;
-        $handler -> ($id, $created_at, $closed_at);
+        next unless defined($id) && defined($created_at) && defined($closed_at);
+        $handler -> ($id, format_date($created_at), format_date($closed_at));
     }
     close $list_fh;
+}
+
+sub format_date
+{
+    my $date = shift;
+    $date =~ s/ /T/;
+    $date =~ tr/-://d;
+    return $date;
 }
