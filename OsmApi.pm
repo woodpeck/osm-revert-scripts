@@ -330,6 +330,7 @@ sub check_oauth2_token
 
 sub request_oauth2_token
 {
+    die "oauth2 token request requires typing/pasting a code, but STDIN is busy with piped input\ntry running request_tokens.pl first to get oauth2 tokens" unless -t STDIN;
     my $token_name = shift;
     my $redirect_uri = "urn:ietf:wg:oauth:2.0:oob";
     my $scope = "read_prefs write_notes write_api";
