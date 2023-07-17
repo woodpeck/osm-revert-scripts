@@ -251,13 +251,15 @@ sub revert_bottom_up
                 next;
             }
             
+            if ($xml =~ /visible="false"/) 
+            {
+                $delete->{$object}->{$id} =  "$lastv";
+                next;
+            }
+
             $xml =~ s/changeset="\d+"/changeset="$current_cs"/;
             $xml =~ s/version="$firstv"/version="$lastv"/;
 
-            #if (($xml =~ /visible="false"/) && ($xml =~ /<node/))
-            #{
-            #    $xml =~ s/visible="false"/visible="false" lat="0" lon="0"/;
-            #}
             $resp = OsmApi::put("$object/$id", $xml);
             if (!$resp->is_success)
             {
@@ -348,13 +350,16 @@ sub revert_top_down_recursive
         print LOG "$object $id OK no action necessary to go from v$firstv to v$lastv\n";
         return;
     }
+            
+    if ($xml =~ /visible="false"/) 
+    {
+        $delete->{$object}->{$id} =  "$lastv";
+        next;
+    }
 
     $xml =~ s/changeset="\d+"/changeset="$current_cs"/;
     $xml =~ s/version="$firstv"/version="$lastv"/;
-    #if (($xml =~ /visible="false"/) && ($xml =~ /<node/))
-    #{
-    #    $xml =~ s/visible="false"/visible="false" lat="0" lon="0"/;
-    #}
+
     $resp = OsmApi::put("$object/$id", $xml);
     if (!$resp->is_success)
     {
