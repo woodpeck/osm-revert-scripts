@@ -14,11 +14,12 @@ my $since_date = "2001-01-01T00:00:00Z";
 my $to_date;
 my $output_dirname;
 
-if ((scalar(@ARGV) == 0) || ($ARGV[0] ne "download"))
+if ((scalar(@ARGV) < 2) || ($ARGV[0] ne "download") || (($ARGV[1] ne "metadata") && ($ARGV[1] ne "changes")))
 {
     print <<EOF;
 Usage:
-  $0 download <options>
+  $0 download metadata <options>
+  $0 download changes <options>
 
 options:
   --username <username>
@@ -68,4 +69,13 @@ else
 
 mkdir $output_dirname unless -d $output_dirname;
 
-UserChangesets::download($output_dirname, $user_arg, $since_date, $to_date);
+my $metadata_output_dirname = "$output_dirname/metadata";
+mkdir $metadata_output_dirname unless -d $metadata_output_dirname;
+UserChangesets::download_metadata($metadata_output_dirname, $user_arg, $since_date, $to_date);
+
+if ($ARGV[1] eq "changes")
+{
+    my $changes_output_dirname = "$output_dirname/changes";
+    mkdir $changes_output_dirname unless -d $changes_output_dirname;
+    UserChangesets::download_changes($metadata_output_dirname, $changes_output_dirname, $since_date, $to_date);
+}

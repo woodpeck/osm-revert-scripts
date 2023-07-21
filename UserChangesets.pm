@@ -10,24 +10,21 @@ use OsmApi;
 use Changeset;
 
 # -----------------------------------------------------------------------------
-# Downloads given user's changesets
-# Parameters: output directory name, user argument, from date, to date
+# Downloads given user's changeset metadata (open/close dates, bboxes, tags, ...)
+# Parameters: metadata directory for output, user argument, from date, to date
 # user argument is either display_name=... or user=... with urlencoded display name or id
 
-sub download
+sub download_metadata
 {
-    my ($output_dirname, $user_arg, $since_date, $to_date) = @_;
+    my ($metadata_dirname, $user_arg, $since_date, $to_date) = @_;
     $since_date = format_date($since_date);
     $to_date = format_date($to_date) if defined($to_date);
+    my $updated_to_date = $to_date;
+    my %visited_changesets = ();
 
     # existing metadata check phase
 
-    my $updated_to_date = $to_date;
-    my %visited_changesets = ();
-    my $meta_output_dirname = "$output_dirname/meta";
-    mkdir $meta_output_dirname unless -d $meta_output_dirname;
-
-    foreach my $list_filename (reverse glob("$meta_output_dirname/*.osm"))
+    foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
     {
         my $bottom_created_at;
         iterate_over_changesets($list_filename, sub {
@@ -77,7 +74,7 @@ sub download
         if (defined($top_created_at))
         {
             $_ = $top_created_at;
-            my $list_filename = "$meta_output_dirname/$_.osm";
+            my $list_filename = "$metadata_dirname/$_.osm";
             open(my $list_fh, '>', $list_filename) or die "can't open changeset list file '$list_filename' for writing";
             print $list_fh $list;
             close $list_fh;
@@ -87,18 +84,23 @@ sub download
 
         $updated_to_date = update_to_date($updated_to_date, $bottom_created_at);
     }
+}
 
-    # changes download phase
+# -----------------------------------------------------------------------------
+# Downloads given user's changeset changes (elements)
+# Parameters: metadata directory name to be scanned, changes directory for output, from date, to date
 
-    my $changes_output_dirname = "$output_dirname/changes";
-    mkdir $changes_output_dirname unless -d $changes_output_dirname;
-    foreach my $list_filename (reverse glob("$meta_output_dirname/*.osm"))
+sub download_changes
+{
+    my ($metadata_dirname, $changes_dirname, $since_date, $to_date) = @_;
+
+    foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
     {
         my $since_timestamp = str2time($since_date);
         my $to_timestamp = str2time($to_date);
         iterate_over_changesets($list_filename, sub {
             my ($id, $created_at, $closed_at) = @_;
-            my $changes_filename = "$changes_output_dirname/$id.osc";
+            my $changes_filename = "$changes_dirname/$id.osc";
             return if -f $changes_filename;
             return if (str2time($closed_at) < $since_timestamp);
             return if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
