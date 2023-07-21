@@ -41,32 +41,10 @@ GetOptions(
     "directory=s" => \$dirname
 ) or die("Error in command line arguments\n");
 
-my $user_arg;
-if (defined($username))
-{
-    if (defined($uid))
-    {
-        die "both user name and id supplied, need to have only one of them";
-    }
-    else
-    {
-        $user_arg = "display_name=" . uri_escape($username);
-        $dirname = "changesets_$username" unless defined($dirname);
-    }
-}
-else
-{
-    if (defined($uid))
-    {
-        $user_arg = "user=" . uri_escape($uid);
-        $dirname = "changesets_$uid" unless defined($dirname);
-    }
-    else
-    {
-        die "neither user name nor id supplied, need to have one of them";
-    }
-}
+require_exactly_one_user_arg();
 
+my $user_arg = get_user_arg();
+$dirname = get_dirname() unless defined($dirname);
 mkdir $dirname unless -d $dirname;
 
 my $metadata_dirname = "$dirname/metadata";
@@ -78,4 +56,28 @@ if ($ARGV[1] eq "changes")
     my $changes_dirname = "$dirname/changes";
     mkdir $changes_dirname unless -d $changes_dirname;
     UserChangesets::download_changes($metadata_dirname, $changes_dirname, $since_date, $to_date);
+}
+
+sub require_exactly_one_user_arg
+{
+    if (defined($username))
+    {
+        die "both user name and id supplied, need to have only one of them" if (defined($uid));
+    }
+    else
+    {
+        die "neither user name nor id supplied, need to have one of them" unless (defined($uid));
+    }
+}
+
+sub get_user_arg
+{
+    return "display_name=" . uri_escape($username) if (defined($username));
+    return "user=" . uri_escape($uid);
+}
+
+sub get_dirname
+{
+    return "changesets_$username" if (defined($username));
+    return "changesets_$uid";
 }
