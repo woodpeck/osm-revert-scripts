@@ -18,7 +18,7 @@ my $correct_options = GetOptions(
     "id|uid=i" => \$uid,
     "from|since=s" => \$since_date,
     "to=s" => \$to_date,
-    "directory=s" => \$dirname
+    "directory|output=s" => \$dirname
 );
 
 if ($correct_options && ($ARGV[0] eq "download") && ($ARGV[1] eq "metadata") || ($ARGV[1] eq "changes"))
