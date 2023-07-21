@@ -12,7 +12,7 @@ my $username;
 my $uid;
 my $since_date = "2001-01-01T00:00:00Z";
 my $to_date;
-my $output_dirname;
+my $dirname;
 
 if ((scalar(@ARGV) < 2) || ($ARGV[0] ne "download") || (($ARGV[1] ne "metadata") && ($ARGV[1] ne "changes")))
 {
@@ -26,7 +26,7 @@ options:
   --uid <uid>
   --from <date>
   --to <date>
-  --output <directory>
+  --directory <directory>
 
   either username or uid has to be supplied for the script to run
 EOF
@@ -38,7 +38,7 @@ GetOptions(
     "id|uid=i" => \$uid,
     "from|since=s" => \$since_date,
     "to=s" => \$to_date,
-    "output=s" => \$output_dirname
+    "directory=s" => \$dirname
 ) or die("Error in command line arguments\n");
 
 my $user_arg;
@@ -51,7 +51,7 @@ if (defined($username))
     else
     {
         $user_arg = "display_name=" . uri_escape($username);
-        $output_dirname = "changesets_$username" unless defined($output_dirname);
+        $dirname = "changesets_$username" unless defined($dirname);
     }
 }
 else
@@ -59,7 +59,7 @@ else
     if (defined($uid))
     {
         $user_arg = "user=" . uri_escape($uid);
-        $output_dirname = "changesets_$uid" unless defined($output_dirname);
+        $dirname = "changesets_$uid" unless defined($dirname);
     }
     else
     {
@@ -67,15 +67,15 @@ else
     }
 }
 
-mkdir $output_dirname unless -d $output_dirname;
+mkdir $dirname unless -d $dirname;
 
-my $metadata_output_dirname = "$output_dirname/metadata";
-mkdir $metadata_output_dirname unless -d $metadata_output_dirname;
-UserChangesets::download_metadata($metadata_output_dirname, $user_arg, $since_date, $to_date);
+my $metadata_dirname = "$dirname/metadata";
+mkdir $metadata_dirname unless -d $metadata_dirname;
+UserChangesets::download_metadata($metadata_dirname, $user_arg, $since_date, $to_date);
 
 if ($ARGV[1] eq "changes")
 {
-    my $changes_output_dirname = "$output_dirname/changes";
-    mkdir $changes_output_dirname unless -d $changes_output_dirname;
-    UserChangesets::download_changes($metadata_output_dirname, $changes_output_dirname, $since_date, $to_date);
+    my $changes_dirname = "$dirname/changes";
+    mkdir $changes_dirname unless -d $changes_dirname;
+    UserChangesets::download_changes($metadata_dirname, $changes_dirname, $since_date, $to_date);
 }
