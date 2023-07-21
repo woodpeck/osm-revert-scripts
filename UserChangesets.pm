@@ -88,8 +88,8 @@ sub download_metadata
 }
 
 # -----------------------------------------------------------------------------
-# Downloads given user's changeset changes (elements)
-# Parameters: metadata directory name to be scanned, changes directory for output, from date, to date
+# Downloads changeset changes (elements) matching provided metadata and date rande
+# Parameters: metadata directory to be scanned, changes directory for output, from date, to date
 
 sub download_changes
 {
@@ -111,6 +111,37 @@ sub download_changes
             close $fh;
         });
     }
+}
+
+# -----------------------------------------------------------------------------
+# Count downloaded changesets inside given date range
+# Parameters: metadata directory, changes directory, from date, to date
+
+sub count
+{
+    my ($metadata_dirname, $changes_dirname, $since_date, $to_date) = @_;
+    my %visited_changesets = ();
+    my $metadata_count = 0;
+    my $changes_count = 0;
+
+    foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
+    {
+        my $since_timestamp = str2time($since_date);
+        my $to_timestamp = str2time($to_date);
+        iterate_over_changesets($list_filename, sub {
+            my ($id, $created_at, $closed_at) = @_;
+            return if (str2time($closed_at) < $since_timestamp);
+            return if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
+            return if $visited_changesets{$id};
+            $visited_changesets{$id} = 1;
+            $metadata_count++;
+            my $changes_filename = "$changes_dirname/$id.osc";
+            $changes_count++ if -e $changes_filename;
+        });
+    }
+
+    print "downloaded $metadata_count changeset metadata records\n";
+    print "downloaded $changes_count changeset change files\n";
 }
 
 sub iterate_over_changesets
