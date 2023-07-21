@@ -17,7 +17,6 @@ use MIME::Base64 qw(encode_base64 encode_base64url);
 use HTTP::Cookies;
 use URI::Escape;
 use File::HomeDir;
-use Bytes::Random::Secure qw(random_bytes);
 use Digest::SHA qw(sha256);
 
 our $prefs;
@@ -290,7 +289,7 @@ sub require_username_and_password
         $prefs->{username} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
         print "\n";
     }
-    
+
     # read password from terminal if not set
     unless (defined($prefs->{password}))
     {
@@ -330,7 +329,10 @@ sub check_oauth2_token
 
 sub request_oauth2_token
 {
-    my $token_name = shift;
+    die "oauth2 token request requires typing/pasting a code, but STDIN is busy with piped input\ntry running request_tokens.pl first to get oauth2 tokens" unless -t STDIN;
+    use Bytes::Random::Secure qw(random_bytes);
+
+my $token_name = shift;
     my $redirect_uri = "urn:ietf:wg:oauth:2.0:oob";
     my $scope = "read_prefs write_notes write_api";
     my $code_verifier = encode_base64url random_bytes(48);
@@ -343,6 +345,7 @@ sub request_oauth2_token
         "&code_challenge=" . uri_escape($code_challenge) .
         "&code_challenge_method=S256";
     print "Open the following url:\n$request_code_url\n\n";
+
     print "Copy the code here: ";
     my $code;
     while ($code = <STDIN>)
