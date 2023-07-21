@@ -16,9 +16,12 @@ my $since_date = "2001-01-01T00:00:00Z";
 my $to_date;
 my $output_dirname;
 
-if (scalar(@ARGV) == 0)
+if ((scalar(@ARGV) == 0) || ($ARGV[0] ne "download"))
 {
     print <<EOF;
+Usage:
+  $0 download <options>
+
 options:
   --username <username>
   --uid <uid>
