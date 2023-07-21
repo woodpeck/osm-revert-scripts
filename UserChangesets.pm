@@ -21,6 +21,7 @@ sub download_metadata
     $to_date = format_date($to_date) if defined($to_date);
     my $updated_to_date = $to_date;
     my %visited_changesets = ();
+    my $download_more = 1;
 
     # existing metadata check phase
 
@@ -34,12 +35,12 @@ sub download_metadata
                 $visited_changesets{$id} = 1;
             }
         });
-        $updated_to_date = update_to_date($updated_to_date, $bottom_created_at) if defined($bottom_created_at);
+        ($updated_to_date, $download_more) = update_to_date($updated_to_date, $bottom_created_at) if defined($bottom_created_at);
     }
 
     # new metadata download phase
 
-    while (1)
+    while ($download_more)
     {
         my $time_arg = "";
         if (defined($updated_to_date))
@@ -82,7 +83,7 @@ sub download_metadata
 
         last if $new_changesets_count == 0;
 
-        $updated_to_date = update_to_date($updated_to_date, $bottom_created_at);
+        ($updated_to_date) = update_to_date($updated_to_date, $bottom_created_at);
     }
 }
 
@@ -136,15 +137,14 @@ sub update_to_date
 {
     my ($to_date, $bottom_created_at) = @_;
     my $new_timestamp = str2time($bottom_created_at) + 1;
+    my $updated = !defined($to_date) || $new_timestamp < str2time($to_date);
 
-    if (!defined($to_date) || $new_timestamp < str2time($to_date))
+    if ($updated)
     {
-        return format_date(time2isoz($new_timestamp));
+        $to_date = format_date(time2isoz($new_timestamp));
     }
-    else
-    {
-        return $to_date;
-    }
+
+    return ($to_date, $updated);
 }
 
 sub format_date
