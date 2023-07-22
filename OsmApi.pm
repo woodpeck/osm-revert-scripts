@@ -30,7 +30,8 @@ our $oauth2_client_ids = {
     "api06.dev.openstreetmap.org:443" => "FEGTbR13GBJ8o3Z1FJLFUqcgMYrvmwzEbN2mciMz528",
     "master.apis.dev.openstreetmap.org:443" => "FEGTbR13GBJ8o3Z1FJLFUqcgMYrvmwzEbN2mciMz528",
     "www.openstreetmap.org:443" => "j2hkpmK8D3XRgXqU-X0fyaIZsehbTUdfZDE4eg-7JJA",
-    "api.openstreetmap.org:443" => "j2hkpmK8D3XRgXqU-X0fyaIZsehbTUdfZDE4eg-7JJA"
+    "api.openstreetmap.org:443" => "j2hkpmK8D3XRgXqU-X0fyaIZsehbTUdfZDE4eg-7JJA",
+    "www.openhistoricalmap.org:443" => "JH6N562wvXBEEntUsYIhXVcfiizLSQvU6Hgw7nVIkVg"
 };
 
 INIT
