@@ -76,7 +76,7 @@ Register osmtools as a oauth2 app
     - *Read user preferences*
     - *Modify the map*
     - *Modify notes*
-6. Click *Register*.
+6. Click *Register* or *Create Oauth2 application* below the registration form.
 7. Add `oauth2_client_id=...` with the application *Client ID* to your `.osmtoolsrc` file.
 
 You don't need to register *osmtools* on `api06.dev.openstreetmap.org` and `api.openstreetmap.org` servers. The scripts have app ids built in for these servers. You can set `oauth2_client_id` to an empty value to refuse to use oauth2 on these servers and go back to basic login/password authorization.

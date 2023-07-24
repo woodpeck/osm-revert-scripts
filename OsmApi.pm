@@ -30,7 +30,8 @@ our $oauth2_client_ids = {
     "api06.dev.openstreetmap.org:443" => "FEGTbR13GBJ8o3Z1FJLFUqcgMYrvmwzEbN2mciMz528",
     "master.apis.dev.openstreetmap.org:443" => "FEGTbR13GBJ8o3Z1FJLFUqcgMYrvmwzEbN2mciMz528",
     "www.openstreetmap.org:443" => "j2hkpmK8D3XRgXqU-X0fyaIZsehbTUdfZDE4eg-7JJA",
-    "api.openstreetmap.org:443" => "j2hkpmK8D3XRgXqU-X0fyaIZsehbTUdfZDE4eg-7JJA"
+    "api.openstreetmap.org:443" => "j2hkpmK8D3XRgXqU-X0fyaIZsehbTUdfZDE4eg-7JJA",
+    "www.openhistoricalmap.org:443" => "JH6N562wvXBEEntUsYIhXVcfiizLSQvU6Hgw7nVIkVg"
 };
 
 INIT
@@ -330,9 +331,11 @@ sub check_oauth2_token
 sub request_oauth2_token
 {
     die "oauth2 token request requires typing/pasting a code, but STDIN is busy with piped input\ntry running request_tokens.pl first to get oauth2 tokens" unless -t STDIN;
+    die "Requesting oauth2 tokens requires 'oauth2_client_id' to be set in .osmtoolsrc for custom 'apiurl'." unless (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id});
+
     use Bytes::Random::Secure qw(random_bytes);
 
-my $token_name = shift;
+    my $token_name = shift;
     my $redirect_uri = "urn:ietf:wg:oauth:2.0:oob";
     my $scope = "read_prefs write_notes write_api";
     my $code_verifier = encode_base64url random_bytes(48);
