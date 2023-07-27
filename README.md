@@ -18,8 +18,8 @@ Package Contents
 | note.pl  | Note.pm  | hides notes  |
 | quickdelnodes.pl  |   | deletes many nodes quickly  |
 | redaction.pl  | Redaction.pm  | creates and applies redactions  |
-| request_tokens.pl  |   | requests oauth2 login tokens  |
 | revert.pl  | Revert.pm  | reverts a whole changeset  |
+| tokens.pl  |   | requests oauth2 login tokens  |
 | undelete.pl  | Undelete.pm  | undeletes an object; see comment in-file for differences to undo  |
 | undo.pl  | Undo.pm  | undoes one change to one object  |
 | user_changesets.pl  | UserChangesets.pm  | bulk downloads changesets by given user; there are also simpler shell script versions listed below  |
