@@ -95,8 +95,9 @@ sub download_changes
 {
     my ($metadata_dirname, $changes_dirname, $since_date, $to_date) = @_;
     my %changesets_in_range = ();
-    my %changesets_to_download = ();
     my %changesets_downloaded = ();
+    my %changesets_to_download = ();
+    my @changesets_queue;
 
     foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
     {
@@ -114,21 +115,22 @@ sub download_changes
             }
             else
             {
+                push @changesets_queue, $id unless $changesets_to_download{$id};
                 $changesets_to_download{$id} = 1;
             }
         });
     }
 
-    if (keys %changesets_to_download > 0)
+    if (@changesets_queue > 0)
     {
-        print((keys %changesets_to_download) . " changesets left to download\n");
+        print((0 + @changesets_queue) . " changesets left to download\n");
     }
     else
     {
         print("all " . (keys %changesets_in_range) . " changesets already downloaded\n");
     }
 
-    foreach my $id (keys %changesets_to_download)
+    foreach my $id (@changesets_queue)
     {
         print("downloading $id.osc (" . (1 + keys %changesets_downloaded) . "/" . (keys %changesets_in_range) . ")\n");
         my $changes_filename = "$changes_dirname/$id.osc";
