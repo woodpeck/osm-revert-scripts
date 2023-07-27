@@ -54,10 +54,12 @@ sub download_metadata
         if (defined($updated_to_timestamp))
         {
             $time_arg = "time=" . make_http_date_from_timestamp($from_timestamp) . "," . make_http_date_from_timestamp($updated_to_timestamp);
+            print "requesting changeset metadata down from " . time2isoz($updated_to_timestamp) . "\n";
         }
         else
         {
             $time_arg = "time=" . make_http_date_from_timestamp($from_timestamp);
+            print "requesting changeset metadata down from current moment\n";
         }
 
         my $resp = OsmApi::get("changesets?$user_arg&$time_arg");
