@@ -71,8 +71,12 @@ sub check_tokens
 
 sub print_token_details
 {
+    use HTTP::Date qw(time2isoz);
+
     my ($primary) = @_;
+    print "- token: " . OsmApi::read_existing_oauth2_token($primary) . "\n";
     my $resp;
+
     $resp = OsmApi::get("user/details", undef, $primary);
     if (!$resp->is_success)
     {
@@ -92,21 +96,34 @@ sub print_token_details
             print "- administrator role\n" if (/<administrator/);
         }
     }
-    $resp = OsmApi::get("permissions", undef, $primary);
+
+    ## get permissions without using oauth2 introspection endpoint:
+    # $resp = OsmApi::get("permissions", undef, $primary);
+    # if (!$resp->is_success)
+    # {
+    #     print "- failed to get permissions\n";
+    # }
+    # else
+    # {
+    #     open my $fh, '<', \$resp->content;
+    #     while (<$fh>)
+    #     {
+    #         if (/<permission/)
+    #         {
+    #             print "- $1 permission\n" if (/name="([^"]+)"/);
+    #         }
+    #     }
+    # }
+
+    $resp = OsmApi::introspect_existing_oauth2_token($primary);
     if (!$resp->is_success)
     {
-        print "- failed to get permissions\n";
+        print "- failed to introspect the token\n";
     }
     else
     {
-        open my $fh, '<', \$resp->content;
-        while (<$fh>)
-        {
-            if (/<permission/)
-            {
-                print "- $1 permission\n" if (/name="([^"]+)"/);
-            }
-        }
+        print "- permissions: $1\n" if ($resp->content =~ /"scope":"([^"]+)"/);
+        print "- issued at: " . time2isoz($1) . "\n" if ($resp->content =~ /"iat":(\d+)/);
     }
     print "\n";
 }

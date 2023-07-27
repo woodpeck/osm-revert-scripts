@@ -322,6 +322,20 @@ sub read_existing_oauth2_token
     return undef;
 }
 
+sub introspect_existing_oauth2_token
+{
+    my $privileged = shift;
+    my $req = HTTP::Request->new(POST => $prefs->{weburl}."oauth2/introspect");
+    $req->content(
+        "client_id=" . uri_escape($prefs->{oauth2_client_id}) .
+        "&token=" . uri_escape(read_existing_oauth2_token($privileged)));
+    $req->header("Content-type" => "application/x-www-form-urlencoded");
+    $req->header("Content-length" => length($req->content));
+    my $resp = $ua->request($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    return $resp;
+}
+
 sub check_oauth2_token
 {
     my $token_name = shift;
