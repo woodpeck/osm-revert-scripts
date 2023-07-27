@@ -10,16 +10,24 @@ use OsmApi;
 use Changeset;
 
 # -----------------------------------------------------------------------------
+# Converts date string from script arguments to timestamp
+# Returns undefined if date format is not recognized
+
+sub parse_date
+{
+    my ($date) = @_;
+    return str2time($date, "GMT");
+}
+
+# -----------------------------------------------------------------------------
 # Downloads given user's changeset metadata (open/close dates, bboxes, tags, ...)
-# Parameters: metadata directory for output, user argument, from date, to date
+# Parameters: metadata directory for output, user argument, from timestamp, to timestamp
 # user argument is either display_name=... or user=... with urlencoded display name or id
 
 sub download_metadata
 {
-    my ($metadata_dirname, $user_arg, $since_date, $to_date) = @_;
-    $since_date = format_date($since_date);
-    $to_date = format_date($to_date) if defined($to_date);
-    my $updated_to_date = $to_date;
+    my ($metadata_dirname, $user_arg, $from_timestamp, $to_timestamp) = @_;
+    my $updated_to_timestamp = $to_timestamp;
     my %visited_changesets = ();
     my $download_more = 1;
 
@@ -35,7 +43,7 @@ sub download_metadata
                 $visited_changesets{$id} = 1;
             }
         });
-        ($updated_to_date, $download_more) = update_to_date($updated_to_date, $bottom_created_at) if defined($bottom_created_at);
+        ($updated_to_timestamp, $download_more) = update_to_timestamp($updated_to_timestamp, $bottom_created_at) if defined($bottom_created_at);
     }
 
     # new metadata download phase
@@ -43,13 +51,13 @@ sub download_metadata
     while ($download_more)
     {
         my $time_arg = "";
-        if (defined($updated_to_date))
+        if (defined($updated_to_timestamp))
         {
-            $time_arg = "time=" . uri_escape($since_date) . "," . uri_escape($updated_to_date);
+            $time_arg = "time=" . make_http_date($from_timestamp) . "," . make_http_date($updated_to_timestamp);
         }
         else
         {
-            $time_arg = "time=" . uri_escape($since_date);
+            $time_arg = "time=" . make_http_date($from_timestamp);
         }
 
         my $resp = OsmApi::get("changesets?$user_arg&$time_arg");
@@ -74,8 +82,7 @@ sub download_metadata
 
         if (defined($top_created_at))
         {
-            $_ = $top_created_at;
-            my $list_filename = "$metadata_dirname/$_.osm";
+            my $list_filename = "$metadata_dirname/" . make_compact_date($top_created_at) . ".osm";
             open(my $list_fh, '>', $list_filename) or die "can't open changeset list file '$list_filename' for writing";
             print $list_fh $list;
             close $list_fh;
@@ -83,17 +90,17 @@ sub download_metadata
 
         last if $new_changesets_count == 0;
 
-        ($updated_to_date) = update_to_date($updated_to_date, $bottom_created_at);
+        ($updated_to_timestamp) = update_to_timestamp($updated_to_timestamp, $bottom_created_at);
     }
 }
 
 # -----------------------------------------------------------------------------
 # Downloads changeset changes (elements) matching provided metadata and date rande
-# Parameters: metadata directory to be scanned, changes directory for output, from date, to date
+# Parameters: metadata directory to be scanned, changes directory for output, from timestamp, to timestamp
 
 sub download_changes
 {
-    my ($metadata_dirname, $changes_dirname, $since_date, $to_date) = @_;
+    my ($metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp) = @_;
     my %changesets_in_range = ();
     my %changesets_downloaded = ();
     my %changesets_to_download = ();
@@ -101,11 +108,9 @@ sub download_changes
 
     foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
     {
-        my $since_timestamp = str2time($since_date);
-        my $to_timestamp = str2time($to_date);
         iterate_over_changesets($list_filename, sub {
             my ($id, $created_at, $closed_at) = @_;
-            return if (str2time($closed_at) < $since_timestamp);
+            return if (str2time($closed_at) < $from_timestamp);
             return if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
             $changesets_in_range{$id} = 1;
             my $changes_filename = "$changes_dirname/$id.osc";
@@ -145,22 +150,20 @@ sub download_changes
 
 # -----------------------------------------------------------------------------
 # Count downloaded changesets inside given date range
-# Parameters: metadata directory, changes directory, from date, to date
+# Parameters: metadata directory, changes directory, from timestamp, to timestamp
 
 sub count
 {
-    my ($metadata_dirname, $changes_dirname, $since_date, $to_date) = @_;
+    my ($metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp) = @_;
     my %visited_changesets = ();
     my $metadata_count = 0;
     my $changes_count = 0;
 
     foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
     {
-        my $since_timestamp = str2time($since_date);
-        my $to_timestamp = str2time($to_date);
         iterate_over_changesets($list_filename, sub {
             my ($id, $created_at, $closed_at) = @_;
-            return if (str2time($closed_at) < $since_timestamp);
+            return if (str2time($closed_at) < $from_timestamp);
             return if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
             return if $visited_changesets{$id};
             $visited_changesets{$id} = 1;
@@ -189,26 +192,33 @@ sub iterate_over_changesets
         /closed_at="([^"]*)"/;
         my $closed_at = $1;
         next unless defined($id) && defined($created_at) && defined($closed_at);
-        $handler -> ($id, format_date($created_at), format_date($closed_at));
+        $handler -> ($id, $created_at, $closed_at);
     }
     close $list_fh;
 }
 
-sub update_to_date
+sub update_to_timestamp
 {
-    my ($to_date, $bottom_created_at) = @_;
+    my ($to_timestamp, $bottom_created_at) = @_;
     my $new_timestamp = str2time($bottom_created_at) + 1;
-    my $updated = !defined($to_date) || $new_timestamp < str2time($to_date);
+    my $updated = !defined($to_timestamp) || $new_timestamp < $to_timestamp;
 
     if ($updated)
     {
-        $to_date = format_date(time2isoz($new_timestamp));
+        $to_timestamp = $new_timestamp;
     }
 
-    return ($to_date, $updated);
+    return ($to_timestamp, $updated);
 }
 
-sub format_date
+sub make_http_date
+{
+    my $timestamp = shift;
+    my $date = time2isoz($timestamp);
+    return uri_escape(make_compact_date($date));
+}
+
+sub make_compact_date
 {
     my $date = shift;
     $date =~ s/ /T/;
