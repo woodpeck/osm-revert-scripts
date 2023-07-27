@@ -18,7 +18,7 @@ else
     print <<EOF;
 Usage: 
   $0 request    request oauth2 tokens
-  $0 check      check user details of stored tokens
+  $0 check      check details of stored tokens
 EOF
     exit;
 }
@@ -89,8 +89,8 @@ sub print_token_details
         {
             if (/<user/)
             {
-                print "- display name: $1\n" if (/display_name="([^"]+)"/);
-                print "- id: $1\n" if (/id="([^"]+)"/);
+                print "- user name: $1\n" if (/display_name="([^"]+)"/);
+                print "- user id: $1\n" if (/id="([^"]+)"/);
             }
             print "- moderator role\n" if (/<moderator/);
             print "- administrator role\n" if (/<administrator/);
