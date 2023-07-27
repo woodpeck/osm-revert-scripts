@@ -94,6 +94,9 @@ sub download_metadata
 sub download_changes
 {
     my ($metadata_dirname, $changes_dirname, $since_date, $to_date) = @_;
+    my %changesets_in_range = ();
+    my %changesets_to_download = ();
+    my %changesets_downloaded = ();
 
     foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
     {
@@ -101,15 +104,40 @@ sub download_changes
         my $to_timestamp = str2time($to_date);
         iterate_over_changesets($list_filename, sub {
             my ($id, $created_at, $closed_at) = @_;
-            my $changes_filename = "$changes_dirname/$id.osc";
-            return if -f $changes_filename;
             return if (str2time($closed_at) < $since_timestamp);
             return if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
-            my $osc = Changeset::download($id) or die "failed to download changeset $id";
-            open(my $fh, '>', $changes_filename) or die "can't open changes file '$changes_filename' for writing";
-            print $fh $osc;
-            close $fh;
+            $changesets_in_range{$id} = 1;
+            my $changes_filename = "$changes_dirname/$id.osc";
+            if (-f $changes_filename)
+            {
+                $changesets_downloaded{$id} = 1;
+            }
+            else
+            {
+                $changesets_to_download{$id} = 1;
+            }
         });
+    }
+
+    if (keys %changesets_to_download > 0)
+    {
+        print((keys %changesets_to_download) . " changesets left to download\n");
+    }
+    else
+    {
+        print("all " . (keys %changesets_in_range) . " changesets already downloaded\n");
+    }
+
+    foreach my $id (keys %changesets_to_download)
+    {
+        print("downloading $id.osc (" . (1 + keys %changesets_downloaded) . "/" . (keys %changesets_in_range) . ")\n");
+        my $changes_filename = "$changes_dirname/$id.osc";
+        my $osc = Changeset::download($id) or die "failed to download changeset $id";
+        open(my $fh, '>', $changes_filename) or die "can't open changes file '$changes_filename' for writing";
+        print $fh $osc;
+        close $fh;
+        delete $changesets_to_download{$id};
+        $changesets_downloaded{$id} = 1;
     }
 }
 
