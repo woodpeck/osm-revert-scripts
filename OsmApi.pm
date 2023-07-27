@@ -322,6 +322,20 @@ sub read_existing_oauth2_token
     return undef;
 }
 
+sub introspect_existing_oauth2_token
+{
+    my $privileged = shift;
+    my $req = HTTP::Request->new(POST => $prefs->{weburl}."oauth2/introspect");
+    $req->content(
+        "client_id=" . uri_escape($prefs->{oauth2_client_id}) .
+        "&token=" . uri_escape(read_existing_oauth2_token($privileged)));
+    $req->header("Content-type" => "application/x-www-form-urlencoded");
+    $req->header("Content-length" => length($req->content));
+    my $resp = $ua->request($req);
+    debuglog($req, $resp) if ($prefs->{"debug"});
+    return $resp;
+}
+
 sub check_oauth2_token
 {
     my $token_name = shift;
@@ -330,7 +344,7 @@ sub check_oauth2_token
 
 sub request_oauth2_token
 {
-    die "oauth2 token request requires typing/pasting a code, but STDIN is busy with piped input\ntry running request_tokens.pl first to get oauth2 tokens" unless -t STDIN;
+    die "oauth2 token request requires typing/pasting a code, but STDIN is busy with piped input\ntry running 'tokens.pl request' first to get oauth2 tokens" unless -t STDIN;
     die "Requesting oauth2 tokens requires 'oauth2_client_id' to be set in .osmtoolsrc for custom 'apiurl'." unless (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id});
 
     use Bytes::Random::Secure qw(random_bytes);
