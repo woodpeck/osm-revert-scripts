@@ -87,6 +87,8 @@ sub print_token_details
                 print "- display name: $1\n" if (/display_name="([^"]+)"/);
                 print "- id: $1\n" if (/id="([^"]+)"/);
             }
+            print "- moderator\n" if (/<moderator/);
+            print "- administrator\n" if (/<administrator/);
         }
     }
     print "\n";
