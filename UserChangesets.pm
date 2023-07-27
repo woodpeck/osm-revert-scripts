@@ -53,11 +53,11 @@ sub download_metadata
         my $time_arg = "";
         if (defined($updated_to_timestamp))
         {
-            $time_arg = "time=" . make_http_date($from_timestamp) . "," . make_http_date($updated_to_timestamp);
+            $time_arg = "time=" . make_http_date_from_timestamp($from_timestamp) . "," . make_http_date_from_timestamp($updated_to_timestamp);
         }
         else
         {
-            $time_arg = "time=" . make_http_date($from_timestamp);
+            $time_arg = "time=" . make_http_date_from_timestamp($from_timestamp);
         }
 
         my $resp = OsmApi::get("changesets?$user_arg&$time_arg");
@@ -82,7 +82,7 @@ sub download_metadata
 
         if (defined($top_created_at))
         {
-            my $list_filename = "$metadata_dirname/" . make_compact_date($top_created_at) . ".osm";
+            my $list_filename = "$metadata_dirname/" . make_filename_from_date_attr_value($top_created_at);
             open(my $list_fh, '>', $list_filename) or die "can't open changeset list file '$list_filename' for writing";
             print $list_fh $list;
             close $list_fh;
@@ -211,11 +211,19 @@ sub update_to_timestamp
     return ($to_timestamp, $updated);
 }
 
-sub make_http_date
+sub make_http_date_from_timestamp
 {
     my $timestamp = shift;
     my $date = time2isoz($timestamp);
     return uri_escape(make_compact_date($date));
+}
+
+sub make_filename_from_date_attr_value
+{
+    my $date_attr_value = shift;
+    my $timestamp = str2time($date_attr_value);
+    die "invalid date format in xml date attribute ($date_attr_value)" unless defined($timestamp);
+    return make_compact_date(time2isoz($timestamp)) . ".osm";
 }
 
 sub make_compact_date
