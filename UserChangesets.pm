@@ -16,6 +16,9 @@ use Changeset;
 sub parse_date
 {
     my ($date) = @_;
+    return undef unless defined($date);
+    $date = "$1-$2-01" if $date =~ /^(\d\d\d\d)-(\d\d)$/;
+    $date = "$1-01-01" if $date =~ /^(\d\d\d\d)$/;
     return str2time($date, "GMT");
 }
 
