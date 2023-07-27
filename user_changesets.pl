@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 
 use strict;
-use warnings;
 use FindBin;
 use lib $FindBin::Bin;
 use Getopt::Long;
@@ -12,70 +11,88 @@ my $username;
 my $uid;
 my $since_date = "2001-01-01T00:00:00Z";
 my $to_date;
-my $output_dirname;
+my $dirname;
 
-if ((scalar(@ARGV) < 2) || ($ARGV[0] ne "download") || (($ARGV[1] ne "metadata") && ($ARGV[1] ne "changes")))
+my $correct_options = GetOptions(
+    "username|u=s" => \$username,
+    "id|uid=i" => \$uid,
+    "from|since=s" => \$since_date,
+    "to=s" => \$to_date,
+    "directory|output=s" => \$dirname
+);
+
+if ($correct_options && ($ARGV[0] eq "download") && ($ARGV[1] eq "metadata") || ($ARGV[1] eq "changes"))
+{
+    require_exactly_one_user_arg();
+
+    my $user_arg = get_user_arg();
+    $dirname = get_dirname() unless defined($dirname);
+    mkdir $dirname unless -d $dirname;
+
+    my $metadata_dirname = "$dirname/metadata";
+    mkdir $metadata_dirname unless -d $metadata_dirname;
+    UserChangesets::download_metadata($metadata_dirname, $user_arg, $since_date, $to_date);
+
+    if ($ARGV[1] eq "changes")
+    {
+        my $changes_dirname = "$dirname/changes";
+        mkdir $changes_dirname unless -d $changes_dirname;
+        UserChangesets::download_changes($metadata_dirname, $changes_dirname, $since_date, $to_date);
+    }
+}
+elsif ($correct_options && ($ARGV[0] eq "count"))
+{
+    if (!defined($dirname))
+    {
+        require_exactly_one_user_arg();
+        $dirname = get_dirname();
+    }
+
+    my $metadata_dirname = "$dirname/metadata";
+    my $changes_dirname = "$dirname/changes";
+    UserChangesets::count($metadata_dirname, $changes_dirname, $since_date, $to_date);
+}
+else
 {
     print <<EOF;
 Usage:
   $0 download metadata <options>
   $0 download changes <options>
+  $0 count <options>
 
 options:
   --username <username>
   --uid <uid>
   --from <date>
   --to <date>
-  --output <directory>
+  --directory <directory>
 
-  either username or uid has to be supplied for the script to run
+  download requires one of: username, uid
+  count requires one of: username, uid, directory
 EOF
     exit;
 }
 
-GetOptions(
-    "username|u=s" => \$username,
-    "id|uid=i" => \$uid,
-    "from|since=s" => \$since_date,
-    "to=s" => \$to_date,
-    "output=s" => \$output_dirname
-) or die("Error in command line arguments\n");
-
-my $user_arg;
-if (defined($username))
+sub require_exactly_one_user_arg
 {
-    if (defined($uid))
+    if (defined($username))
     {
-        die "both user name and id supplied, need to have only one of them";
+        die "both user name and id supplied, need to have only one of them" if (defined($uid));
     }
     else
     {
-        $user_arg = "display_name=" . uri_escape($username);
-        $output_dirname = "changesets_$username" unless defined($output_dirname);
-    }
-}
-else
-{
-    if (defined($uid))
-    {
-        $user_arg = "user=" . uri_escape($uid);
-        $output_dirname = "changesets_$uid" unless defined($output_dirname);
-    }
-    else
-    {
-        die "neither user name nor id supplied, need to have one of them";
+        die "neither user name nor id supplied, need to have one of them" unless (defined($uid));
     }
 }
 
-mkdir $output_dirname unless -d $output_dirname;
-
-my $metadata_output_dirname = "$output_dirname/metadata";
-mkdir $metadata_output_dirname unless -d $metadata_output_dirname;
-UserChangesets::download_metadata($metadata_output_dirname, $user_arg, $since_date, $to_date);
-
-if ($ARGV[1] eq "changes")
+sub get_user_arg
 {
-    my $changes_output_dirname = "$output_dirname/changes";
-    mkdir $changes_output_dirname unless -d $changes_output_dirname;
-    UserChangesets::download_changes($metadata_output_dirname, $changes_output_dirname, $since_date, $to_date);
+    return "display_name=" . uri_escape($username) if (defined($username));
+    return "user=" . uri_escape($uid);
+}
+
+sub get_dirname
+{
+    return "changesets_$username" if (defined($username));
+    return "changesets_$uid";
 }

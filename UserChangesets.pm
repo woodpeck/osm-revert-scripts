@@ -88,12 +88,16 @@ sub download_metadata
 }
 
 # -----------------------------------------------------------------------------
-# Downloads given user's changeset changes (elements)
-# Parameters: metadata directory name to be scanned, changes directory for output, from date, to date
+# Downloads changeset changes (elements) matching provided metadata and date rande
+# Parameters: metadata directory to be scanned, changes directory for output, from date, to date
 
 sub download_changes
 {
     my ($metadata_dirname, $changes_dirname, $since_date, $to_date) = @_;
+    my %changesets_in_range = ();
+    my %changesets_downloaded = ();
+    my %changesets_to_download = ();
+    my @changesets_queue;
 
     foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
     {
@@ -101,16 +105,73 @@ sub download_changes
         my $to_timestamp = str2time($to_date);
         iterate_over_changesets($list_filename, sub {
             my ($id, $created_at, $closed_at) = @_;
-            my $changes_filename = "$changes_dirname/$id.osc";
-            return if -f $changes_filename;
             return if (str2time($closed_at) < $since_timestamp);
             return if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
-            my $osc = Changeset::download($id) or die "failed to download changeset $id";
-            open(my $fh, '>', $changes_filename) or die "can't open changes file '$changes_filename' for writing";
-            print $fh $osc;
-            close $fh;
+            $changesets_in_range{$id} = 1;
+            my $changes_filename = "$changes_dirname/$id.osc";
+            if (-f $changes_filename)
+            {
+                $changesets_downloaded{$id} = 1;
+            }
+            else
+            {
+                push @changesets_queue, $id unless $changesets_to_download{$id};
+                $changesets_to_download{$id} = 1;
+            }
         });
     }
+
+    if (@changesets_queue > 0)
+    {
+        print((0 + @changesets_queue) . " changesets left to download\n");
+    }
+    else
+    {
+        print("all " . (keys %changesets_in_range) . " changesets already downloaded\n");
+    }
+
+    foreach my $id (@changesets_queue)
+    {
+        print("downloading $id.osc (" . (1 + keys %changesets_downloaded) . "/" . (keys %changesets_in_range) . ")\n");
+        my $changes_filename = "$changes_dirname/$id.osc";
+        my $osc = Changeset::download($id) or die "failed to download changeset $id";
+        open(my $fh, '>', $changes_filename) or die "can't open changes file '$changes_filename' for writing";
+        print $fh $osc;
+        close $fh;
+        delete $changesets_to_download{$id};
+        $changesets_downloaded{$id} = 1;
+    }
+}
+
+# -----------------------------------------------------------------------------
+# Count downloaded changesets inside given date range
+# Parameters: metadata directory, changes directory, from date, to date
+
+sub count
+{
+    my ($metadata_dirname, $changes_dirname, $since_date, $to_date) = @_;
+    my %visited_changesets = ();
+    my $metadata_count = 0;
+    my $changes_count = 0;
+
+    foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
+    {
+        my $since_timestamp = str2time($since_date);
+        my $to_timestamp = str2time($to_date);
+        iterate_over_changesets($list_filename, sub {
+            my ($id, $created_at, $closed_at) = @_;
+            return if (str2time($closed_at) < $since_timestamp);
+            return if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
+            return if $visited_changesets{$id};
+            $visited_changesets{$id} = 1;
+            $metadata_count++;
+            my $changes_filename = "$changes_dirname/$id.osc";
+            $changes_count++ if -e $changes_filename;
+        });
+    }
+
+    print "downloaded $metadata_count changeset metadata records\n";
+    print "downloaded $changes_count changeset change files\n";
 }
 
 sub iterate_over_changesets
