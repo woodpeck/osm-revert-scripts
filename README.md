@@ -9,18 +9,22 @@ Package Contents
 
 | Script  | Module  | Description  |
 |---|---|---|
+| batch_redaction.pl  | BatchRedaction.pm  | applies redactions to a list of elements  |
 | block.pl | Block.pm  | creates user blocks  |
 | changeset.pl  | Changeset.pm  | opens and closes changesets  |
+| complex_revert.pl  |   | reverts a group of interdependent changesets  |
 | delete.pl  | Delete.pm  | deletes or redacts an object  |
 | modify.pl  | Modify.pm  | modifies tags of an object  |
 | note.pl  | Note.pm  | hides notes  |
-| undo.pl  | Undo.pm  | undoes one change to one object  |
-| undelete.pl  | Undelete.pm  | undeletes an object; see comment in-file for differences to undo  |
-| revert.pl  | Revert.pm  | reverts a whole changeset  |
-| redaction.pl  | Redaction.pm  | creates and applies redactions  |
-| complex_revert.pl  |   | reverts a group of interdependent changesets  |
 | quickdelnodes.pl  |   | deletes many nodes quickly  |
-| download_changesets.sh  |   | bulk downloads changesets by given user  |
+| redaction.pl  | Redaction.pm  | creates and applies redactions  |
+| revert.pl  | Revert.pm  | reverts a whole changeset  |
+| tokens.pl  |   | requests oauth2 login tokens  |
+| undelete.pl  | Undelete.pm  | undeletes an object; see comment in-file for differences to undo  |
+| undo.pl  | Undo.pm  | undoes one change to one object  |
+| user_changesets.pl  | UserChangesets.pm  | bulk downloads changesets by given user; there are also simpler shell script versions listed below  |
+| download_changesets.sh  |   | bulk downloads changesets by given user name  |
+| download_changesets_uid.sh  |   | bulk downloads changesets by given user id  |
 
 Design "Philosophy"
 -------------------
