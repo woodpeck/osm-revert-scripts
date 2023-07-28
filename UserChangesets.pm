@@ -25,7 +25,7 @@ sub download_metadata
 
     # existing metadata check phase
 
-    foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
+    foreach my $list_filename (list_osm_filenames($metadata_dirname))
     {
         my $bottom_created_at;
         iterate_over_changesets($list_filename, sub {
@@ -99,7 +99,7 @@ sub download_changes
     my %changesets_to_download = ();
     my @changesets_queue;
 
-    foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
+    foreach my $list_filename (list_osm_filenames($metadata_dirname))
     {
         my $since_timestamp = str2time($since_date);
         my $to_timestamp = str2time($to_date);
@@ -154,7 +154,7 @@ sub count
     my $metadata_count = 0;
     my $changes_count = 0;
 
-    foreach my $list_filename (reverse glob("$metadata_dirname/*.osm"))
+    foreach my $list_filename (list_osm_filenames($metadata_dirname))
     {
         my $since_timestamp = str2time($since_date);
         my $to_timestamp = str2time($to_date);
@@ -172,6 +172,12 @@ sub count
 
     print "downloaded $metadata_count changeset metadata records\n";
     print "downloaded $changes_count changeset change files\n";
+}
+
+sub list_osm_filenames
+{
+	my $dirname = shift;
+	return reverse glob qq{"$dirname/*.osm"};
 }
 
 sub iterate_over_changesets
