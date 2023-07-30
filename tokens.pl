@@ -8,13 +8,27 @@ use OsmApi;
 
 if ($ARGV[0] eq "request")
 {
+    my $primary = 1;
+    my $secondary = 1;
     my $scope;
     my $correct_options = GetOptions(
+        "primary!" => \$primary,
+        "secondary!" => \$secondary,
         "scope=s" => \$scope
     );
     if ($correct_options)
     {
-        request_tokens($scope);
+        if ($primary)
+        {
+            my $login_message = "Login with your osm account that has full permissions.\n";
+            request_token($scope, "oauth2_token", "primary", $login_message);
+        }
+        if ($secondary)
+        {
+            my $login_message = "Login with your bot/mechanical edit account.\n";
+            $login_message .= "Altenatively, if you want to use only one account, interrupt the script.\n" if $primary;
+            request_token($scope, "oauth2_token_secondary", "secondary", $login_message);
+        }
         exit;
     }
 }
@@ -31,32 +45,24 @@ Usage:
   $0 check                check details of stored tokens
 
 options:
+  --no-primary            don't request primary token
+  --no-secondary          don't request secondary token
   --scope <space-separated permissions>
 EOF
 exit;
 
-sub request_tokens
+sub request_token
 {
-    my ($scope) = @_;
+    my ($scope, $token_name, $token_title, $login_message) = @_;
 
-    if (OsmApi::check_oauth2_token("oauth2_token"))
+    if (OsmApi::check_oauth2_token($token_name))
     {
-        print "Primary token is already received. Delete 'oauth2_token' from .osmtoolsrc to request it again.\n";
+        print "The $token_title token is already received. Delete '$token_name' from .osmtoolsrc to request it again.\n";
     }
     else
     {
-        print "\n=== Requesting the primary token. ===\n\nLogin with your osm account that has full permissions.\n";
-        OsmApi::request_oauth2_token("oauth2_token", $scope);
-    }
-
-    if (OsmApi::check_oauth2_token("oauth2_token_secondary"))
-    {
-        print "Secondary token is already received. Delete 'oauth2_token_secondary' from .osmtoolsrc to request it again.\n";
-    }
-    else
-    {
-        print "\n=== Requesting the secondary token. ===\n\nLogin with your bot/mechanical edit account.\nAltenatively, if you want to use only one account, interrupt the script.\n";
-        OsmApi::request_oauth2_token("oauth2_token_secondary", $scope);
+        print "\n=== Requesting the $token_title token. ===\n\n$login_message";
+        OsmApi::request_oauth2_token($token_name, $scope);
     }
 }
 
