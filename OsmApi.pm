@@ -349,9 +349,10 @@ sub request_oauth2_token
 
     use Bytes::Random::Secure qw(random_bytes);
 
-    my $token_name = shift;
+    my ($token_name, $scope) = @_;
+    $scope = "read_prefs write_notes write_api" unless defined($scope);
+
     my $redirect_uri = "urn:ietf:wg:oauth:2.0:oob";
-    my $scope = "read_prefs write_notes write_api";
     my $code_verifier = encode_base64url random_bytes(48);
     my $code_challenge = encode_base64url sha256($code_verifier);
     my $request_code_url = "$prefs->{weburl}oauth2/authorize?" .

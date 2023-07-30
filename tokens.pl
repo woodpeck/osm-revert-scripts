@@ -3,28 +3,42 @@
 use strict;
 use FindBin;
 use lib $FindBin::Bin;
+use Getopt::Long;
 use OsmApi;
 
-if (($ARGV[0] eq "request") && (scalar(@ARGV) == 1))
+if ($ARGV[0] eq "request")
 {
-    request_tokens();
+    my $scope;
+    my $correct_options = GetOptions(
+        "scope=s" => \$scope
+    );
+    if ($correct_options)
+    {
+        request_tokens($scope);
+        exit;
+    }
 }
-elsif (($ARGV[0] eq "check") && (scalar(@ARGV) == 1))
+
+if (($ARGV[0] eq "check") && (scalar(@ARGV) == 1))
 {
     check_tokens();
-}
-else
-{
-    print <<EOF;
-Usage: 
-  $0 request    request oauth2 tokens
-  $0 check      check details of stored tokens
-EOF
     exit;
 }
 
+print <<EOF;
+Usage: 
+  $0 request <options>    request oauth2 tokens
+  $0 check                check details of stored tokens
+
+options:
+  --scope <space-separated permissions>
+EOF
+exit;
+
 sub request_tokens
 {
+    my ($scope) = @_;
+
     if (OsmApi::check_oauth2_token("oauth2_token"))
     {
         print "Primary token is already received. Delete 'oauth2_token' from .osmtoolsrc to request it again.\n";
@@ -32,7 +46,7 @@ sub request_tokens
     else
     {
         print "\n=== Requesting the primary token. ===\n\nLogin with your osm account that has full permissions.\n";
-        OsmApi::request_oauth2_token("oauth2_token");
+        OsmApi::request_oauth2_token("oauth2_token", $scope);
     }
 
     if (OsmApi::check_oauth2_token("oauth2_token_secondary"))
@@ -42,7 +56,7 @@ sub request_tokens
     else
     {
         print "\n=== Requesting the secondary token. ===\n\nLogin with your bot/mechanical edit account.\nAltenatively, if you want to use only one account, interrupt the script.\n";
-        OsmApi::request_oauth2_token("oauth2_token_secondary");
+        OsmApi::request_oauth2_token("oauth2_token_secondary", $scope);
     }
 }
 
