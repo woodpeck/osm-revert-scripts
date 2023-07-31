@@ -18,7 +18,8 @@ if ($ARGV[0] eq "create")
     );
     if ($correct_options && (scalar(@ARGV) == 2))
     {
-        Trace::create($ARGV[1], $description, $tags, $visibility);
+        my $id = Trace::create($ARGV[1], $description, $tags, $visibility);
+        print "created a trace with id $id" if defined($id);
         exit;
     }
 }

@@ -6,6 +6,10 @@ use strict;
 use warnings;
 use OsmApi;
 
+# -----------------------------------------------------------------------------
+# Creates a trace by uploading a file.
+# Returns: new trace id, or undef in case of error (will write error to stderr)
+
 sub create
 {
     my ($filename, $description, $tags, $visibility) = @_;
