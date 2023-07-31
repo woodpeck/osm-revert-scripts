@@ -8,12 +8,13 @@ use OsmApi;
 
 sub create
 {
-    my ($filename, $description, $tags) = @_;
+    my ($filename, $description, $tags, $visibility) = @_;
 
     my $resp = OsmApi::post_multipart("gpx/create", [
         "file" => [$filename],
         "description" => $description,
-        "tags" => $tags
+        "tags" => $tags,
+        "visibility" => $visibility,
     ]);
     if (!$resp->is_success)
     {
