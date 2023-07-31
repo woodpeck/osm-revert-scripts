@@ -8,9 +8,8 @@ use OsmApi;
 
 sub create
 {
-    my ($filename) = @_;
+    my ($filename, $description) = @_;
 
-    my $description = "TODO set description";
     my $resp = OsmApi::post_multipart("gpx/create", [
         "file" => [$filename],
         "description" => $description,
