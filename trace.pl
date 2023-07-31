@@ -24,9 +24,16 @@ if ($ARGV[0] eq "create")
     }
 }
 
+if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 2))
+{
+    Trace::delete($ARGV[1]);
+    exit;
+}
+
 print <<EOF;
 Usage: 
-  $0 create <filename> <options>   upload new gpx trace
+  $0 create <filename> <options>    upload new gpx trace
+  $0 delete <id>                    delete trace
 
 options:
   --description <text>

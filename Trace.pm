@@ -28,4 +28,18 @@ sub create
     return $resp->content;
 }
 
+sub delete
+{
+    my ($id) = @_;
+
+    my $resp = OsmApi::delete("gpx/$id");
+
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot delete trace: ".$resp->status_line."\n";
+        return undef;
+    }
+    return 1;
+}
+
 1;
