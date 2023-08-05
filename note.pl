@@ -38,6 +38,13 @@ if (($ARGV[0] eq "comment") && (scalar(@ARGV) == 2) && $correct_options)
     exit;
 }
 
+if (($ARGV[0] eq "close") && (scalar(@ARGV) == 2))
+{
+    my $r = Note::close($ARGV[1]);
+    print "note closed: $r\n" if defined($r);
+    exit;
+}
+
 if (($ARGV[0] eq "reopen") && (scalar(@ARGV) == 2))
 {
     my $r = Note::reopen($ARGV[1]);
@@ -132,6 +139,7 @@ Usage:
   $0 create <lat> <lon> <options>  create note
   $0 get <id>                      load and print note XML
   $0 comment <id> <options>        add comment to the note
+  $0 close <id> <options>          close note
   $0 reopen <id>                   reopen note
   $0 hide <id>                     hide note
   $0 reset <id>                    hide note, and create a new one with the first comment
