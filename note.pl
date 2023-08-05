@@ -19,8 +19,15 @@ my $correct_options = GetOptions(
 
 if (($ARGV[0] eq "create") && (scalar(@ARGV) == 3) && $correct_options)
 {
-    my $r = Note::create($ARGV[1], $ARGV[2], $text);
-    print "note created: $r\n" if defined($r);
+    my $raw = Note::create($ARGV[1], $ARGV[2], $text);
+    print $raw;
+    exit;
+}
+
+if (($ARGV[0] eq "get") && (scalar(@ARGV) == 2))
+{
+    my $raw = Note::get($ARGV[1]);
+    print $raw;
     exit;
 }
 
@@ -31,13 +38,6 @@ if (($ARGV[0] eq "comment") && (scalar(@ARGV) == 2) && $correct_options)
     exit;
 }
 
-if (($ARGV[0] eq "hide") && (scalar(@ARGV) == 2))
-{
-    my $r = Note::hide($ARGV[1]);
-    print "note hidden: $r\n" if defined($r);
-    exit;
-}
-
 if (($ARGV[0] eq "reopen") && (scalar(@ARGV) == 2))
 {
     my $r = Note::reopen($ARGV[1]);
@@ -45,10 +45,10 @@ if (($ARGV[0] eq "reopen") && (scalar(@ARGV) == 2))
     exit;
 }
 
-if (($ARGV[0] eq "get") && (scalar(@ARGV) == 2))
+if (($ARGV[0] eq "hide") && (scalar(@ARGV) == 2))
 {
-    my $raw = Note::get($ARGV[1]);
-    print $raw;
+    my $r = Note::hide($ARGV[1]);
+    print "note hidden: $r\n" if defined($r);
     exit;
 }
 
