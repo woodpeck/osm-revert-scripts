@@ -55,6 +55,22 @@ sub reopen
     return 1;
 }
 
+sub comment
+{
+    my ($id, $text) = @_;
+
+    my $body;
+    $body = "text=".uri_escape($text) if defined($text);
+    my $resp = OsmApi::post("notes/$id/comment", $body, 1);
+
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot comment note: ".$resp->status_line."\n";
+        return undef;
+    }
+    return 1;
+}
+
 sub get
 {
     my ($id) = @_;
