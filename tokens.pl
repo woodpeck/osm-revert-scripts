@@ -142,6 +142,7 @@ sub print_token_details
     }
     else
     {
+    	print "- token is inactive\n" if ($resp->content =~ /"active":false/);
         print "- permissions: $1\n" if ($resp->content =~ /"scope":"([^"]+)"/);
         print "- issued at: " . time2isoz($1) . "\n" if ($resp->content =~ /"iat":(\d+)/);
     }
