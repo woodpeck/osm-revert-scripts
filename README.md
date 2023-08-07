@@ -52,22 +52,32 @@ These scripts do not have safety nets. Be sure that you feel confident to fix an
 Configuration
 -------------
 
-You will have to create a file named `.osmtoolsrc` in your home directory containing the URL of the OSM server to use. If the server is neither the main or the sandbox OSM server, you may need to add the oauth2 client id if you want to use oauth2. This requires registering osmtools as an oauth2 app on the server, see the section below. The next step is usually to request authorization tokens. This request will happen automatically if any operation requiring user login is run. However, since it requires user input, it may fail with scripts reading from stdin. Therefore it's safer to request tokens before running any other scripts by executing
+You will have to create a file named `.osmtoolsrc` in your home directory containing the URL of the OSM server to use. The first thing to specify is the server to work with. The server URL must be complete up to the API version number and the slash afterwards, so:
+
+    apiurl=https://api06.dev.openstreetmap.org/api/0.6/
+
+The next step is to add the oauth2 client id of *osmtools*. This step is not required for servers where *osmtools* is already registered with a built-in id, which are:
+
+- main OSM server
+- [sandbox OSM server](https://wiki.openstreetmap.org/wiki/Sandbox_for_editing#Experiment_with_the_API_(advanced))
+- [OpenHistoricalMap](https://wiki.openstreetmap.org/wiki/Open_Historical_Map)
+
+If your server is not in the list above and you don't have a client id for *osmtools* on that server, you'll have to register *osmtools* as an oauth2 app. This process is described in the next section. Once you have the id, you'll need to add it to `.osmtoolsrc`:
+
+    oauth2_client_id=1234567890zxcvbasdfgqwert
+
+The next step is usually to request authorization tokens. This request will happen automatically if any operation requiring user login is run. However, since it requires user input, it may fail with scripts reading from stdin. Therefore it's safer to request tokens before running any other scripts by executing:
 
     tokens.pl request
 
 You will be prompted to open a link to a confirmation page, then to copy the code. The received tokens will be saved to `.osmtoolsrc`.
 
-Alternatively, if you want to avoid using oauth2, you may use basic authorization; in this case you have to provide your username and password. Some operation require username and password anyway, see the "SCRAPE" section below.
+Alternatively, if you want to avoid using oauth2, registering an application, setting up ids and tokens, you may use basic authorization. In this case you have to provide your username and password. Some operation require username and password anyway, see the "SCRAPE" section below.
 
-The server URL must be complete up to the API version number and the slash afterwards, so:
-
-    apiurl=https://api06.dev.openstreetmap.org/api/0.6/
     username=fred
     password=test
-    oauth2_client_id=1234567890zxcvbasdfgqwert
 
-If your username or password is not specified in your `.osmtoolsrc` file, these scripts will look for OSMTOOLS_USERNAME and OSMTOOLS_PASSWORD environment variables. As a last resort, you will be prompted for a user name or password on the command line (requires the Term::ReadKey module).
+If your username or password is not specified in your `.osmtoolsrc` file, these scripts will look for `OSMTOOLS_USERNAME` and `OSMTOOLS_PASSWORD` environment variables. As a last resort, you will be prompted for a user name or password on the command line (requires the `Term::ReadKey` module).
 
 By default, all tools will run in "dry run" mode, so no changes will be actually written and all write requests will be considered successful. Add the `dryrun=0` parameter to the file for live action.
 
