@@ -6,27 +6,60 @@
 use strict;
 use FindBin;
 use lib $FindBin::Bin;
+use Getopt::Long;
 use Note;
 use XML::Twig;
 use utf8;
 binmode STDOUT;
 
+my $text;
+my $correct_options = GetOptions(
+    "text=s" => \$text,
+);
+
+if (($ARGV[0] eq "create") && (scalar(@ARGV) == 3) && $correct_options)
+{
+    my $raw = Note::create($ARGV[1], $ARGV[2], $text);
+    print $raw;
+    exit;
+}
+
+if (($ARGV[0] eq "get") && (scalar(@ARGV) == 2))
+{
+    my $raw = Note::get($ARGV[1]);
+    print $raw;
+    exit;
+}
+
+if (($ARGV[0] eq "comment") && (scalar(@ARGV) == 2) && $correct_options)
+{
+    my $r = Note::comment($ARGV[1], $text);
+    print "note commented: $r\n" if defined($r);
+    exit;
+}
+
+if (($ARGV[0] eq "close") && (scalar(@ARGV) == 2))
+{
+    my $r = Note::close($ARGV[1]);
+    print "note closed: $r\n" if defined($r);
+    exit;
+}
+
+if (($ARGV[0] eq "reopen") && (scalar(@ARGV) == 2))
+{
+    my $r = Note::reopen($ARGV[1]);
+    print "note reopened: $r\n" if defined($r);
+    exit;
+}
+
 if (($ARGV[0] eq "hide") && (scalar(@ARGV) == 2))
 {
     my $r = Note::hide($ARGV[1]);
     print "note hidden: $r\n" if defined($r);
+    exit;
 }
-elsif (($ARGV[0] eq "reopen") && (scalar(@ARGV) == 2))
-{
-    my $r = Note::reopen($ARGV[1]);
-    print "note reopened: $r\n" if defined($r);
-}
-elsif (($ARGV[0] eq "get") && (scalar(@ARGV) == 2))
-{
-    my $raw = Note::get($ARGV[1]);
-    print $raw;
-}
-elsif (($ARGV[0] eq "reset") && (scalar(@ARGV) == 2))
+
+if (($ARGV[0] eq "reset") && (scalar(@ARGV) == 2))
 {
     my $t = XML::Twig->new(keep_encoding => 1);
     my $raw = Note::get($ARGV[1]);
@@ -98,15 +131,19 @@ elsif (($ARGV[0] eq "reset") && (scalar(@ARGV) == 2))
     {
         print "cannot create new note: $r\n";
     }
-}
-else
-{
-    print <<EOF;
-Usage: 
-  $0 get <id>       load and print note XML
-  $0 hide <id>      hide note
-  $0 reopen <id>    reopen note
-  $0 reset <id>     hide note, and create a new one with the first comment
-EOF
     exit;
 }
+
+print <<EOF;
+Usage: 
+  $0 create <lat> <lon> <options>  create note
+  $0 get <id>                      load and print note XML
+  $0 comment <id> <options>        add comment to the note
+  $0 close <id> <options>          close note
+  $0 reopen <id>                   reopen note
+  $0 hide <id>                     hide note
+  $0 reset <id>                    hide note, and create a new one with the first comment
+
+options:
+  --text <comment>
+EOF

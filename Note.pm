@@ -38,18 +38,38 @@ sub hide
 
 # -----------------------------------------------------------------------------
 # Reopens the given note.
-# Parameters: Note ID
+# Parameters: Note ID, comment text
 # Returns: 1, or undef in case of error (will write error to stderr)
 
 sub reopen
 {
-    my ($id) = @_;
+    my ($id, $text) = @_;
+    return post("reopen", $id, $text);
+}
 
-    my $resp = OsmApi::post("notes/$id/reopen", undef, 1);
+sub close
+{
+    my ($id, $text) = @_;
+    return post("close", $id, $text);
+}
+
+sub comment
+{
+    my ($id, $text) = @_;
+    return post("comment", $id, $text);
+}
+
+sub post
+{
+    my ($endpoint, $id, $text) = @_;
+
+    my $body;
+    $body = "text=".uri_escape($text) if defined($text);
+    my $resp = OsmApi::post("notes/$id/$endpoint", $body, 1);
 
     if (!$resp->is_success)
     {
-        print STDERR "cannot reopen note: ".$resp->status_line."\n";
+        print STDERR "cannot $endpoint note: ".$resp->status_line."\n";
         return undef;
     }
     return 1;
