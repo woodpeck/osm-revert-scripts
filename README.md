@@ -19,6 +19,7 @@ Package Contents
 | quickdelnodes.pl  |   | deletes many nodes quickly  |
 | redaction.pl  | Redaction.pm  | creates and applies redactions  |
 | revert.pl  | Revert.pm  | reverts a whole changeset  |
+| trace.pl  | Trace.pm  | uploads gpx traces  |
 | tokens.pl  |   | requests oauth2 login tokens  |
 | undelete.pl  | Undelete.pm  | undeletes an object; see comment in-file for differences to undo  |
 | undo.pl  | Undo.pm  | undoes one change to one object  |
@@ -79,6 +80,7 @@ Register osmtools as a oauth2 app
 5. In *Permissions* check:
     - *Read user preferences*
     - *Modify the map*
+    - *Upload GPS traces*
     - *Modify notes*
 6. Click *Register* or *Create Oauth2 application* below the registration form.
 7. Add `oauth2_client_id=...` with the application *Client ID* to your `.osmtoolsrc` file.

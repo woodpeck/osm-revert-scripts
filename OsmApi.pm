@@ -151,6 +151,15 @@ sub post
     return run_api_request($req, $privileged);
 }
 
+sub post_multipart
+{
+    use HTTP::Request::Common;
+
+    my $url = shift;
+    my $req = HTTP::Request::Common::POST($prefs->{apiurl}.$url, @_, 'Content_Type' => 'form-data');
+    return run_api_request($req);
+}
+
 sub delete
 {
     my $url = shift;
@@ -349,9 +358,10 @@ sub request_oauth2_token
 
     use Bytes::Random::Secure qw(random_bytes);
 
-    my $token_name = shift;
+    my ($token_name, $scope) = @_;
+    $scope = "read_prefs write_api write_notes write_gpx" unless defined($scope);
+
     my $redirect_uri = "urn:ietf:wg:oauth:2.0:oob";
-    my $scope = "read_prefs write_notes write_api";
     my $code_verifier = encode_base64url random_bytes(48);
     my $code_challenge = encode_base64url sha256($code_verifier);
     my $request_code_url = "$prefs->{weburl}oauth2/authorize?" .
