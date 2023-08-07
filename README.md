@@ -45,9 +45,9 @@ Act Responsibly
 
 These scripts enable you to revert edits done by other people. Never do this unless you are absolutely sure that the edit in question is either malicious or accidental. Make an effort to talk to the user beforehand and afterwards. Always be kind to other mappers, and always assume that if they did something wrong it must have been an error, a misunderstanding, or their cat chasing fluff across the keyboard!
 
-When in doubt, discuss things on the mailing list before you act (see lists.openstreetmap.org). Also, [read the Wiki article on automated edits here](https://wiki.openstreetmap.org/wiki/Automated_Edits).
+When in doubt, discuss things on the mailing list before you act (see [lists.openstreetmap.org](https://lists.openstreetmap.org/)). Also, [read the Wiki article on automated edits here](https://wiki.openstreetmap.org/wiki/Automated_Edits).
 
-These scripts do not have safety nets. Be sure that you feel confident to fix anything you might break. If you do not know your PUTs from your GETs, if you do not know the details of API 0.6, or know what changesets are and how they work, then DO NOT USE THIS SOFTWARE.
+These scripts do not have safety nets. Be sure that you feel confident to fix anything you might break. If you do not know your PUTs from your GETs, if you do not know the details of [API 0.6](https://wiki.openstreetmap.org/wiki/API_v0.6), or know what changesets are and how they work, then DO NOT USE THIS SOFTWARE.
 
 Configuration
 -------------
