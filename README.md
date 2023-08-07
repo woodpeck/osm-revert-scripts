@@ -52,7 +52,13 @@ These scripts do not have safety nets. Be sure that you feel confident to fix an
 Configuration
 -------------
 
-You will have to create a file named .osmtoolsrc in your home directory containing the URL of the OSM server to use. If the server is neither the main or the sandbox OSM server, you may need to add the oauth2 client id if you want to use oauth2. This requires registering osmtools as a oauth2 app on the server, see the section below. Alternatively you may use basic authorization; in this case you have to provide your username and password. Some operation require username and password anyway, see the "SCRAPE" section below.
+You will have to create a file named `.osmtoolsrc` in your home directory containing the URL of the OSM server to use. If the server is neither the main or the sandbox OSM server, you may need to add the oauth2 client id if you want to use oauth2. This requires registering osmtools as an oauth2 app on the server, see the section below. The next step is usually to request authorization tokens. This request will happen automatically if any operation requiring user login is run. However, since it requires user input, it may fail with scripts reading from stdin. Therefore it's safer to request tokens before running any other scripts by executing
+
+    tokens.pl request
+
+You will be prompted to open a link to a confirmation page, then to copy the code. The received tokens will be saved to `.osmtoolsrc`.
+
+Alternatively, if you want to avoid using oauth2, you may use basic authorization; in this case you have to provide your username and password. Some operation require username and password anyway, see the "SCRAPE" section below.
 
 The server URL must be complete up to the API version number and the slash afterwards, so:
 
@@ -61,11 +67,11 @@ The server URL must be complete up to the API version number and the slash after
     password=test
     oauth2_client_id=1234567890zxcvbasdfgqwert
 
-If your username or password is not specified in your .osmtoolsrc file, these scripts will look for OSMTOOLS_USERNAME and OSMTOOLS_PASSWORD environment variables. As a last resort, you will be prompted for a user name or password on the command line (requires the Term::ReadKey module).
+If your username or password is not specified in your `.osmtoolsrc` file, these scripts will look for OSMTOOLS_USERNAME and OSMTOOLS_PASSWORD environment variables. As a last resort, you will be prompted for a user name or password on the command line (requires the Term::ReadKey module).
 
-By default, all tools will run in "dry run" mode, so no changes will be actually written and all write requests will be considered successful. Add the "dryrun=0" parameter to the file for live action.
+By default, all tools will run in "dry run" mode, so no changes will be actually written and all write requests will be considered successful. Add the `dryrun=0` parameter to the file for live action.
 
-By default, "dry run" also enables "debug" so you are shown the requests made. If you want to keep debug mode when setting dryrun=0, explicitly set debug=1. There's also debug_request_headers and debug_request_body to print out details about the HTML messages, and the same for responses.
+By default, "dry run" also enables "debug" so you are shown the requests made. If you want to keep debug mode when setting `dryrun=0`, explicitly set `debug=1`. There's also `debug_request_headers` and `debug_request_body` to print out details about the HTML messages, and the same for responses.
 
 Register osmtools as a oauth2 app
 ---------------------------------
@@ -85,7 +91,7 @@ Register osmtools as a oauth2 app
 6. Click *Register* or *Create Oauth2 application* below the registration form.
 7. Add `oauth2_client_id=...` with the application *Client ID* to your `.osmtoolsrc` file.
 
-You don't need to register *osmtools* on `api06.dev.openstreetmap.org` and `api.openstreetmap.org` servers. The scripts have app ids built in for these servers. You can set `oauth2_client_id` to an empty value to refuse to use oauth2 on these servers and go back to basic login/password authorization.
+You don't need to register *osmtools* on `api06.dev.openstreetmap.org`, `api.openstreetmap.org` and `www.openhistoricalmap.org` servers. The scripts have app ids built in for these servers. You can set `oauth2_client_id` to an empty value to refuse to use oauth2 on these servers and go back to basic login/password authorization.
 
 SCRAPE SCRAPE SCRAPE
 --------------------
