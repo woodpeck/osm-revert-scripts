@@ -1,42 +1,42 @@
-The scripts in this directory together form the "osmtools" suite.
+The scripts in this directory together form the *osmtools* suite.
 
 Originally written by Frederik Ramm <frederik@remote.org>, public domain.
 
-The scripts require Perl and the LWP module (libwww-perl on Ubuntu et al.).
+The scripts require Perl and the LWP module (`libwww-perl` on Ubuntu et al.).
 
 Package Contents
 ----------------
 
 | Script  | Module  | Description  |
 |---|---|---|
-| batch_redaction.pl  | BatchRedaction.pm  | applies redactions to a list of elements  |
-| block.pl | Block.pm  | creates user blocks  |
-| changeset.pl  | Changeset.pm  | opens and closes changesets  |
-| complex_revert.pl  |   | reverts a group of interdependent changesets  |
-| delete.pl  | Delete.pm  | deletes or redacts an object  |
-| modify.pl  | Modify.pm  | modifies tags of an object  |
-| note.pl  | Note.pm  | hides notes  |
-| quickdelnodes.pl  |   | deletes many nodes quickly  |
-| redaction.pl  | Redaction.pm  | creates and applies redactions  |
-| revert.pl  | Revert.pm  | reverts a whole changeset  |
-| trace.pl  | Trace.pm  | uploads gpx traces  |
-| tokens.pl  |   | requests oauth2 login tokens  |
-| undelete.pl  | Undelete.pm  | undeletes an object; see comment in-file for differences to undo  |
-| undo.pl  | Undo.pm  | undoes one change to one object  |
-| user_changesets.pl  | UserChangesets.pm  | bulk downloads changesets by given user; there are also simpler shell script versions listed below  |
-| download_changesets.sh  |   | bulk downloads changesets by given user name  |
-| download_changesets_uid.sh  |   | bulk downloads changesets by given user id  |
+| `batch_redaction.pl`  | `BatchRedaction.pm`  | applies redactions to a list of elements  |
+| `block.pl` | `Block.pm`  | creates user blocks  |
+| `changeset.pl`  | `Changeset.pm`  | opens and closes changesets  |
+| `complex_revert.pl`  |   | reverts a group of interdependent changesets  |
+| `delete.pl`  | `Delete.pm`  | deletes or redacts an object  |
+| `modify.pl`  | `Modify.pm`  | modifies tags of an object  |
+| `note.pl`  | `Note.pm`  | hides notes  |
+| `quickdelnodes.pl`  |   | deletes many nodes quickly  |
+| `redaction.pl`  | `Redaction.pm`  | creates and applies redactions  |
+| `revert.pl`  | `Revert.pm`  | reverts a whole changeset  |
+| `trace.pl`  | `Trace.pm`  | uploads gpx traces  |
+| `tokens.pl`  |   | requests oauth2 login tokens  |
+| `undelete.pl`  | `Undelete.pm`  | undeletes an object; see comment in-file for differences to undo  |
+| `undo.pl`  | `Undo.pm`  | undoes one change to one object  |
+| `user_changesets.pl`  | `UserChangesets.pm`  | bulk downloads changesets by given user; there are also simpler shell script versions listed below  |
+| `download_changesets.sh`  |   | bulk downloads changesets by given user name  |
+| `download_changesets_uid.sh`  |   | bulk downloads changesets by given user id  |
 
 Design "Philosophy"
 -------------------
 
-Most functionality is implemented as individual Perl modules (.pm). They do not have a namespace because we want people to be able to run everything from the current directory. If you create a Perl module named "Osm::Api", then it has to reside in a subdirectory named "Osm" which tends to get confusing, at least for me.
+Most functionality is implemented as individual Perl modules (`.pm`). They do not have a namespace because we want people to be able to run everything from the current directory. If you create a Perl module named `Osm::Api`, then it has to reside in a subdirectory named `Osm` which tends to get confusing, at least for me.
 
 We're not using any libraries for XML reading and writing, just plain regular expressions.
 
 We're not creating any OO interfaces.
 
-In addition to the modules, there are simple perl scripts (.pl) that can be called from the command line and that provide a command line interface to what the modules do.
+In addition to the modules, there are simple perl scripts (`.pl`) that can be called from the command line and that provide a command line interface to what the modules do.
 
 If you want to create some hyper cool object oriented undo/redo manager using all the latest libraries and technologies and design patterns, feel free to cannibalize the hell out of this code and make your own.
 
