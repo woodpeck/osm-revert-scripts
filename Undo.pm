@@ -131,7 +131,7 @@ sub determine_undo_action
     my $restore_version;
     my $override_version;
     my $override = 0;
-    my $force = 0; # if this is set to 1, any object touched by the undo userwill be reverted even if there are later modifications by others
+    my $force = 1; # if this is set to 1, any object touched by the undo userwill be reverted even if there are later modifications by others
 
     my $resp = OsmApi::get("$what/$id/history");
     if (!$resp->is_success)
