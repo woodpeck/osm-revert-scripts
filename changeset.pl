@@ -49,6 +49,11 @@ elsif (($ARGV[0] eq "download") && (scalar(@ARGV)==2))
     print Changeset::download($ARGV[1]);
     print "\n";
 }
+elsif (($ARGV[0] eq "download-versions") && (scalar(@ARGV)==2))
+{
+    my $content = Changeset::download($ARGV[1]);
+    print "$_\n" for Changeset::get_element_versions($content);
+}
 else
 {
     print <<EOF;
@@ -58,6 +63,7 @@ Usage:
   $0 upload <id> <content>   to upload changes to an open changeset
   $0 comment <id> <comment>  to comment on an existing changeset
   $0 download <id>           to download and display an existing changeset
+  $0 download-versions <id>  to download and display element versions of a changeset
 EOF
     exit;
 }

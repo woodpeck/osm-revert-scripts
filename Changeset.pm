@@ -175,4 +175,27 @@ sub download($)
     return $resp->content();
 }
 
+# -----------------------------------------------------------------------------
+# Get element versions from changeset content
+# Paramters: changeset content
+# Returns: array of type/id/version, undef on error
+sub get_element_versions($)
+{
+    my ($content) = @_;
+    my @elements = ();
+
+    open my $fh, '<', \$content;
+    while (<$fh>)
+    {
+        next unless /<(node|way|relation)/;
+        my $type = $1;
+        /id="(\d+)"/;
+        my $id = $1;
+        /version="(\d+)"/;
+        my $version = $1;
+        push @elements, "$type/$id/$version";
+    }
+    return @elements;
+}
+
 1;
