@@ -175,4 +175,149 @@ sub download($)
     return $resp->content();
 }
 
+# -----------------------------------------------------------------------------
+# Get element versions from changeset content
+# Paramters: changeset content
+# Returns: array of type/id/version, undef on error
+sub get_element_versions($)
+{
+    my ($content) = @_;
+    my @element_versions = ();
+
+    CORE::open my $fh, '<', \$content;
+    while (<$fh>)
+    {
+        next unless /<(node|way|relation)/;
+        my $type = $1;
+        /id="(\d+)"/;
+        my $id = $1;
+        /version="(\d+)"/;
+        my $version = $1;
+        push @element_versions, "$type/$id/$version";
+    }
+    CORE::close $fh;
+    return @element_versions;
+}
+
+sub get_previous_element_versions(@)
+{
+    my @element_versions = @_;
+    my @previous_element_versions = ();
+
+    foreach (@element_versions)
+    {
+        next unless /(\w+)\/(\d+)\/(\d+)/;
+        my $type = $1;
+        my $id = $2;
+        my $version = $3;
+        $version -= 1;
+        next if $version <= 0;
+        push @previous_element_versions, "$type/$id/$version";
+    }
+    return @previous_element_versions;
+}
+
+sub download_elements(@)
+{
+    my @element_versions = @_;
+
+    my @queries = prepare_download_queries(@element_versions);
+    my @contents = ();
+
+    foreach my $query (@queries)
+    {
+        my $resp = OsmApi::get($query);
+        if (!$resp->is_success)
+        {
+            print STDERR "previous element versions cannot be retrieved: ".$resp->status_line."\n";
+            return undef;
+        }
+        push @contents, $resp->content();
+    }
+    return merge_osm_contents(@contents);
+}
+
+sub get_changeset_summary($)
+{
+    my ($content) = @_;
+    my %counts = ();
+    my %users = ();
+    my %uids = ();
+
+    CORE::open my $fh, '<', \$content;
+    while (<$fh>)
+    {
+        next unless /<(node|way|relation)/;
+        /changeset="([^"]*)"/;
+        my $changeset = $1;
+        $counts{$changeset}++;
+        /user="([^"]*)"/;
+        $users{$changeset} = $1;
+        /uid="([^"]*)"/;
+        $uids{$changeset} = $1;
+    }
+    CORE::close $fh;
+
+    my $result = "# count, changeset, uid, user\n";
+    foreach my $changeset (reverse sort keys %counts)
+    {
+        $result .= $counts{$changeset} . "," . $changeset . "," . $uids{$changeset} . "," . $users{$changeset} . "\n";
+    }
+    return $result;
+}
+
+###
+
+sub prepare_download_queries(@)
+{
+    my @element_versions = @_;
+    my %counts = ();
+    my %ivs = ();
+    my @queries = ();
+
+    local *flush = sub($) {
+        my ($type) = @_;
+        push @queries, $type . "s?" . $type . "s=" . $ivs{$type};
+        delete $counts{$type};
+        delete $ivs{$type};
+    };
+
+    foreach (@element_versions)
+    {
+        next unless /(\w+)\/(\d+)\/(\d+)/;
+        my $type = $1;
+        my $id = $2;
+        my $version = $3;
+        $counts{$type}++;
+        $ivs{$type} .= "," if exists $ivs{$type};
+        $ivs{$type} .= $id . "v" . $version;
+        flush($type) if $counts{$type} > 700 || length($ivs{$type}) > 7500;
+    }
+    flush($_) for keys %counts;
+    return @queries;
+}
+
+sub merge_osm_contents(@)
+{
+    my @contents = @_;
+    my $i = 0;
+    my $result = $_;
+
+    foreach my $content (@contents)
+    {
+        CORE::open my $fh, '<', \$content;
+        while (<$fh>)
+        {
+            next if $i > 0 && /<\?xml/;
+            next if $i > 0 && /<osm/;
+            next if /<\/osm>/;
+            $result .= $_;
+        }
+        CORE::close $fh;
+        $i++;
+    }
+    $result .= "</osm>\n";
+    return $result;
+}
+
 1;
