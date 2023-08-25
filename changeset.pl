@@ -68,7 +68,6 @@ elsif (($ARGV[0] eq "download-previous") && (scalar(@ARGV)==2))
     my @element_versions = Changeset::get_element_versions($content);
     my @previous_element_versions = Changeset::get_previous_element_versions(@element_versions);
     print Changeset::download_elements(@previous_element_versions);
-    print "\n";
 }
 else
 {

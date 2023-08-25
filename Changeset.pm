@@ -184,7 +184,7 @@ sub get_element_versions($)
     my ($content) = @_;
     my @element_versions = ();
 
-    open my $fh, '<', \$content;
+    CORE::open my $fh, '<', \$content;
     while (<$fh>)
     {
         next unless /<(node|way|relation)/;
@@ -195,6 +195,7 @@ sub get_element_versions($)
         my $version = $1;
         push @element_versions, "$type/$id/$version";
     }
+    CORE::close $fh;
     return @element_versions;
 }
 
@@ -221,7 +222,7 @@ sub download_elements(@)
     my @element_versions = @_;
 
     my @queries = prepare_download_queries(@element_versions);
-    my $result = "";
+    my @contents = ();
 
     foreach my $query (@queries)
     {
@@ -231,9 +232,9 @@ sub download_elements(@)
             print STDERR "previous element versions cannot be retrieved: ".$resp->status_line."\n";
             return undef;
         }
-        $result .= $resp->content();
+        push @contents, $resp->content();
     }
-    return $result;
+    return merge_osm_contents(@contents);
 }
 
 ###
@@ -272,6 +273,29 @@ sub prepare_download_queries(@)
     }
     flush($_) for keys %counts;
     return @queries;
+}
+
+sub merge_osm_contents(@)
+{
+    my @contents = @_;
+    my $i = 0;
+    my $result = $_;
+
+    foreach my $content (@contents)
+    {
+        CORE::open my $fh, '<', \$content;
+        while (<$fh>)
+        {
+            next if $i > 0 && /<\?xml/;
+            next if $i > 0 && /<osm/;
+            next if /<\/osm>/;
+            $result .= $_;
+        }
+        CORE::close $fh;
+        $i++;
+    }
+    $result .= "</osm>\n";
+    return $result;
 }
 
 1;
