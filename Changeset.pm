@@ -259,16 +259,9 @@ sub prepare_download_queries(@)
         my $type = $1;
         my $id = $2;
         my $version = $3;
-        $counts{$type} = 0 if !exists $counts{$type};
         $counts{$type}++;
-        if (exists $ivs{$type})
-        {
-            $ivs{$type} .= "," . $id . "v" . $version;
-        }
-        else
-        {
-            $ivs{$type} = $id . "v" . $version;
-        }
+        $ivs{$type} .= "," if exists $ivs{$type};
+        $ivs{$type} .= $id . "v" . $version;
         flush($type) if $counts{$type} > 700 || length($ivs{$type}) > 7500;
     }
     flush($_) for keys %counts;
