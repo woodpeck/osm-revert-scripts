@@ -182,7 +182,7 @@ sub download($)
 sub get_element_versions($)
 {
     my ($content) = @_;
-    my @elements = ();
+    my @element_versions = ();
 
     open my $fh, '<', \$content;
     while (<$fh>)
@@ -193,9 +193,27 @@ sub get_element_versions($)
         my $id = $1;
         /version="(\d+)"/;
         my $version = $1;
-        push @elements, "$type/$id/$version";
+        push @element_versions, "$type/$id/$version";
     }
-    return @elements;
+    return @element_versions;
+}
+
+sub get_previous_element_versions(@)
+{
+    my @element_versions = @_;
+    my @previous_element_versions = ();
+
+    foreach (@element_versions)
+    {
+        next unless /(\w+)\/(\d+)\/(\d+)/;
+        my $type = $1;
+        my $id = $2;
+        my $version = $3;
+        $version -= 1;
+        next if $version <= 0;
+        push @previous_element_versions, "$type/$id/$version";
+    }
+    return @previous_element_versions;
 }
 
 1;
