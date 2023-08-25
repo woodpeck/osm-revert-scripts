@@ -237,6 +237,35 @@ sub download_elements(@)
     return merge_osm_contents(@contents);
 }
 
+sub get_changeset_summary($)
+{
+    my ($content) = @_;
+    my %counts = ();
+    my %users = ();
+    my %uids = ();
+
+    CORE::open my $fh, '<', \$content;
+    while (<$fh>)
+    {
+        next unless /<(node|way|relation)/;
+        /changeset="([^"]*)"/;
+        my $changeset = $1;
+        $counts{$changeset}++;
+        /user="([^"]*)"/;
+        $users{$changeset} = $1;
+        /uid="([^"]*)"/;
+        $uids{$changeset} = $1;
+    }
+    CORE::close $fh;
+
+    my $result = "# count, changeset, uid, user\n";
+    foreach my $changeset (reverse sort keys %counts)
+    {
+        $result .= $counts{$changeset} . "," . $changeset . "," . $uids{$changeset} . "," . $users{$changeset} . "\n";
+    }
+    return $result;
+}
+
 ###
 
 sub prepare_download_queries(@)
