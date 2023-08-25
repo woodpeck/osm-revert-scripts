@@ -216,4 +216,62 @@ sub get_previous_element_versions(@)
     return @previous_element_versions;
 }
 
+sub download_elements(@)
+{
+    my @element_versions = @_;
+
+    my @queries = prepare_download_queries(@element_versions);
+    my $result = "";
+
+    foreach my $query (@queries)
+    {
+        my $resp = OsmApi::get($query);
+        if (!$resp->is_success)
+        {
+            print STDERR "previous element versions cannot be retrieved: ".$resp->status_line."\n";
+            return undef;
+        }
+        $result .= $resp->content();
+    }
+    return $result;
+}
+
+###
+
+sub prepare_download_queries(@)
+{
+    my @element_versions = @_;
+    my %counts = ();
+    my %ivs = ();
+    my @queries = ();
+
+    local *flush = sub($) {
+        my ($type) = @_;
+        push @queries, $type . "s?" . $type . "s=" . $ivs{$type};
+        delete $counts{$type};
+        delete $ivs{$type};
+    };
+
+    foreach (@element_versions)
+    {
+        next unless /(\w+)\/(\d+)\/(\d+)/;
+        my $type = $1;
+        my $id = $2;
+        my $version = $3;
+        $counts{$type} = 0 if !exists $counts{$type};
+        $counts{$type}++;
+        if (exists $ivs{$type})
+        {
+            $ivs{$type} .= "," . $id . "v" . $version;
+        }
+        else
+        {
+            $ivs{$type} = $id . "v" . $version;
+        }
+        flush($type) if $counts{$type} > 700 || length($ivs{$type}) > 7500;
+    }
+    flush($_) for keys %counts;
+    return @queries;
+}
+
 1;
