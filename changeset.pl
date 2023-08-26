@@ -86,6 +86,23 @@ elsif (($ARGV[0] eq "download-next-versions") && (scalar(@ARGV)==2))
     my @next_element_versions = Changeset::get_next_element_versions(@element_versions);
     print "$_\n" for @next_element_versions;
 }
+elsif (($ARGV[0] eq "download-next") && (scalar(@ARGV)==2))
+{
+    my $content = Changeset::download($ARGV[1]);
+    my @element_versions = Changeset::get_element_versions($content);
+    my @next_element_versions = Changeset::get_next_element_versions(@element_versions);
+    my $next_content = Changeset::download_elements(@next_element_versions);
+    print $next_content;
+}
+elsif (($ARGV[0] eq "download-next-summary") && (scalar(@ARGV)==2))
+{
+    my $content = Changeset::download($ARGV[1]);
+    my @element_versions = Changeset::get_element_versions($content);
+    my @next_element_versions = Changeset::get_next_element_versions(@element_versions);
+    my $next_content = Changeset::download_elements(@next_element_versions);
+    my $next_summary = Changeset::get_changeset_summary($next_content);
+    print $next_summary;
+}
 else
 {
     print <<EOF;
@@ -97,9 +114,11 @@ Usage:
   $0 download <id>                      to download and display an existing changeset
   $0 download-versions <id>             to download and display element versions of a changeset
   $0 download-previous <id>             to download and display previous elements of a changeset
+  $0 download-next <id>                 to download and display next elements of a changeset
   $0 download-previous-versions <id>    to display previous versions of elements in a changeset
   $0 download-next-versions <id>        to display next versions of elements in a changeset
   $0 download-previous-summary <id>     to display a summary table of previous changesets
+  $0 download-next-summary <id>         to display a summary table of next changesets
 EOF
     exit;
 }
