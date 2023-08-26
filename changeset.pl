@@ -79,6 +79,13 @@ elsif (($ARGV[0] eq "download-previous-summary") && (scalar(@ARGV)==2))
     my $previous_summary = Changeset::get_changeset_summary($previous_content);
     print $previous_summary;
 }
+elsif (($ARGV[0] eq "download-next-versions") && (scalar(@ARGV)==2))
+{
+    my $content = Changeset::download($ARGV[1]);
+    my @element_versions = Changeset::get_element_versions($content);
+    my @next_element_versions = Changeset::get_next_element_versions(@element_versions);
+    print "$_\n" for @next_element_versions;
+}
 else
 {
     print <<EOF;
@@ -90,7 +97,8 @@ Usage:
   $0 download <id>                      to download and display an existing changeset
   $0 download-versions <id>             to download and display element versions of a changeset
   $0 download-previous <id>             to download and display previous elements of a changeset
-  $0 download-previous-versions <id>    to download and display previous element versions of a changeset
+  $0 download-previous-versions <id>    to display previous versions of elements in a changeset
+  $0 download-next-versions <id>        to display next versions of elements in a changeset
   $0 download-previous-summary <id>     to display a summary table of previous changesets
 EOF
     exit;

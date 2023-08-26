@@ -199,42 +199,61 @@ sub get_element_versions($)
     return @element_versions;
 }
 
+# -----------------------------------------------------------------------------
+# Get previous versions of elements, skipping newly created ones
+# Paramters: array of type/id/version
+# Returns: array of type/id/version, undef on error
 sub get_previous_element_versions(@)
 {
     my @element_versions = @_;
     my @previous_element_versions = ();
 
-    foreach (@element_versions)
-    {
-        next unless /(\w+)\/(\d+)\/(\d+)/;
-        my $type = $1;
-        my $id = $2;
-        my $version = $3;
+    iterate_over_element_versions(\@element_versions, sub {
+        my ($type, $id, $version) = @_;
         $version -= 1;
-        next if $version <= 0;
+        return if $version <= 0;
         push @previous_element_versions, "$type/$id/$version";
-    }
+    });
     return @previous_element_versions;
+}
+
+# -----------------------------------------------------------------------------
+# Get next versions of elements, skipping those at their top version
+# Paramters: array of type/id/version
+# Returns: array of type/id/version, undef on error
+sub get_next_element_versions(@)
+{
+    my @element_versions = @_;
+    
+    my %type_id_versions = ();
+    iterate_over_element_versions(\@element_versions, sub {
+        my ($type, $id, $version) = @_;
+        $type_id_versions{"$type/$id"} = $version;
+    });
+
+    my @queries = prepare_download_queries(0, @element_versions);
+    my $top_content = run_download_queries("top", @queries);
+    return undef unless defined($top_content);
+
+    my @next_element_versions = ();
+    my @top_element_versions = get_element_versions($top_content);
+    iterate_over_element_versions(\@top_element_versions, sub {
+        my ($type, $id, $next_version) = @_;
+        my $version = $type_id_versions{"$type/$id"};
+        if ($version < $next_version)
+        {
+            push @next_element_versions, "$type/$id/" . ($version + 1);
+        }
+    });
+    return @next_element_versions;
 }
 
 sub download_elements(@)
 {
     my @element_versions = @_;
 
-    my @queries = prepare_download_queries(@element_versions);
-    my @contents = ();
-
-    foreach my $query (@queries)
-    {
-        my $resp = OsmApi::get($query);
-        if (!$resp->is_success)
-        {
-            print STDERR "previous element versions cannot be retrieved: ".$resp->status_line."\n";
-            return undef;
-        }
-        push @contents, $resp->content();
-    }
-    return merge_osm_contents(@contents);
+    my @queries = prepare_download_queries(1, @element_versions);
+    return run_download_queries("previous", @queries);
 }
 
 sub get_changeset_summary($)
@@ -268,8 +287,9 @@ sub get_changeset_summary($)
 
 ###
 
-sub prepare_download_queries(@)
+sub prepare_download_queries($@)
 {
+    my $with_versions = shift;
     my @element_versions = @_;
     my %counts = ();
     my %ivs = ();
@@ -282,19 +302,35 @@ sub prepare_download_queries(@)
         delete $ivs{$type};
     };
 
-    foreach (@element_versions)
-    {
-        next unless /(\w+)\/(\d+)\/(\d+)/;
-        my $type = $1;
-        my $id = $2;
-        my $version = $3;
+    iterate_over_element_versions(\@element_versions, sub {
+        my ($type, $id, $version) = @_;
         $counts{$type}++;
         $ivs{$type} .= "," if exists $ivs{$type};
-        $ivs{$type} .= $id . "v" . $version;
+        $ivs{$type} .= $id;
+        $ivs{$type} .= "v" . $version if $with_versions;
         flush($type) if $counts{$type} > 700 || length($ivs{$type}) > 7500;
-    }
+    });
     flush($_) for keys %counts;
     return @queries;
+}
+
+sub run_download_queries($@)
+{
+    my $relation = shift;
+    my @queries = @_;
+
+    my @contents = ();
+    foreach my $query (@queries)
+    {
+        my $resp = OsmApi::get($query);
+        if (!$resp->is_success)
+        {
+            print STDERR "$relation element versions cannot be retrieved: ".$resp->status_line."\n";
+            return undef;
+        }
+        push @contents, $resp->content();
+    }
+    return merge_osm_contents(@contents);
 }
 
 sub merge_osm_contents(@)
@@ -318,6 +354,19 @@ sub merge_osm_contents(@)
     }
     $result .= "</osm>\n";
     return $result;
+}
+
+sub iterate_over_element_versions(\@&)
+{
+    my ($element_versions, $handler) = @_;
+    foreach (@$element_versions)
+    {
+        next unless /(\w+)\/(\d+)\/(\d+)/;
+        my $type = $1;
+        my $id = $2;
+        my $version = $3;
+        $handler -> ($type, $id, $version);
+    }
 }
 
 1;
