@@ -66,8 +66,9 @@ my @download_commands = (
 
 if ((pairgrep {$a eq $ARGV[0]} @download_commands) && (scalar(@ARGV)==2))
 {
-    my $content = Changeset::download($ARGV[1]);
-    if ($ARGV[0] eq "download")
+    my ($command, $cid) = @ARGV;
+    my $content = Changeset::download($cid);
+    if ($command eq "download")
     {
         print $content;
         print "\n";
@@ -75,13 +76,14 @@ if ((pairgrep {$a eq $ARGV[0]} @download_commands) && (scalar(@ARGV)==2))
     }
     
     my @element_versions = Changeset::get_element_versions($content);
-    if ($ARGV[0] eq "download-versions") {
+    if ($command eq "download-versions") {
         print "$_\n" for @element_versions;
         exit;
     }
 
+    my $is_previous = $command =~ /^download-previous/;
     my @other_element_versions;
-    if ($ARGV[0] =~ /^download-previous/)
+    if ($is_previous)
     {
         @other_element_versions = Changeset::get_previous_element_versions(@element_versions);
     }
@@ -89,22 +91,24 @@ if ((pairgrep {$a eq $ARGV[0]} @download_commands) && (scalar(@ARGV)==2))
     {
         @other_element_versions = Changeset::get_next_element_versions(@element_versions);
     }
-    if (($ARGV[0] eq "download-previous-versions") || ($ARGV[0] eq "download-next-versions"))
+    if (($command eq "download-previous-versions") || ($command eq "download-next-versions"))
     {
         print "$_\n" for @other_element_versions;
         exit;
     }
 
     my $other_content = Changeset::download_elements(@other_element_versions);
-    if (($ARGV[0] eq "download-previous") || ($ARGV[0] eq "download-next"))
+    if (($command eq "download-previous") || ($command eq "download-next"))
     {
         print $other_content;
         exit;
     }
 
     my $other_summary = Changeset::get_changeset_summary($other_content);
-    if (($ARGV[0] eq "download-previous-summary") || ($ARGV[0] eq "download-next-summary"))
+    if (($command eq "download-previous-summary") || ($command eq "download-next-summary"))
     {
+        print "# summary of changesets " . ($is_previous ? "preceding" : "following") . " $cid\n";
+        print "# count, changeset, uid, user\n";
         print $other_summary;
         exit;
     }
