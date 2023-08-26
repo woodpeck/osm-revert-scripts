@@ -9,6 +9,13 @@ use lib $FindBin::Bin;
 use List::Util qw(pairs pairgrep);
 use Changeset;
 
+my @regular_commands = (
+    "create [<comment>]",     "create a changeset; returns ID created",
+    "close <id> [<comment>]", "close a changeset and optionally set comment",
+    "upload <id> <content>",  "upload changes to an open changeset",
+    "comment <id> <comment>", "comment on an existing changeset",
+);
+
 if ($ARGV[0] eq "create")
 {
     my $cs = Changeset::create($ARGV[1]);
@@ -114,13 +121,6 @@ if ((pairgrep {$a eq $ARGV[0]} @download_commands) && (scalar(@ARGV)==2))
         exit;
     }
 }
-
-my @regular_commands = (
-    "create [<comment>]",     "create a changeset; returns ID created",
-    "close <id> [<comment>]", "close a changeset and optionally set comment",
-    "upload <id> <content>",  "upload changes to an open changeset",
-    "comment <id> <comment>", "comment on an existing changeset",
-);
 
 my $command_width = 35;
 print "Usage:\n";
