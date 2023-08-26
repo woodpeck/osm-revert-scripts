@@ -278,7 +278,7 @@ sub get_changeset_summary($)
     CORE::close $fh;
 
     my $result = "# count, changeset, uid, user\n";
-    foreach my $changeset (reverse sort keys %counts)
+    foreach my $changeset (sort { $b <=> $a } keys %counts)
     {
         $result .= $counts{$changeset} . "," . $changeset . "," . $uids{$changeset} . "," . $users{$changeset} . "\n";
     }
