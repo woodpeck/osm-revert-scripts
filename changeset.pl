@@ -69,6 +69,7 @@ my @download_commands = (
     "download-next-versions",     "display next versions of elements in a changeset",
     "download-previous-summary",  "display a summary table of previous changesets",
     "download-next-summary",      "display a summary table of next changesets",
+    "download-neighbor-summary",  "display a summary table of previous and next changesets",
 );
 
 if ((pairgrep {$a eq $ARGV[0]} @download_commands) && (scalar(@ARGV)==2))
@@ -89,10 +90,20 @@ if ((pairgrep {$a eq $ARGV[0]} @download_commands) && (scalar(@ARGV)==2))
         exit;
     }
 
-    exit unless $command =~ /^download-(previous|next)(.*)/;
-    my $is_previous = $1 eq "previous";
+    exit unless $command =~ /^download-(previous|next|neighbor)(.*)/;
     my $subcommand = $2;
-    exit if download_siblings($subcommand, $cid, $is_previous, @element_versions);
+    if (($1 eq "neighbor") && ($subcommand eq "-summary"))
+    {
+        download_siblings($subcommand, $cid, 1, @element_versions);
+        print "\n";
+        download_siblings($subcommand, $cid, 0, @element_versions);
+        exit;
+    }
+    else
+    {
+        my $is_previous = $1 eq "previous";
+        exit if download_siblings($subcommand, $cid, $is_previous, @element_versions);
+    }
 }
 
 my $command_width = 35;
