@@ -68,6 +68,7 @@ if ((pairgrep {$a eq $ARGV[0]} @download_commands) && (scalar(@ARGV)==2))
 {
     my ($command, $cid) = @ARGV;
     my $content = Changeset::download($cid);
+    die unless defined($content);
     if ($command eq "download")
     {
         print $content;
