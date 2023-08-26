@@ -89,37 +89,10 @@ if ((pairgrep {$a eq $ARGV[0]} @download_commands) && (scalar(@ARGV)==2))
         exit;
     }
 
-    my $is_previous = $command =~ /^download-previous/;
-    my @other_element_versions;
-    if ($is_previous)
-    {
-        @other_element_versions = Changeset::get_previous_element_versions(@element_versions);
-    }
-    else
-    {
-        @other_element_versions = Changeset::get_next_element_versions(@element_versions);
-    }
-    if (($command eq "download-previous-versions") || ($command eq "download-next-versions"))
-    {
-        print "$_\n" for @other_element_versions;
-        exit;
-    }
-
-    my $other_content = Changeset::download_elements(@other_element_versions);
-    if (($command eq "download-previous") || ($command eq "download-next"))
-    {
-        print $other_content;
-        exit;
-    }
-
-    my $other_summary = Changeset::get_changeset_summary($other_content);
-    if (($command eq "download-previous-summary") || ($command eq "download-next-summary"))
-    {
-        print "# summary of changesets " . ($is_previous ? "preceding" : "following") . " $cid\n";
-        print "# count, changeset, uid, user\n";
-        print $other_summary;
-        exit;
-    }
+    exit unless $command =~ /^download-(previous|next)(.*)/;
+    my $is_previous = $1 eq "previous";
+    my $subcommand = $2;
+    exit if download_siblings($subcommand, $cid, $is_previous, @element_versions);
 }
 
 my $command_width = 35;
@@ -131,4 +104,44 @@ foreach my $pair (pairs @regular_commands)
 foreach my $pair (pairs @download_commands)
 {
     printf "  %s %-35s %s\n", $0, $pair->key . " <id>", $pair->value;
+}
+
+sub download_siblings($$$@)
+{
+    my $subcommand = shift;
+    my $cid = shift;
+    my $is_previous = shift;
+    my @element_versions = @_;
+
+    my @other_element_versions;
+    if ($is_previous)
+    {
+        @other_element_versions = Changeset::get_previous_element_versions(@element_versions);
+    }
+    else
+    {
+        @other_element_versions = Changeset::get_next_element_versions(@element_versions);
+    }
+
+    if ($subcommand eq "-versions")
+    {
+        print "$_\n" for @other_element_versions;
+        return 1;
+    }
+
+    my $other_content = Changeset::download_elements(@other_element_versions);
+    if ($subcommand eq "")
+    {
+        print $other_content;
+        return 1;
+    }
+
+    my $other_summary = Changeset::get_changeset_summary($other_content);
+    if ($subcommand eq "-summary")
+    {
+        print "# summary of changesets " . ($is_previous ? "preceding" : "following") . " $cid\n";
+        print "# count, changeset, uid, user\n";
+        print $other_summary;
+        return 1;
+    }
 }
