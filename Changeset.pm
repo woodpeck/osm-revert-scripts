@@ -277,12 +277,12 @@ sub get_changeset_summary($)
     }
     CORE::close $fh;
 
-    my $result;
+    my @result;
     foreach my $changeset (sort { $b <=> $a } keys %counts)
     {
-        $result .= $counts{$changeset} . "," . $changeset . "," . $uids{$changeset} . "," . $users{$changeset} . "\n";
+        push @result, $counts{$changeset} . "," . $changeset . "," . $uids{$changeset} . "," . $users{$changeset};
     }
-    return $result;
+    return @result;
 }
 
 ###

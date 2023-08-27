@@ -147,12 +147,12 @@ sub download_siblings($$$@)
         return 1;
     }
 
-    my $other_summary = Changeset::get_changeset_summary($other_content);
+    my @other_summary = Changeset::get_changeset_summary($other_content);
     if ($subcommand eq "-summary")
     {
         print "# summary of changesets " . ($is_previous ? "preceding" : "following") . " $cid\n";
         print "# count, changeset, uid, user\n";
-        print $other_summary;
+        print "$_\n" for @other_summary;
         return 1;
     }
 }
