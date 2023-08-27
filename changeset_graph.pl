@@ -74,6 +74,10 @@ sub write_graph_html($$$)
 {
     my ($dirname, $js_nodes, $js_links) = @_;
 
+    open my $fh, '<', $FindBin::Bin . "/graph.js";
+    my $js_draw_graph = do { local $/; <$fh> };
+    close $fh;
+
     open my $fh, '>', "$dirname/graph.html";
     print $fh <<EOF;
 <head>
@@ -89,12 +93,7 @@ $js_nodes],
 links: [
 $js_links],
 };
-const Graph = ForceGraph()
-(document.getElementById('graph'))
-    .graphData(gData)
-    .linkWidth(({weight}) => 32*Math.log(weight)/Math.log(10000))
-    .linkDirectionalArrowLength(6);
-</script>
+$js_draw_graph</script>
 </body>
 EOF
     close $fh;
