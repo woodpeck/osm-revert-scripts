@@ -25,4 +25,7 @@ const Graph = ForceGraph()
         ctx.fillStyle = color;
         const bckgDimensions = node.__bckgDimensions;
         bckgDimensions && ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, ...bckgDimensions);
+    })
+    .onNodeClick(node => {
+        window.open("https://www.openstreetmap.org/changeset/" + node.id);
     });
