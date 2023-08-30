@@ -7,7 +7,7 @@ for (const node of gData.nodes) {
     if (uid > maxUid) maxUid = uid;
 }
 
-const Graph = ForceGraph()
+const myGraph = ForceGraph()
 (document.getElementById('graph'))
     .graphData(gData)
     .linkWidth(({weight}) => 32*Math.log(weight)/Math.log(10000))
@@ -24,8 +24,12 @@ const Graph = ForceGraph()
             `with uid #${node.uid}`
         );
         return popup.innerHTML;
-    })
-    .nodeCanvasObject((node, ctx, globalScale) => {
+    }).onNodeClick(node => {
+        window.open("https://www.openstreetmap.org/changeset/" + node.id);
+    });
+
+if (showCids || showUsers || showUids) {
+    myGraph.nodeCanvasObject((node, ctx, globalScale) => {
         const labels = [];
         if (showCids) labels.push(node.id);
         if (showUsers) labels.push(node.user);
@@ -46,12 +50,7 @@ const Graph = ForceGraph()
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        if (node.uid && maxUid > minUid) {
-            const heat = (node.uid - minUid) / (maxUid - minUid);
-            ctx.fillStyle = `rgb(${100 * heat}%, 20%, ${100 * (1 - heat)}%)`;
-        } else {
-            ctx.fillStyle = `rgb(100%, 20%, 0%)`;
-        }
+        ctx.fillStyle = getNodeColor(node);
         for (let i = 0; i < labels.length; i++) {
             const label = labels[i];
             const iOffset = i - (labels.length - 1) / 2;
@@ -65,7 +64,26 @@ const Graph = ForceGraph()
         ctx.fillStyle = color;
         const bckgDimensions = node.__bckgDimensions;
         bckgDimensions && ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, ...bckgDimensions);
-    })
-    .onNodeClick(node => {
-        window.open("https://www.openstreetmap.org/changeset/" + node.id);
     });
+} else {
+    const nodeRadius = 8;
+    myGraph
+        .nodeRelSize(nodeRadius)
+        .nodeCanvasObjectMode(node => node.selected ? 'before' : undefined)
+        .nodeColor(getNodeColor)
+        .nodeCanvasObject((node, ctx) => {
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, nodeRadius * 1.4, 0, 2 * Math.PI, false);
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+            ctx.fill();
+        });
+}
+
+function getNodeColor(node) {
+    if (node.uid && maxUid > minUid) {
+        const heat = (node.uid - minUid) / (maxUid - minUid);
+        return `rgb(${100 * heat}%, 20%, ${100 * (1 - heat)}%)`;
+    } else {
+        return `rgb(100%, 20%, 0%)`;
+    }
+}
