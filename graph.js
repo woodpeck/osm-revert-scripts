@@ -1,3 +1,12 @@
+let minUid = +Infinity;
+let maxUid = -Infinity;
+for (const node of gData.nodes) {
+    const uid = node.uid;
+    if (!uid) continue;
+    if (uid < minUid) minUid = uid;
+    if (uid > maxUid) maxUid = uid;
+}
+
 const Graph = ForceGraph()
 (document.getElementById('graph'))
     .graphData(gData)
@@ -21,7 +30,12 @@ const Graph = ForceGraph()
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#3183ba';
+        if (node.uid && maxUid > minUid) {
+            const heat = (node.uid - minUid) / (maxUid - minUid);
+            ctx.fillStyle = `rgb(${100 * heat}%, 20%, ${100 * (1 - heat)}%)`;
+        } else {
+            ctx.fillStyle = `rgb(100%, 20%, 0%)`;
+        }
         for (let i = 0; i < labels.length; i++) {
             const label = labels[i];
             const iOffset = i - (labels.length - 1) / 2;
