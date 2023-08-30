@@ -26,8 +26,10 @@ const Graph = ForceGraph()
         return popup.innerHTML;
     })
     .nodeCanvasObject((node, ctx, globalScale) => {
-        // const labels = [node.id, node.user, node.uid];
-        const labels = [node.id];
+        const labels = [];
+        if (showCids) labels.push(node.id);
+        if (showUsers) labels.push(node.user);
+        if (showUids) labels.push(node.uid);
         const fontSize = 12/globalScale;
         ctx.font = `${fontSize}px Sans-Serif`;
         const textWidth = Math.max(...labels.map(label => ctx.measureText(label).width));

@@ -6,11 +6,11 @@ use strict;
 use warnings;
 use List::Util qw(uniqnum);
 
-sub generate($)
+sub generate($$$$)
 {
-    my ($dirname) = @_;
+    my ($dirname, $show_cids, $show_users, $show_uids) = @_;
     my ($js_nodes, $js_links) = read_js_data($dirname);
-    write_html($dirname, $js_nodes, $js_links);
+    write_html($dirname, $show_cids, $show_users, $show_uids, $js_nodes, $js_links);
 }
 
 ###
@@ -133,9 +133,9 @@ sub read_nodes_edges($$)
     return %nodes_edges;
 }
 
-sub write_html($$$)
+sub write_html($$$$$$)
 {
-    my ($dirname, $js_nodes, $js_links) = @_;
+    my ($dirname, $show_cids, $show_users, $show_uids, $js_nodes, $js_links) = @_;
     my $fh;
 
     open $fh, '<', $FindBin::Bin . "/graph.js";
@@ -151,6 +151,9 @@ sub write_html($$$)
 <body>
 <div id="graph"></div>
 <script>
+${\(get_option_const('showCids', $show_cids))}
+${\(get_option_const('showUsers', $show_users))}
+${\(get_option_const('showUids', $show_uids))}
 const gData = {
 nodes: [
 $js_nodes],
@@ -162,6 +165,12 @@ $js_draw_graph</script>
 </body>
 EOF
     close $fh;
+}
+
+sub get_option_const($$)
+{
+    my ($name, $value) = @_;
+    return "const $name = ${\($value ? 'true' : 'false')};";
 }
 
 1;

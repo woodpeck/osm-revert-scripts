@@ -3,10 +3,21 @@
 use strict;
 use FindBin;
 use lib $FindBin::Bin;
+use Getopt::Long;
 use Changeset;
 use ChangesetGraph;
 
-if (($ARGV[0] eq "add") && (scalar(@ARGV)==2))
+my $graph_cids = 1;
+my $graph_users = 0;
+my $graph_uids = 0;
+
+my $correct_options = GetOptions(
+    "graph-cids!" => \$graph_cids,
+    "graph-users!" => \$graph_users,
+    "graph-uids!" => \$graph_uids,
+);
+
+if ($correct_options && ($ARGV[0] eq "add") && (scalar(@ARGV)==2))
 {
     my ($command, $cid) = @ARGV;
     my $dirname = "graph";
@@ -26,22 +37,27 @@ if (($ARGV[0] eq "add") && (scalar(@ARGV)==2))
     my @next_element_versions = Changeset::get_next_element_versions(@element_versions);
     write_edges("$dirname/$cid.out", @next_element_versions);
 
-    ChangesetGraph::generate($dirname);
+    ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
     exit;
 }
 
-if (($ARGV[0] eq "redraw") && (scalar(@ARGV)==1))
+if ($correct_options && ($ARGV[0] eq "redraw") && (scalar(@ARGV)==1))
 {
     my $dirname = "graph";
 
-    ChangesetGraph::generate($dirname);
+    ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
     exit;
 }
 
 print <<EOF;
 Usage:
-  $0 add <id>    add changeset
-  $0 redraw      redraw graph from added changesets
+  $0 add <id> <options>               add changeset
+  $0 redraw <options>                 redraw graph from added changesets
+
+options:
+  --graph-cids  | --no-graph-cids     [don't] show changeset ids on graph
+  --graph-users | --no-graph-users    [don't] show usernames on graph
+  --graph-uids  | --no-graph-uids     [don't] show user ids on graph
 EOF
 
 sub write_node($$)
