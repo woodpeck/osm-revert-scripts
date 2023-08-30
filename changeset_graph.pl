@@ -7,11 +7,13 @@ use Getopt::Long;
 use Changeset;
 use ChangesetGraph;
 
+my $dirname = "graph";
 my $graph_cids = 1;
 my $graph_users = 0;
 my $graph_uids = 0;
 
 my $correct_options = GetOptions(
+    "directory|output=s" => \$dirname,
     "graph-cids!" => \$graph_cids,
     "graph-users!" => \$graph_users,
     "graph-uids!" => \$graph_uids,
@@ -20,7 +22,6 @@ my $correct_options = GetOptions(
 if ($correct_options && ($ARGV[0] eq "add") && (scalar(@ARGV)==2))
 {
     my ($command, $cid) = @ARGV;
-    my $dirname = "graph";
     mkdir $dirname unless -d $dirname;
 
     my $metadata = Changeset::get($cid);
@@ -43,8 +44,6 @@ if ($correct_options && ($ARGV[0] eq "add") && (scalar(@ARGV)==2))
 
 if ($correct_options && ($ARGV[0] eq "redraw") && (scalar(@ARGV)==1))
 {
-    my $dirname = "graph";
-
     ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
     exit;
 }
@@ -55,6 +54,7 @@ Usage:
   $0 redraw <options>                 redraw graph from added changesets
 
 options:
+  --directory <directory>             directory for changeset data and graph html file
   --graph-cids  | --no-graph-cids     [don't] show changeset ids on graph
   --graph-users | --no-graph-users    [don't] show usernames on graph
   --graph-uids  | --no-graph-uids     [don't] show user ids on graph
