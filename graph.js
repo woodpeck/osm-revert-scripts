@@ -12,14 +12,22 @@ const Graph = ForceGraph()
     .graphData(gData)
     .linkWidth(({weight}) => 32*Math.log(weight)/Math.log(10000))
     .linkDirectionalArrowLength(6)
+    .nodeLabel((node) => {
+        const popup = document.createElement('span');
+        const user = document.createElement('strong');
+        user.append(node.user);
+        popup.append(`by `, user, ` (#${node.uid})`);
+        return popup.innerHTML;
+    })
     .nodeCanvasObject((node, ctx, globalScale) => {
-        const labels = [node.id, node.user, node.uid];
+        // const labels = [node.id, node.user, node.uid];
+        const labels = [node.id];
         const fontSize = 12/globalScale;
         ctx.font = `${fontSize}px Sans-Serif`;
         const textWidth = Math.max(...labels.map(label => ctx.measureText(label).width));
         const gap = fontSize * 0.1;
         const nodeWidth = textWidth + 2 * gap;
-        const nodeHeight = 3 * fontSize + 4 * gap;
+        const nodeHeight = labels.length * fontSize + (labels.length + 1) * gap;
 
         if (node.selected) {
             ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
