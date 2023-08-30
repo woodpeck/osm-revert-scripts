@@ -14,6 +14,7 @@ my @regular_commands = (
     "close <id> [<comment>]", "close a changeset and optionally set comment",
     "upload <id> <content>",  "upload changes to an open changeset",
     "comment <id> <comment>", "comment on an existing changeset",
+    "get <id>",               "load and print changeset metadata XML",
 );
 
 if ($ARGV[0] eq "create")
@@ -57,6 +58,14 @@ if (($ARGV[0] eq "comment") && (scalar(@ARGV)==3))
     {
         print "comment added.\n";
     }
+    exit;
+}
+
+if (($ARGV[0] eq "get") && (scalar(@ARGV)==2))
+{
+    my $content = Changeset::get($ARGV[1]);
+    print $content;
+    print "\n";
     exit;
 }
 

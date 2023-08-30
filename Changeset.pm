@@ -176,6 +176,23 @@ sub download($)
 }
 
 # -----------------------------------------------------------------------------
+# Downloads changeset metadata.
+# Paramters: changeset id
+# Returns: changeset metadata contents as string, undef on error
+
+sub get($)
+{
+    my $csid = shift;
+    my $resp = OsmApi::get("changeset/$csid?include_discussion=true");
+    if (!$resp->is_success)
+    {
+        print STDERR "metadata of changeset $csid cannot be retrieved: ".$resp->status_line."\n";
+        return undef;
+    }
+    return $resp->content();
+}
+
+# -----------------------------------------------------------------------------
 # Get element versions from changeset content
 # Paramters: changeset content
 # Returns: array of type/id/version, undef on error
