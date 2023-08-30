@@ -149,7 +149,7 @@ sub download_siblings($$$@)
         return 1;
     }
 
-    my $other_content = Changeset::download_elements(@other_element_versions);
+    my $other_content = Changeset::download_elements(($is_previous ? "previous" : "next"), @other_element_versions);
     if ($subcommand eq "")
     {
         print $other_content;

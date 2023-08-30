@@ -265,12 +265,13 @@ sub get_next_element_versions(@)
     return @next_element_versions;
 }
 
-sub download_elements(@)
+sub download_elements($@)
 {
+    my $relation = shift;
     my @element_versions = @_;
 
     my @queries = prepare_download_queries(1, @element_versions);
-    return run_download_queries("previous", @queries);
+    return run_download_queries($relation, @queries);
 }
 
 sub get_changeset_summary($)

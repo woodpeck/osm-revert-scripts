@@ -33,10 +33,10 @@ if ($correct_options && ($ARGV[0] eq "add") && (scalar(@ARGV)==2))
     my @element_versions = Changeset::get_element_versions($content);
 
     my @previous_element_versions = Changeset::get_previous_element_versions(@element_versions);
-    write_edges("$dirname/$cid.in", @previous_element_versions);
+    write_edges("previous", "$dirname/$cid.in", @previous_element_versions);
 
     my @next_element_versions = Changeset::get_next_element_versions(@element_versions);
-    write_edges("$dirname/$cid.out", @next_element_versions);
+    write_edges("next", "$dirname/$cid.out", @next_element_versions);
 
     ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
     exit;
@@ -82,12 +82,13 @@ sub write_node($$)
     close $fh;
 }
 
-sub write_edges($@)
+sub write_edges($$@)
 {
+    my $relation = shift;
     my $filename = shift;
     my @other_element_versions = @_;
 
-    my $other_content = Changeset::download_elements(@other_element_versions);
+    my $other_content = Changeset::download_elements($relation, @other_element_versions);
     my @other_summary = Changeset::get_changeset_summary($other_content);
     open my $fh, '>', $filename;
     print $fh "$_\n" for @other_summary;
