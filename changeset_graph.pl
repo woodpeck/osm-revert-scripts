@@ -12,6 +12,10 @@ if (($ARGV[0] eq "add") && (scalar(@ARGV)==2))
     my $dirname = "graph";
     mkdir $dirname unless -d $dirname;
 
+    my $metadata = Changeset::get($cid);
+    die unless defined($metadata);
+    write_node("$dirname/$cid.osm", $metadata);
+
     my $content = Changeset::download($cid);
     die unless defined($content);
     my @element_versions = Changeset::get_element_versions($content);
@@ -26,10 +30,27 @@ if (($ARGV[0] eq "add") && (scalar(@ARGV)==2))
     exit;
 }
 
+if (($ARGV[0] eq "redraw") && (scalar(@ARGV)==1))
+{
+    my $dirname = "graph";
+
+    ChangesetGraph::generate($dirname);
+    exit;
+}
+
 print <<EOF;
 Usage:
   $0 add <id>    add changeset
+  $0 redraw      redraw graph from added changesets
 EOF
+
+sub write_node($$)
+{
+    my ($filename, $metadata) = @_;
+    open my $fh, '>', $filename;
+    print $fh $metadata;
+    close $fh;
+}
 
 sub write_edges($@)
 {
