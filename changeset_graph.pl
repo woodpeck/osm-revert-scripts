@@ -42,6 +42,19 @@ if ($correct_options && ($ARGV[0] eq "add") && (scalar(@ARGV)==2))
     exit;
 }
 
+if ($correct_options && ($ARGV[0] eq "remove") && (scalar(@ARGV)==2))
+{
+    my ($command, $cid) = @ARGV;
+    mkdir $dirname unless -d $dirname;
+
+    unlink "$dirname/$cid.osm";
+    unlink "$dirname/$cid.in";
+    unlink "$dirname/$cid.out";
+
+    ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
+    exit;
+}
+
 if ($correct_options && ($ARGV[0] eq "redraw") && (scalar(@ARGV)==1))
 {
     ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
@@ -50,7 +63,8 @@ if ($correct_options && ($ARGV[0] eq "redraw") && (scalar(@ARGV)==1))
 
 print <<EOF;
 Usage:
-  $0 add <id> <options>               add changeset
+  $0 add <id> <options>               add changeset to graph
+  $0 remove <id> <options>            remove changeset from graph
   $0 redraw <options>                 redraw graph from added changesets
 
 options:
