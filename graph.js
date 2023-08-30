@@ -14,9 +14,15 @@ const Graph = ForceGraph()
     .linkDirectionalArrowLength(6)
     .nodeLabel((node) => {
         const popup = document.createElement('span');
+        const changeset = document.createElement('strong');
         const user = document.createElement('strong');
+        changeset.append(`#`, node.id);
         user.append(node.user);
-        popup.append(`by `, user, ` (#${node.uid})`);
+        popup.append(
+            `changeset `, changeset, document.createElement('br'),
+            `by `, user, document.createElement('br'),
+            `with uid #${node.uid}`
+        );
         return popup.innerHTML;
     })
     .nodeCanvasObject((node, ctx, globalScale) => {

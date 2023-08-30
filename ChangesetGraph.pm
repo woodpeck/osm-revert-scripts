@@ -157,6 +157,7 @@ $js_nodes],
 links: [
 $js_links],
 };
+
 $js_draw_graph</script>
 </body>
 EOF
