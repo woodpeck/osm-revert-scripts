@@ -12,6 +12,7 @@ Package Contents
 | `batch_redaction.pl`  | `BatchRedaction.pm`  | applies redactions to a list of elements  |
 | `block.pl` | `Block.pm`  | creates user blocks  |
 | `changeset.pl`  | `Changeset.pm`  | opens and closes changesets  |
+| `changeset_graph.pl`  | `ChangesetGraph.pm`  | draws changeset dependency graph  |
 | `complex_revert.pl`  |   | reverts a group of interdependent changesets  |
 | `delete.pl`  | `Delete.pm`  | deletes or redacts an object  |
 | `modify.pl`  | `Modify.pm`  | modifies tags of an object  |
