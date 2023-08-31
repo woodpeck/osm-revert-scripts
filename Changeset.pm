@@ -166,10 +166,27 @@ sub upload($$)
 sub download($)
 {
     my $csid = shift;
-    my $resp = OsmApi::get("changeset/$csid/download");
+    my $resp = OsmApi::get("changeset/$csid/download?show_redactions=true", "", 1);
     if (!$resp->is_success)
     {
         print STDERR "changeset $csid cannot be retrieved: ".$resp->status_line."\n";
+        return undef;
+    }
+    return $resp->content();
+}
+
+# -----------------------------------------------------------------------------
+# Downloads changeset metadata.
+# Paramters: changeset id
+# Returns: changeset metadata contents as string, undef on error
+
+sub get($)
+{
+    my $csid = shift;
+    my $resp = OsmApi::get("changeset/$csid?include_discussion=true");
+    if (!$resp->is_success)
+    {
+        print STDERR "metadata of changeset $csid cannot be retrieved: ".$resp->status_line."\n";
         return undef;
     }
     return $resp->content();
@@ -248,12 +265,13 @@ sub get_next_element_versions(@)
     return @next_element_versions;
 }
 
-sub download_elements(@)
+sub download_elements($@)
 {
+    my $relation = shift;
     my @element_versions = @_;
 
     my @queries = prepare_download_queries(1, @element_versions);
-    return run_download_queries("previous", @queries);
+    return run_download_queries($relation, @queries);
 }
 
 sub get_changeset_summary($)
@@ -277,12 +295,12 @@ sub get_changeset_summary($)
     }
     CORE::close $fh;
 
-    my $result;
+    my @result;
     foreach my $changeset (sort { $b <=> $a } keys %counts)
     {
-        $result .= $counts{$changeset} . "," . $changeset . "," . $uids{$changeset} . "," . $users{$changeset} . "\n";
+        push @result, $counts{$changeset} . "," . $changeset . "," . $uids{$changeset} . "," . $users{$changeset};
     }
-    return $result;
+    return @result;
 }
 
 ###
@@ -322,7 +340,7 @@ sub run_download_queries($@)
     my @contents = ();
     foreach my $query (@queries)
     {
-        my $resp = OsmApi::get($query);
+        my $resp = OsmApi::get("$query&show_redactions=true", "", 1);
         if (!$resp->is_success)
         {
             print STDERR "$relation element versions cannot be retrieved: ".$resp->status_line."\n";

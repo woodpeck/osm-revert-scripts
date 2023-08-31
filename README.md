@@ -12,6 +12,7 @@ Package Contents
 | `batch_redaction.pl`  | `BatchRedaction.pm`  | applies redactions to a list of elements  |
 | `block.pl` | `Block.pm`  | creates user blocks  |
 | `changeset.pl`  | `Changeset.pm`  | opens and closes changesets  |
+| `changeset_graph.pl`  | `ChangesetGraph.pm`  | draws changeset dependency graph  |
 | `complex_revert.pl`  |   | reverts a group of interdependent changesets  |
 | `delete.pl`  | `Delete.pm`  | deletes or redacts an object  |
 | `modify.pl`  | `Modify.pm`  | modifies tags of an object  |
@@ -32,7 +33,7 @@ Design "Philosophy"
 
 Most functionality is implemented as individual Perl modules (`.pm`). They do not have a namespace because we want people to be able to run everything from the current directory. If you create a Perl module named `Osm::Api`, then it has to reside in a subdirectory named `Osm` which tends to get confusing, at least for me.
 
-We're not using any libraries for XML reading and writing in most of the scripts, with the exception of `note.pl`, just plain regular expressions.
+We're not using any libraries for XML reading and writing in most of the scripts, just plain regular expressions.
 
 We're not creating any OO interfaces.
 

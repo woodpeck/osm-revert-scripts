@@ -14,6 +14,7 @@ my @regular_commands = (
     "close <id> [<comment>]", "close a changeset and optionally set comment",
     "upload <id> <content>",  "upload changes to an open changeset",
     "comment <id> <comment>", "comment on an existing changeset",
+    "get <id>",               "load and print changeset metadata XML",
 );
 
 if ($ARGV[0] eq "create")
@@ -57,6 +58,14 @@ if (($ARGV[0] eq "comment") && (scalar(@ARGV)==3))
     {
         print "comment added.\n";
     }
+    exit;
+}
+
+if (($ARGV[0] eq "get") && (scalar(@ARGV)==2))
+{
+    my $content = Changeset::get($ARGV[1]);
+    print $content;
+    print "\n";
     exit;
 }
 
@@ -140,19 +149,19 @@ sub download_siblings($$$@)
         return 1;
     }
 
-    my $other_content = Changeset::download_elements(@other_element_versions);
+    my $other_content = Changeset::download_elements(($is_previous ? "previous" : "next"), @other_element_versions);
     if ($subcommand eq "")
     {
         print $other_content;
         return 1;
     }
 
-    my $other_summary = Changeset::get_changeset_summary($other_content);
+    my @other_summary = Changeset::get_changeset_summary($other_content);
     if ($subcommand eq "-summary")
     {
         print "# summary of changesets " . ($is_previous ? "preceding" : "following") . " $cid\n";
         print "# count, changeset, uid, user\n";
-        print $other_summary;
+        print "$_\n" for @other_summary;
         return 1;
     }
 }
