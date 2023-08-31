@@ -166,7 +166,7 @@ sub upload($$)
 sub download($)
 {
     my $csid = shift;
-    my $resp = OsmApi::get("changeset/$csid/download");
+    my $resp = OsmApi::get("changeset/$csid/download?show_redactions=true", "", 1);
     if (!$resp->is_success)
     {
         print STDERR "changeset $csid cannot be retrieved: ".$resp->status_line."\n";
@@ -340,7 +340,7 @@ sub run_download_queries($@)
     my @contents = ();
     foreach my $query (@queries)
     {
-        my $resp = OsmApi::get($query);
+        my $resp = OsmApi::get("$query&show_redactions=true", "", 1);
         if (!$resp->is_success)
         {
             print STDERR "$relation element versions cannot be retrieved: ".$resp->status_line."\n";

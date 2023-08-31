@@ -51,7 +51,7 @@ if ($correct_options && ($ARGV[0] eq "add") && $types{$ARGV[1]} && (scalar(@ARGV
         my $subdirname = "$dirname/${type}s";
         mkdir $subdirname unless -d $subdirname;
 
-        my $resp = OsmApi::get("$type/$id/history");
+        my $resp = OsmApi::get("$type/$id/history?show_redactions=true", "", 1);
         if (!$resp->is_success)
         {
             print STDERR "history of $type $id cannot be retrieved: ".$resp->status_line."\n";
