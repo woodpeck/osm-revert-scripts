@@ -69,9 +69,7 @@ sub read_js_data($)
         if ($node)
         {
             my ($selected, $uid, $user, $comment) = @$node;
-            $user =~ s/"/\\"/g;
-            $comment =~ s/"/\\"/g;
-            $js_nodes .= qq#{ id: $cid, selected: $selected, uid: $uid, user: "$user", comment: "$comment" },\n#;
+            $js_nodes .= "{ id: $cid, selected: $selected, uid: $uid, user: ${\(to_js_string($user))}, comment: ${\(to_js_string($comment))} },\n";
         }
         else
         {
@@ -170,6 +168,14 @@ sub get_option_const($$)
 {
     my ($name, $value) = @_;
     return "const $name = ${\($value ? 'true' : 'false')};";
+}
+
+sub to_js_string($)
+{
+    my ($s) = @_;
+    $s =~ s/\\/\\\\/g;
+    $s =~ s/'/\\'/g;
+    return qq{'$s'};
 }
 
 1;
