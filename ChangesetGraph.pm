@@ -5,6 +5,7 @@ package ChangesetGraph;
 use strict;
 use warnings;
 use List::Util qw(uniqnum);
+use XML::Twig;
 
 sub generate($$$$)
 {
@@ -100,18 +101,12 @@ sub read_nodes_data($)
     {
         next unless $filename =~ qr/(\d+)\.osm$/;
         my $cid = $1;
-        open my $fh, '<', $filename;
-        while (<$fh>)
-        {
-            next unless /<changeset/;
-            /user="([^"]*)"/;
-            my $user = $1;
-            /uid="([^"]*)"/;
-            my $uid = $1;
-            $nodes_data{$cid} = [$uid, $user];
-            last;
-        }
-        close $fh;
+        my $twig = XML::Twig->new(keep_encoding => 1)->parsefile($filename);
+        my $changeset = $twig->root->first_child('changeset');
+        $nodes_data{$cid} = [
+            $changeset->att('uid'),
+            $changeset->att('user'),
+        ];
     }
     return %nodes_data;
 }
