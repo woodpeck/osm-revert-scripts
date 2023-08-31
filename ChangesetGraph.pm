@@ -96,7 +96,7 @@ sub read_nodes_data($)
     my ($dirname) = @_;
     my %nodes_data;
 
-    foreach my $filename (glob qq{"$dirname/*.osm"})
+    foreach my $filename (glob qq{"$dirname/changesets/*.osm"})
     {
         next unless $filename =~ qr/(\d+)\.osm$/;
         my $cid = $1;
@@ -121,7 +121,7 @@ sub read_nodes_edges($$)
     my ($dirname, $direction) = @_;
     my %nodes_edges;
 
-    foreach my $filename (glob qq{"$dirname/*.$direction"})
+    foreach my $filename (glob qq{"$dirname/changesets/*.$direction"})
     {
         next unless $filename =~ qr/(\d+)\.${direction}$/;
         my $cid = $1;

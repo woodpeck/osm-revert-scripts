@@ -23,20 +23,21 @@ if ($correct_options && ($ARGV[0] eq "add") && (scalar(@ARGV)==2))
 {
     my ($command, $cid) = @ARGV;
     mkdir $dirname unless -d $dirname;
+    mkdir "$dirname/changesets" unless -d "$dirname/changesets";
 
     my $metadata = Changeset::get($cid);
     die unless defined($metadata);
-    write_node("$dirname/$cid.osm", $metadata);
+    write_node("$dirname/changesets/$cid.osm", $metadata);
 
     my $content = Changeset::download($cid);
     die unless defined($content);
     my @element_versions = Changeset::get_element_versions($content);
 
     my @previous_element_versions = Changeset::get_previous_element_versions(@element_versions);
-    write_edges("previous", "$dirname/$cid.in", @previous_element_versions);
+    write_edges("previous", "$dirname/changesets/$cid.in", @previous_element_versions);
 
     my @next_element_versions = Changeset::get_next_element_versions(@element_versions);
-    write_edges("next", "$dirname/$cid.out", @next_element_versions);
+    write_edges("next", "$dirname/changesets/$cid.out", @next_element_versions);
 
     ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
     exit;
@@ -46,10 +47,11 @@ if ($correct_options && ($ARGV[0] eq "remove") && (scalar(@ARGV)==2))
 {
     my ($command, $cid) = @ARGV;
     mkdir $dirname unless -d $dirname;
+    mkdir "$dirname/changesets" unless -d "$dirname/changesets";
 
-    unlink "$dirname/$cid.osm";
-    unlink "$dirname/$cid.in";
-    unlink "$dirname/$cid.out";
+    unlink "$dirname/changesets/$cid.osm";
+    unlink "$dirname/changesets/$cid.in";
+    unlink "$dirname/changesets/$cid.out";
 
     ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
     exit;
