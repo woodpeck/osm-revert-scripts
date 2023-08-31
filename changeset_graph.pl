@@ -19,9 +19,9 @@ my $correct_options = GetOptions(
     "graph-uids!" => \$graph_uids,
 );
 
-if ($correct_options && ($ARGV[0] eq "add") && (scalar(@ARGV)==2))
+if ($correct_options && ($ARGV[0] eq "add") && ($ARGV[1] eq "changeset") && (scalar(@ARGV)==3))
 {
-    my ($command, $cid) = @ARGV;
+    my ($command, $type, $cid) = @ARGV;
     mkdir $dirname unless -d $dirname;
     mkdir "$dirname/changesets" unless -d "$dirname/changesets";
 
@@ -43,9 +43,9 @@ if ($correct_options && ($ARGV[0] eq "add") && (scalar(@ARGV)==2))
     exit;
 }
 
-if ($correct_options && ($ARGV[0] eq "remove") && (scalar(@ARGV)==2))
+if ($correct_options && ($ARGV[0] eq "remove") && ($ARGV[1] eq "changeset") && (scalar(@ARGV)==3))
 {
-    my ($command, $cid) = @ARGV;
+    my ($command, $type, $cid) = @ARGV;
     mkdir $dirname unless -d $dirname;
     mkdir "$dirname/changesets" unless -d "$dirname/changesets";
 
@@ -65,8 +65,8 @@ if ($correct_options && ($ARGV[0] eq "redraw") && (scalar(@ARGV)==1))
 
 print <<EOF;
 Usage:
-  $0 add <id> <options>               add changeset to graph
-  $0 remove <id> <options>            remove changeset from graph
+  $0 add changeset <id> <options>     add changeset to graph
+  $0 remove changeset <id> <options>  remove changeset from graph
   $0 redraw <options>                 redraw graph from added changesets
 
 options:
