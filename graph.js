@@ -44,10 +44,10 @@ const myGraph = ForceGraph()
         if (t == 'c') window.open("https://www.openstreetmap.org/changeset/" + id);
     });
 
-if (showCids || showUsers || showUids) {
+if (showIds || showUsers || showUids) {
     myGraph.nodeCanvasObject((node, ctx, globalScale) => {
         const labels = [];
-        if (showCids) labels.push(node.id);
+        if (showIds) labels.push(node.id);
         if (showUsers) labels.push(node.user);
         if (showUids) labels.push(node.uid);
         const fontSize = 12/globalScale;

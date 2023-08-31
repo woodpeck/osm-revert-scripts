@@ -9,9 +9,9 @@ use XML::Twig;
 
 sub generate($$$$)
 {
-    my ($dirname, $show_cids, $show_users, $show_uids) = @_;
+    my ($dirname, $show_ids, $show_users, $show_uids) = @_;
     my ($js_nodes, $js_links) = read_js_data($dirname);
-    write_html($dirname, $show_cids, $show_users, $show_uids, $js_nodes, $js_links);
+    write_html($dirname, $show_ids, $show_users, $show_uids, $js_nodes, $js_links);
 }
 
 ###
@@ -174,7 +174,7 @@ sub read_changeset_edges($$$)
 
 sub write_html($$$$$$)
 {
-    my ($dirname, $show_cids, $show_users, $show_uids, $js_nodes, $js_links) = @_;
+    my ($dirname, $show_ids, $show_users, $show_uids, $js_nodes, $js_links) = @_;
     my $fh;
 
     open $fh, '<', $FindBin::Bin . "/graph.js";
@@ -190,7 +190,7 @@ sub write_html($$$$$$)
 <body>
 <div id="graph"></div>
 <script>
-${\(get_option_const('showCids', $show_cids))}
+${\(get_option_const('showIds', $show_ids))}
 ${\(get_option_const('showUsers', $show_users))}
 ${\(get_option_const('showUids', $show_uids))}
 const gData = {

@@ -9,13 +9,13 @@ use Changeset;
 use ChangesetGraph;
 
 my $dirname = "graph";
-my $graph_cids = 1;
+my $graph_ids = 1;
 my $graph_users = 0;
 my $graph_uids = 0;
 
 my $correct_options = GetOptions(
     "directory|output=s" => \$dirname,
-    "graph-cids!" => \$graph_cids,
+    "graph-ids!" => \$graph_ids,
     "graph-users!" => \$graph_users,
     "graph-uids!" => \$graph_uids,
 );
@@ -60,7 +60,7 @@ if ($correct_options && ($ARGV[0] eq "add") && $types{$ARGV[1]} && (scalar(@ARGV
         write_file("$subdirname/$id.osm", $resp->content());
     }
 
-    ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
+    ChangesetGraph::generate($dirname, $graph_ids, $graph_users, $graph_uids);
     exit;
 }
 
@@ -82,13 +82,13 @@ if ($correct_options && ($ARGV[0] eq "remove") && $types{$ARGV[1]} && (scalar(@A
         unlink "$subdirname/$id.osm";
     }
 
-    ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
+    ChangesetGraph::generate($dirname, $graph_ids, $graph_users, $graph_uids);
     exit;
 }
 
 if ($correct_options && ($ARGV[0] eq "redraw") && (scalar(@ARGV)==1))
 {
-    ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
+    ChangesetGraph::generate($dirname, $graph_ids, $graph_users, $graph_uids);
     exit;
 }
 
@@ -105,8 +105,8 @@ type:
   relation
 
 options:
-  --directory <directory>             directory for changeset data and graph html file
-  --graph-cids  | --no-graph-cids     [don't] show changeset ids on graph
+  --directory <directory>             directory for changeset/element data and graph html file
+  --graph-ids   | --no-graph-ids      [don't] show changeset/element ids on graph
   --graph-users | --no-graph-users    [don't] show usernames on graph
   --graph-uids  | --no-graph-uids     [don't] show user ids on graph
 EOF
