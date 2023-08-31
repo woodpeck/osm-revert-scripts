@@ -35,10 +35,10 @@ sub read_js_data($)
             my @edges = @{$nodes_in_edges{$cid}};
             foreach my $edge (@edges)
             {
-                my ($weight, $in_cid, $in_uid, $in_user) = split ",", $edge;
+                my ($weight, $in_cid, $in_uid, $in_user) = @$edge;
                 $all_cids{$in_cid} = 1;
                 $merged_edges{$in_cid}{$cid} = $weight;
-                $merged_nodes{$in_cid} = "0,$in_uid,$in_user";
+                $merged_nodes{$in_cid} = [0, $in_uid, $in_user];
             }
         }
         if ($nodes_out_edges{$cid})
@@ -46,10 +46,10 @@ sub read_js_data($)
             my @edges = @{$nodes_out_edges{$cid}};
             foreach my $edge (@edges)
             {
-                my ($weight, $out_cid, $out_uid, $out_user) = split ",", $edge;
+                my ($weight, $out_cid, $out_uid, $out_user) = @$edge;
                 $all_cids{$out_cid} = 1;
                 $merged_edges{$cid}{$out_cid} = $weight;
-                $merged_nodes{$out_cid} = "0,$out_uid,$out_user";
+                $merged_nodes{$out_cid} = [0, $out_uid, $out_user];
             }
         }
     }
@@ -57,7 +57,7 @@ sub read_js_data($)
     {
         if ($nodes_data{$cid})
         {
-            $merged_nodes{$cid} = "1," . $nodes_data{$cid};
+            $merged_nodes{$cid} = [1, @{$nodes_data{$cid}}];
         }
     }
 
@@ -67,7 +67,7 @@ sub read_js_data($)
         my $node = $merged_nodes{$cid};
         if ($node)
         {
-            my ($selected, $uid, $user) = split ",", $node;
+            my ($selected, $uid, $user) = @$node;
             $user =~ s/"/\\"/g;
             $js_nodes .= qq#{ id: $cid, selected: $selected, uid: $uid, user: "$user" },\n#;
         }
@@ -108,7 +108,7 @@ sub read_nodes_data($)
             my $user = $1;
             /uid="([^"]*)"/;
             my $uid = $1;
-            $nodes_data{$cid} = "$uid,$user";
+            $nodes_data{$cid} = [$uid, $user];
             last;
         }
         close $fh;
@@ -128,7 +128,7 @@ sub read_nodes_edges($$)
         open my $fh, '<', $filename;
         chomp(my @lines = <$fh>);
         close $fh;
-        $nodes_edges{$cid} = \@lines;
+        $nodes_edges{$cid} = [map { [split ","] } @lines];
     }
     return %nodes_edges;
 }
