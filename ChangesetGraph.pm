@@ -39,7 +39,7 @@ sub read_js_data($)
                 my ($weight, $in_cid, $in_uid, $in_user) = @$edge;
                 $all_cids{$in_cid} = 1;
                 $merged_edges{$in_cid}{$cid} = $weight;
-                $merged_nodes{$in_cid} = [0, $in_uid, $in_user];
+                $merged_nodes{$in_cid} = [0, $in_uid, $in_user, ""];
             }
         }
         if ($nodes_out_edges{$cid})
@@ -50,7 +50,7 @@ sub read_js_data($)
                 my ($weight, $out_cid, $out_uid, $out_user) = @$edge;
                 $all_cids{$out_cid} = 1;
                 $merged_edges{$cid}{$out_cid} = $weight;
-                $merged_nodes{$out_cid} = [0, $out_uid, $out_user];
+                $merged_nodes{$out_cid} = [0, $out_uid, $out_user, ""];
             }
         }
     }
@@ -68,9 +68,10 @@ sub read_js_data($)
         my $node = $merged_nodes{$cid};
         if ($node)
         {
-            my ($selected, $uid, $user) = @$node;
+            my ($selected, $uid, $user, $comment) = @$node;
             $user =~ s/"/\\"/g;
-            $js_nodes .= qq#{ id: $cid, selected: $selected, uid: $uid, user: "$user" },\n#;
+            $comment =~ s/"/\\"/g;
+            $js_nodes .= qq#{ id: $cid, selected: $selected, uid: $uid, user: "$user", comment: "$comment" },\n#;
         }
         else
         {
@@ -103,9 +104,12 @@ sub read_nodes_data($)
         my $cid = $1;
         my $twig = XML::Twig->new(keep_encoding => 1)->parsefile($filename);
         my $changeset = $twig->root->first_child('changeset');
+        my $comment_tag = $changeset->first_child('tag[@k="comment"]');
+        my $comment = $comment_tag ? $comment_tag->att('v') : "";
         $nodes_data{$cid} = [
             $changeset->att('uid'),
             $changeset->att('user'),
+            $comment,
         ];
     }
     return %nodes_data;

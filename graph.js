@@ -23,6 +23,14 @@ const myGraph = ForceGraph()
             `by `, user, document.createElement('br'),
             `with uid #${node.uid}`
         );
+        if (node.comment) {
+            const comment = document.createElement('small');
+            comment.append(node.comment);
+            popup.append(
+                document.createElement('br'),
+                comment
+            );
+        }
         return popup.innerHTML;
     }).onNodeClick(node => {
         window.open("https://www.openstreetmap.org/changeset/" + node.id);

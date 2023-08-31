@@ -33,7 +33,7 @@ Design "Philosophy"
 
 Most functionality is implemented as individual Perl modules (`.pm`). They do not have a namespace because we want people to be able to run everything from the current directory. If you create a Perl module named `Osm::Api`, then it has to reside in a subdirectory named `Osm` which tends to get confusing, at least for me.
 
-We're not using any libraries for XML reading and writing in most of the scripts, with the exception of `note.pl`, just plain regular expressions.
+We're not using any libraries for XML reading and writing in most of the scripts, just plain regular expressions.
 
 We're not creating any OO interfaces.
 
