@@ -4,6 +4,7 @@ use strict;
 use FindBin;
 use lib $FindBin::Bin;
 use Getopt::Long;
+use OsmApi;
 use Changeset;
 use ChangesetGraph;
 
@@ -19,39 +20,67 @@ my $correct_options = GetOptions(
     "graph-uids!" => \$graph_uids,
 );
 
-if ($correct_options && ($ARGV[0] eq "add") && ($ARGV[1] eq "changeset") && (scalar(@ARGV)==3))
+my %types = ("changeset" => 1, "node" => 1, "way" => 1, "relation" => 1);
+
+if ($correct_options && ($ARGV[0] eq "add") && $types{$ARGV[1]} && (scalar(@ARGV)==3))
 {
-    my ($command, $type, $cid) = @ARGV;
+    my ($command, $type, $id) = @ARGV;
     mkdir $dirname unless -d $dirname;
-    mkdir "$dirname/changesets" unless -d "$dirname/changesets";
 
-    my $metadata = Changeset::get($cid);
-    die unless defined($metadata);
-    write_node("$dirname/changesets/$cid.osm", $metadata);
+    if ($type eq "changeset")
+    {
+        my $subdirname = "$dirname/changesets";
+        mkdir $subdirname unless -d $subdirname;
 
-    my $content = Changeset::download($cid);
-    die unless defined($content);
-    my @element_versions = Changeset::get_element_versions($content);
+        my $metadata = Changeset::get($id);
+        die unless defined($metadata);
+        write_file("$subdirname/$id.osm", $metadata);
 
-    my @previous_element_versions = Changeset::get_previous_element_versions(@element_versions);
-    write_edges("previous", "$dirname/changesets/$cid.in", @previous_element_versions);
+        my $content = Changeset::download($id);
+        die unless defined($content);
+        my @element_versions = Changeset::get_element_versions($content);
 
-    my @next_element_versions = Changeset::get_next_element_versions(@element_versions);
-    write_edges("next", "$dirname/changesets/$cid.out", @next_element_versions);
+        my @previous_element_versions = Changeset::get_previous_element_versions(@element_versions);
+        write_edges("previous", "$subdirname/$id.in", @previous_element_versions);
+
+        my @next_element_versions = Changeset::get_next_element_versions(@element_versions);
+        write_edges("next", "$subdirname/$id.out", @next_element_versions);
+    }
+    else
+    {
+        my $subdirname = "$dirname/${type}s";
+        mkdir $subdirname unless -d $subdirname;
+
+        my $resp = OsmApi::get("$type/$id/history");
+        if (!$resp->is_success)
+        {
+            print STDERR "history of $type $id cannot be retrieved: ".$resp->status_line."\n";
+            die;
+        }
+        write_file("$subdirname/$id.osm", $resp->content());
+    }
 
     ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
     exit;
 }
 
-if ($correct_options && ($ARGV[0] eq "remove") && ($ARGV[1] eq "changeset") && (scalar(@ARGV)==3))
+if ($correct_options && ($ARGV[0] eq "remove") && $types{$ARGV[1]} && (scalar(@ARGV)==3))
 {
-    my ($command, $type, $cid) = @ARGV;
+    my ($command, $type, $id) = @ARGV;
     mkdir $dirname unless -d $dirname;
-    mkdir "$dirname/changesets" unless -d "$dirname/changesets";
 
-    unlink "$dirname/changesets/$cid.osm";
-    unlink "$dirname/changesets/$cid.in";
-    unlink "$dirname/changesets/$cid.out";
+    if ($type eq "changeset")
+    {
+        my $subdirname = "$dirname/changesets";
+        unlink "$subdirname/$id.osm";
+        unlink "$subdirname/$id.in";
+        unlink "$subdirname/$id.out";
+    }
+    else
+    {
+        my $subdirname = "$dirname/${type}s";
+        unlink "$subdirname/$id.osm";
+    }
 
     ChangesetGraph::generate($dirname, $graph_cids, $graph_users, $graph_uids);
     exit;
@@ -65,9 +94,15 @@ if ($correct_options && ($ARGV[0] eq "redraw") && (scalar(@ARGV)==1))
 
 print <<EOF;
 Usage:
-  $0 add changeset <id> <options>     add changeset to graph
-  $0 remove changeset <id> <options>  remove changeset from graph
+  $0 add <type> <id> <options>        add changeset to graph
+  $0 remove <type> <id> <options>     remove changeset from graph
   $0 redraw <options>                 redraw graph from added changesets
+
+type:
+  changeset
+  node
+  way
+  relation
 
 options:
   --directory <directory>             directory for changeset data and graph html file
@@ -76,7 +111,7 @@ options:
   --graph-uids  | --no-graph-uids     [don't] show user ids on graph
 EOF
 
-sub write_node($$)
+sub write_file($$)
 {
     my ($filename, $metadata) = @_;
     open my $fh, '>', $filename;

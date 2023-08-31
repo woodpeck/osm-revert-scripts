@@ -4,7 +4,7 @@ package ChangesetGraph;
 
 use strict;
 use warnings;
-use List::Util qw(uniqnum);
+use List::Util qw(uniq);
 use XML::Twig;
 
 sub generate($$$$)
@@ -19,82 +19,124 @@ sub generate($$$$)
 sub read_js_data($)
 {
     my ($dirname) = @_;
+    my %nodes;
+    my %in_edges;
+    my %out_edges;
 
-    my %nodes_data = read_nodes_data($dirname);
-    my %nodes_in_edges = read_nodes_edges($dirname, "in");
-    my %nodes_out_edges = read_nodes_edges($dirname, "out");
+    read_elements($dirname, \%nodes, \%in_edges);
+    read_changesets($dirname, \%nodes);
+    read_changeset_edges($dirname, "in", \%in_edges);
+    read_changeset_edges($dirname, "out", \%out_edges);
 
-    my @cids = sort { $a <=> $b } uniqnum keys(%nodes_data), keys(%nodes_in_edges), keys(%nodes_out_edges);
-    my %all_cids;
+    my @ids = sort {$a cmp $b} uniq keys(%nodes), keys(%in_edges), keys(%out_edges);
+    my %all_ids;
     my %merged_nodes;
     my %merged_edges;
-    foreach my $cid (@cids)
+    foreach my $id (@ids)
     {
-        $all_cids{$cid} = 1;
-        if ($nodes_in_edges{$cid})
+        $all_ids{$id} = 1;
+        if ($in_edges{$id})
         {
-            my @edges = @{$nodes_in_edges{$cid}};
-            foreach my $edge (@edges)
+            foreach my $edge (@{$in_edges{$id}})
             {
-                my ($weight, $in_cid, $in_uid, $in_user) = @$edge;
-                $all_cids{$in_cid} = 1;
-                $merged_edges{$in_cid}{$cid} = $weight;
-                $merged_nodes{$in_cid} = [0, $in_uid, $in_user, ""];
+                my ($weight, $in_id, $in_uid, $in_user) = @$edge;
+                $all_ids{$in_id} = 1;
+                $merged_edges{$in_id}{$id} = $weight;
+                $merged_nodes{$in_id} = [0, $in_uid, $in_user, ""];
             }
         }
-        if ($nodes_out_edges{$cid})
+        if ($out_edges{$id})
         {
-            my @edges = @{$nodes_out_edges{$cid}};
-            foreach my $edge (@edges)
+            foreach my $edge (@{$out_edges{$id}})
             {
-                my ($weight, $out_cid, $out_uid, $out_user) = @$edge;
-                $all_cids{$out_cid} = 1;
-                $merged_edges{$cid}{$out_cid} = $weight;
-                $merged_nodes{$out_cid} = [0, $out_uid, $out_user, ""];
+                my ($weight, $out_id, $out_uid, $out_user) = @$edge;
+                $all_ids{$out_id} = 1;
+                $merged_edges{$id}{$out_id} = $weight;
+                $merged_nodes{$out_id} = [0, $out_uid, $out_user, ""];
             }
         }
     }
-    foreach my $cid (@cids)
+    foreach my $id (@ids)
     {
-        if ($nodes_data{$cid})
+        if ($nodes{$id})
         {
-            $merged_nodes{$cid} = [1, @{$nodes_data{$cid}}];
+            $merged_nodes{$id} = [1, @{$nodes{$id}}];
         }
     }
 
     my $js_nodes;
-    foreach my $cid (sort { $a <=> $b } keys(%all_cids))
+    foreach my $id (sort {$a cmp $b} keys(%all_ids))
     {
-        my $node = $merged_nodes{$cid};
+        my $node = $merged_nodes{$id};
         if ($node)
         {
             my ($selected, $uid, $user, $comment) = @$node;
-            $js_nodes .= "{ id: $cid, selected: $selected, uid: $uid, user: ${\(to_js_string($user))}, comment: ${\(to_js_string($comment))} },\n";
+            $js_nodes .= "{ id: '$id', selected: $selected, uid: $uid, user: ${\(to_js_string($user))}, comment: ${\(to_js_string($comment))} },\n";
         }
         else
         {
-            $js_nodes .= "{ id: $cid, selected: 0 },\n";
+            $js_nodes .= "{ id: '$id', selected: 0 },\n";
         }
     }
 
     my $js_links;
-    foreach my $in_cid (sort { $a <=> $b } keys(%merged_edges))
+    foreach my $in_id (sort {$a cmp $b} keys(%merged_edges))
     {
-        my %out_edges = %{$merged_edges{$in_cid}};
-        foreach my $out_cid (sort { $a <=> $b } keys(%out_edges))
+        my %out_edges = %{$merged_edges{$in_id}};
+        foreach my $out_id (sort {$a cmp $b} keys(%out_edges))
         {
-            my $weight = $out_edges{$out_cid};
-            $js_links .= "{ source: $in_cid, target: $out_cid, weight: $weight },\n";
+            my $weight = $out_edges{$out_id};
+            $js_links .= "{ source: '$in_id', target: '$out_id', weight: $weight },\n";
         }
     }
 
     return $js_nodes, $js_links;
 }
 
-sub read_nodes_data($)
+sub read_elements($$$)
 {
-    my ($dirname) = @_;
-    my %nodes_data;
+    my ($dirname, $nodes, $in_edges) = @_;
+    my %elements;
+
+    foreach my $type ('node', 'way', 'relation')
+    {
+        my $t = substr($type, 0, 1);
+        foreach my $filename (glob qq{"$dirname/${type}s/*.osm"})
+        {
+            next unless $filename =~ qr/(\d+)\.osm$/;
+            my $eid = $1;
+            my $twig = XML::Twig->new(keep_encoding => 1)->parsefile($filename);
+            my $last_edge;
+
+            foreach my $element ($twig->root->children) {
+                my $version = $element->att('version');
+                my $id = "${t}${eid}v${version}";
+                $nodes->{$id} = [
+                    $element->att('uid'),
+                    $element->att('user'),
+                    "",
+                ];
+                push @{$in_edges->{$id}}, [
+                    1,
+                    "c" . $element->att('changeset'),
+                    $element->att('uid'),
+                    $element->att('user'),
+                ];
+                push @{$in_edges->{$id}}, $last_edge if (defined($last_edge));
+                $last_edge = [
+                    1,
+                    $id,
+                    $element->att('uid'),
+                    $element->att('user'),
+                ];
+            }
+        }
+    }
+}
+
+sub read_changesets($$)
+{
+    my ($dirname, $nodes) = @_;
 
     foreach my $filename (glob qq{"$dirname/changesets/*.osm"})
     {
@@ -104,19 +146,17 @@ sub read_nodes_data($)
         my $changeset = $twig->root->first_child('changeset');
         my $comment_tag = $changeset->first_child('tag[@k="comment"]');
         my $comment = $comment_tag ? $comment_tag->att('v') : "";
-        $nodes_data{$cid} = [
+        $nodes->{"c$cid"} = [
             $changeset->att('uid'),
             $changeset->att('user'),
             $comment,
         ];
     }
-    return %nodes_data;
 }
 
-sub read_nodes_edges($$)
+sub read_changeset_edges($$$)
 {
-    my ($dirname, $direction) = @_;
-    my %nodes_edges;
+    my ($dirname, $direction, $edges) = @_;
 
     foreach my $filename (glob qq{"$dirname/changesets/*.$direction"})
     {
@@ -125,9 +165,11 @@ sub read_nodes_edges($$)
         open my $fh, '<', $filename;
         chomp(my @lines = <$fh>);
         close $fh;
-        $nodes_edges{$cid} = [map { [split ","] } @lines];
+        push @{$edges->{"c$cid"}}, (map {
+            my ($weight, $cid, $uid, $user) = split ",";
+            [$weight, "c$cid", $uid, $user];
+        } @lines);
     }
-    return %nodes_edges;
 }
 
 sub write_html($$$$$$)

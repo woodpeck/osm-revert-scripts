@@ -14,12 +14,18 @@ const myGraph = ForceGraph()
     .linkDirectionalArrowLength(6)
     .nodeLabel((node) => {
         const popup = document.createElement('span');
-        const changeset = document.createElement('strong');
+        const item = document.createElement('strong');
         const user = document.createElement('strong');
-        changeset.append(`#`, node.id);
+        item.append(`#`, node.id.substring(1));
         user.append(node.user);
+        const t = node.id[0];
+        let type = '';
+        if (t == 'c') type = 'changeset';
+        if (t == 'n') type = 'node';
+        if (t == 'w') type = 'way';
+        if (t == 'r') type = 'relation';
         popup.append(
-            `changeset `, changeset, document.createElement('br'),
+            `${type} `, item, document.createElement('br'),
             `by `, user, document.createElement('br'),
             `with uid #${node.uid}`
         );
@@ -33,7 +39,9 @@ const myGraph = ForceGraph()
         }
         return popup.innerHTML;
     }).onNodeClick(node => {
-        window.open("https://www.openstreetmap.org/changeset/" + node.id);
+        const t = node.id[0];
+        const id = node.id.substring(1);
+        if (t == 'c') window.open("https://www.openstreetmap.org/changeset/" + id);
     });
 
 if (showCids || showUsers || showUids) {
