@@ -359,7 +359,7 @@ sub request_oauth2_token
     use Bytes::Random::Secure qw(random_bytes);
 
     my ($token_name, $scope) = @_;
-    $scope = "read_prefs write_api write_notes write_gpx" unless defined($scope);
+    $scope = "read_prefs write_api write_notes read_gpx write_gpx" unless defined($scope);
 
     my $redirect_uri = "urn:ietf:wg:oauth:2.0:oob";
     my $code_verifier = encode_base64url random_bytes(48);

@@ -28,6 +28,18 @@ sub create
     return $resp->content;
 }
 
+sub get
+{
+    my ($id) = @_;
+    my $resp = OsmApi::get("gpx/$id");
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot load trace: ".$resp->status_line."\n";
+        return undef;
+    }
+    return $resp->content;
+}
+
 sub delete
 {
     my ($id) = @_;
