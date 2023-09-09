@@ -7,14 +7,16 @@ use strict;
 use FindBin;
 use lib $FindBin::Bin;
 use List::Util qw(pairs pairgrep);
+use Getopt::Long;
 use Changeset;
 
 my @regular_commands = (
     "create [<comment>]",     "create a changeset; returns ID created",
     "close <id> [<comment>]", "close a changeset and optionally set comment",
     "upload <id> <content>",  "upload changes to an open changeset",
-    "comment <id> <comment>", "comment on an existing changeset",
     "get <id>",               "load and print changeset metadata XML",
+    "comment <id> <comment>", "comment on an existing changeset",
+    "comment-hide <options>", "hide changeset comment(s)",
 );
 
 if ($ARGV[0] eq "create")
@@ -52,6 +54,14 @@ if (($ARGV[0] eq "upload") && (scalar(@ARGV)==2))
     exit;
 }
 
+if (($ARGV[0] eq "get") && (scalar(@ARGV)==2))
+{
+    my $content = Changeset::get($ARGV[1]);
+    print $content;
+    print "\n";
+    exit;
+}
+
 if (($ARGV[0] eq "comment") && (scalar(@ARGV)==3))
 {
     if (Changeset::comment($ARGV[1], $ARGV[2]))
@@ -61,12 +71,19 @@ if (($ARGV[0] eq "comment") && (scalar(@ARGV)==3))
     exit;
 }
 
-if (($ARGV[0] eq "get") && (scalar(@ARGV)==2))
+if ($ARGV[0] eq "comment-hide")
 {
-    my $content = Changeset::get($ARGV[1]);
-    print $content;
-    print "\n";
-    exit;
+    my $comment_id;
+    my $correct_options = GetOptions(
+        "comment-id=s" => \$comment_id,
+    );
+    if ($correct_options && defined($comment_id) && (scalar(@ARGV)==1))
+    {
+        if (Changeset::hide_comment($comment_id)) {
+            print "comment hidden.\n";
+        }
+        exit;
+    }
 }
 
 my @download_commands = (
@@ -119,12 +136,15 @@ my $command_width = 35;
 print "Usage:\n";
 foreach my $pair (pairs @regular_commands)
 {
-    printf "  %s %-35s %s\n", $0, $pair->key, $pair->value;
+    printf "  %s %-${command_width}s %s\n", $0, $pair->key, $pair->value;
 }
 foreach my $pair (pairs @download_commands)
 {
-    printf "  %s %-35s %s\n", $0, $pair->key . " <id>", $pair->value;
+    printf "  %s %-${command_width}s %s\n", $0, $pair->key . " <id>", $pair->value;
 }
+print "\ncomment-hide options:\n";
+my $option_width = length($0) + 1 + $command_width;
+printf "  %-${option_width}s %s\n", "--comment-id <number>", "hide one comment with the specified id";
 
 sub download_siblings($$$@)
 {

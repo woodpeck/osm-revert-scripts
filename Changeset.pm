@@ -58,6 +58,22 @@ sub comment($$)
     }
 }
 
+# -----------------------------------------------------------------------------
+# Hides (discussion) changeset comment
+# Parameters: comment id
+# Returns: 1=ok, undef=error
+
+sub hide_comment($)
+{
+    my $comment_id = shift;
+    my $resp = OsmApi::post("changeset/comment/$comment_id/hide", "", 1);
+    if (!$resp->is_success)
+    {
+    	print STDERR "cannot hide changeset comment: ".$resp->status_line."\n";
+        return undef;
+    }
+    return 1;
+}
 
 # -----------------------------------------------------------------------------
 # Creates XML representation of changeset
