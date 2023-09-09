@@ -31,6 +31,13 @@ if (($ARGV[0] eq "get") && (scalar(@ARGV) == 2))
     exit;
 }
 
+if (($ARGV[0] eq "list") && (scalar(@ARGV) == 1))
+{
+    my $content = Trace::list();
+    print $content;
+    exit;
+}
+
 if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 2))
 {
     Trace::delete($ARGV[1]);
@@ -41,6 +48,7 @@ print <<EOF;
 Usage:
   $0 create <filename> <options>    upload new gpx trace
   $0 get <id>                       load and print trace metadata XML
+  $0 list                           load and print metadata of current user's traces
   $0 delete <id>                    delete trace
 
 options:
