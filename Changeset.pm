@@ -66,13 +66,18 @@ sub comment($$)
 sub hide_comment($)
 {
     my $comment_id = shift;
-    my $resp = OsmApi::post("changeset/comment/$comment_id/hide", "", 1);
-    if (!$resp->is_success)
-    {
-    	print STDERR "cannot hide changeset comment: ".$resp->status_line."\n";
-        return undef;
-    }
-    return 1;
+    return modify_comment($comment_id, "hide");
+}
+
+# -----------------------------------------------------------------------------
+# Unhides (discussion) changeset comment
+# Parameters: comment id
+# Returns: 1=ok, undef=error
+
+sub unhide_comment($)
+{
+    my $comment_id = shift;
+    return modify_comment($comment_id, "unhide");
 }
 
 # -----------------------------------------------------------------------------
@@ -320,6 +325,18 @@ sub get_changeset_summary($)
 }
 
 ###
+
+sub modify_comment($$)
+{
+    my ($comment_id, $action) = @_;
+    my $resp = OsmApi::post("changeset/comment/$comment_id/$action", "", 1);
+    if (!$resp->is_success)
+    {
+    	print STDERR "cannot $action changeset comment: ".$resp->status_line."\n";
+        return undef;
+    }
+    return 1;
+}
 
 sub prepare_download_queries($@)
 {

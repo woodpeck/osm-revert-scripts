@@ -11,12 +11,13 @@ use Getopt::Long;
 use Changeset;
 
 my @regular_commands = (
-    "create [<comment>]",     "create a changeset; returns ID created",
-    "close <id> [<comment>]", "close a changeset and optionally set comment",
-    "upload <id> <content>",  "upload changes to an open changeset",
-    "get <id>",               "load and print changeset metadata XML",
-    "comment <id> <comment>", "comment on an existing changeset",
-    "comment-hide <options>", "hide changeset comment(s)",
+    "create [<comment>]",       "create a changeset; returns ID created",
+    "close <id> [<comment>]",   "close a changeset and optionally set comment",
+    "upload <id> <content>",    "upload changes to an open changeset",
+    "get <id>",                 "load and print changeset metadata XML",
+    "comment <id> <comment>",   "comment on an existing changeset",
+    "comment-hide <options>",   "hide changeset comment(s)",
+    "comment-unhide <options>", "unhide changeset comment(s)",
 );
 
 if ($ARGV[0] eq "create")
@@ -71,7 +72,7 @@ if (($ARGV[0] eq "comment") && (scalar(@ARGV)==3))
     exit;
 }
 
-if ($ARGV[0] eq "comment-hide")
+if (($ARGV[0] eq "comment-hide") || ($ARGV[0] eq "comment-unhide"))
 {
     my $comment_id;
     my $correct_options = GetOptions(
@@ -79,8 +80,13 @@ if ($ARGV[0] eq "comment-hide")
     );
     if ($correct_options && defined($comment_id) && (scalar(@ARGV)==1))
     {
-        if (Changeset::hide_comment($comment_id)) {
-            print "comment hidden.\n";
+        if ($ARGV[0] eq "comment-hide")
+        {
+            print "comment hidden.\n" if Changeset::hide_comment($comment_id);
+        }
+        elsif ($ARGV[0] eq "comment-unhide")
+        {
+            print "comment unhidden.\n" if Changeset::unhide_comment($comment_id);
         }
         exit;
     }
