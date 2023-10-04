@@ -1,5 +1,15 @@
 const $changesets = document.getElementById('changesets');
 
+const $selectAllCheckbox = document.createElement('input');
+$selectAllCheckbox.type = 'checkbox';
+$selectAllCheckbox.title = `select all changesets`;
+$selectAllCheckbox.onclick = () => {
+    for (const $checkbox of $changesets.querySelectorAll('li.item input[type=checkbox]')) {
+        $checkbox.checked = $selectAllCheckbox.checked;
+    }
+    updateSelection();
+};
+
 const $selectedCountOutput = document.createElement('output');
 $selectedCountOutput.textContent = 0;
 
@@ -61,16 +71,11 @@ $changesets.onclick = ev => {
     const $clickedCheckbox = ev.target;
     if (!($clickedCheckbox instanceof HTMLInputElement)) return;
     if ($clickedCheckbox.type != 'checkbox') return;
-    let count = 0;
-    for (const $checkbox of $changesets.querySelectorAll('li.item input[type=checkbox]')) {
-        if (!($checkbox instanceof HTMLInputElement)) continue;
-        count += $checkbox.checked;
-    }
-    $selectedCountOutput.textContent = count;
+    updateSelection();
 };
 
 const $header = document.createElement('header');
-$header.append($viewSelect, ` `, $separatorSelect);
+$header.append($selectAllCheckbox,` `,$viewSelect, ` `, $separatorSelect);
 document.body.prepend($header);
 
 const $footer = document.createElement('footer');
@@ -122,12 +127,24 @@ const $footer = document.createElement('footer');
 }
 document.body.append($footer);
 
+function updateSelection() {
+    let countChecked = 0;
+    let countUnchecked = 0;
+    for (const $checkbox of $changesets.querySelectorAll('li.item input[type=checkbox]')) {
+        if (!($checkbox instanceof HTMLInputElement)) continue;
+        countChecked += $checkbox.checked;
+        countUnchecked += !$checkbox.checked;
+    }
+    $selectedCountOutput.textContent = countChecked;
+    $selectAllCheckbox.checked = countChecked && !countUnchecked;
+    $selectAllCheckbox.indeterminate=countChecked && countUnchecked;
+}
+
 function getSelectedChangesetIds() {
     const ids = [];
     for (const $item of $changesets.querySelectorAll('li.item')) {
         if (!($item instanceof HTMLElement)) continue;
-        const $checkbox = $item.querySelector('input[type=checkbox]');
-        if (!($checkbox instanceof HTMLInputElement)) continue;
+        const $checkbox = getItemCheckbox($item);
         if (!$checkbox.checked) continue;
         const id = getItemId($item);
         if (id == null) continue;
@@ -146,4 +163,8 @@ function getItemTime($item) {
     const $time = $item.querySelector('time');
     if (!$time) return;
     return $time.dateTime;
+}
+
+function getItemCheckbox($item) {
+    return $item.querySelector('input[type=checkbox]');
 }

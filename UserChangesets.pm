@@ -250,6 +250,7 @@ HTML
 </main>
 <script>
 const weburl = "$weburl";
+
 ${html_script}</script>
 </body>
 </html>
