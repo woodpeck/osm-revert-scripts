@@ -35,7 +35,7 @@ $separatorSelect.oninput = () => {
     let lastTime;
     for (const $item of $changesets.querySelectorAll('li.item')) {
         if (!($item instanceof HTMLElement)) continue;
-        const uncutTime = $item.dataset.time;
+        const uncutTime = getItemTime($item);
         if (!uncutTime) continue;
         const time = uncutTime.slice(0, size);
         if (lastTime == time) continue;
@@ -63,7 +63,7 @@ $changesets.onclick = ev => {
     if ($clickedCheckbox.type != 'checkbox') return;
     let count = 0;
     for (const $checkbox of $changesets.querySelectorAll('li.item input[type=checkbox]')) {
-        if (!($checkbox instanceof HTMLInputElement)) return;
+        if (!($checkbox instanceof HTMLInputElement)) continue;
         count += $checkbox.checked;
     }
     $selectedCountOutput.textContent = count;
@@ -76,3 +76,9 @@ document.body.prepend($header);
 const $footer = document.createElement('footer');
 $footer.append(`Selected `, $selectedCountOutput, ` changesets`);
 document.body.append($footer);
+
+function getItemTime($item) {
+    const $time = $item.querySelector('time');
+    if (!$time) return;
+    return $time.dateTime;
+}

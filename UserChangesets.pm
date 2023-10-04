@@ -195,7 +195,7 @@ sub list
     my $html_filename = "$dirname/index.html";
     my $fh;
 
-    open($fh, '<', $FindBin::Bin."/list.js") or die $!;
+    open($fh, '<:utf8', $FindBin::Bin."/list.js") or die $!;
     my $script = do { local $/; <$fh> };
     close $fh;
 
@@ -212,17 +212,29 @@ sub list
 <style>
 body {
     margin: 0;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+        'header'
+        'main'
+        'footer';
 }
 header {
-    position: sticky;
-    z-index: 1;
-    top: 0;
-    padding: .5rem;
-    background: canvas;
-    box-shadow: 0 0px 6px #000;
+    grid-area: header;
 }
 main {
+    grid-area: main;
+    overflow: auto;
     padding: .5rem;
+}
+footer {
+    grid-area: footer;
+}
+header, footer {
+    padding: .5rem;
+    box-shadow: 0 0px 6px #000;
 }
 #changesets {
     margin: 0;
@@ -248,6 +260,12 @@ main {
 #changesets li.separator time {
     background: canvas;
     padding: .5rem;
+}
+#changesets li.item {
+    white-space: nowrap;
+}
+#changesets li.item > * {
+    white-space: normal;
 }
 #changesets li.item :is(a, time, .changes) {
     font-family: monospace;
