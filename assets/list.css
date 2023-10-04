@@ -24,6 +24,7 @@ header, footer {
     padding: .5rem;
     box-shadow: 0 0px 6px #000;
 }
+
 #changesets {
     margin: 0;
     padding: 0;
@@ -73,4 +74,12 @@ header, footer {
 }
 #changesets.compact li.item :is(time, .changes, .comment) {
     display: none;
+}
+
+footer output {
+    display: inline-block;
+    width: 5.5ex;
+    border: dotted 1px #888;
+    padding: .125em;
+    text-align: right;
 }
