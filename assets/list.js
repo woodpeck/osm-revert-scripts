@@ -51,14 +51,20 @@ $separatorSelect.oninput = () => {
         if (lastTime == time) continue;
         lastTime = time;
         let label = time.replace('T', ' ');
-        if (label.length == 13) label += ':**';
+        if (label.length == 13) label += ':--';
+
+        const $checkbox = document.createElement('input');
+        $checkbox.type = 'checkbox';
+        $checkbox.title = `select changesets in ${label}`;
+
         const $time = document.createElement('time');
         $time.append(label);
         const $separator = document.createElement('li');
         $separator.classList.add('separator');
-        $separator.append($time);
+        $separator.append($checkbox,` `,$time);
         $item.before($separator);
     }
+    updateSelection();
 };
 
 for (const $item of $changesets.querySelectorAll('li.item')) {
@@ -71,6 +77,14 @@ $changesets.onclick = ev => {
     const $clickedCheckbox = ev.target;
     if (!($clickedCheckbox instanceof HTMLInputElement)) return;
     if ($clickedCheckbox.type != 'checkbox') return;
+    let $item = $clickedCheckbox.closest('li');
+    if ($item.classList.contains('separator')) {
+        while ($item = $item.nextElementSibling) {
+            if ($item.classList.contains('separator')) break;
+            const $checkbox = getItemCheckbox($item);
+            $checkbox.checked = $clickedCheckbox.checked;
+        }
+    }
     updateSelection();
 };
 
@@ -128,16 +142,31 @@ const $footer = document.createElement('footer');
 document.body.append($footer);
 
 function updateSelection() {
-    let countChecked = 0;
-    let countUnchecked = 0;
-    for (const $checkbox of $changesets.querySelectorAll('li.item input[type=checkbox]')) {
-        if (!($checkbox instanceof HTMLInputElement)) continue;
-        countChecked += $checkbox.checked;
-        countUnchecked += !$checkbox.checked;
+    let checkedTotalCount = 0;
+    let uncheckedTotalCount = 0;
+    let checkedGroupCount = 0;
+    let uncheckedGroupCount = 0;
+    let $groupCheckbox;
+    for (const $item of $changesets.querySelectorAll('li')) {
+        if ($item.classList.contains('separator')) {
+            if ($groupCheckbox) {
+                $groupCheckbox.checked = checkedGroupCount && !uncheckedGroupCount;
+                $groupCheckbox.indeterminate = checkedGroupCount && uncheckedGroupCount;
+            }
+            checkedGroupCount = 0;
+            uncheckedGroupCount = 0;
+            $groupCheckbox = getItemCheckbox($item);
+        } else if ($item.classList.contains('item')) {
+            const $checkbox = getItemCheckbox($item);
+            checkedTotalCount += $checkbox.checked;
+            uncheckedTotalCount += !$checkbox.checked;
+            checkedGroupCount += $checkbox.checked;
+            uncheckedGroupCount += !$checkbox.checked;
+        }
     }
-    $selectedCountOutput.textContent = countChecked;
-    $selectAllCheckbox.checked = countChecked && !countUnchecked;
-    $selectAllCheckbox.indeterminate=countChecked && countUnchecked;
+    $selectedCountOutput.textContent = checkedTotalCount;
+    $selectAllCheckbox.checked = checkedTotalCount && !uncheckedTotalCount;
+    $selectAllCheckbox.indeterminate=checkedTotalCount && uncheckedTotalCount;
 }
 
 function getSelectedChangesetIds() {

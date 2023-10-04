@@ -32,7 +32,6 @@ header, footer {
 }
 #changesets li.separator {
     position: relative;
-    text-align: center;
     padding: .5rem 0;
     margin-top: .25rem;
 }
@@ -47,8 +46,12 @@ header, footer {
     background: linear-gradient(to right, transparent, #888 50%, transparent);
 }
 #changesets li.separator time {
-    background: canvas;
+    position: absolute;
+    inset: 0;
+    width: fit-content;
+    margin: auto;
     padding: .5rem;
+    background: canvas;
 }
 #changesets li.item {
     white-space: nowrap;
