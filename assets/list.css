@@ -1,0 +1,76 @@
+body {
+    margin: 0;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+        'header'
+        'main'
+        'footer';
+}
+header {
+    grid-area: header;
+}
+main {
+    grid-area: main;
+    overflow: auto;
+    padding: .5rem;
+}
+footer {
+    grid-area: footer;
+}
+header, footer {
+    padding: .5rem;
+    box-shadow: 0 0px 6px #000;
+}
+#changesets {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+#changesets li.separator {
+    position: relative;
+    text-align: center;
+    padding: .5rem 0;
+    margin-top: .25rem;
+}
+#changesets li.separator::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: 0;
+    top: 50%;
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(to right, transparent, #888 50%, transparent);
+}
+#changesets li.separator time {
+    background: canvas;
+    padding: .5rem;
+}
+#changesets li.item {
+    white-space: nowrap;
+}
+#changesets li.item > * {
+    white-space: normal;
+}
+#changesets li.item :is(a, time, .changes) {
+    font-family: monospace;
+}
+#changesets li.item .changes {
+    background: #8884;
+    border-radius: .25em;
+    padding-inline: .25em;
+}
+#changesets li.item .changes .count {
+    min-width: 4.5ex;
+    display: inline-block;
+    text-align: right;
+}
+#changesets.compact li.item {
+    display: inline;
+}
+#changesets.compact li.item :is(time, .changes, .comment) {
+    display: none;
+}
