@@ -198,7 +198,7 @@ sub list
     my $script = do { local $/; <$fh> };
     close $fh;
 
-    open($fh, '>', $html_filename) or die "can't open html list file '$html_filename' for writing";
+    open($fh, '>:utf8', $html_filename) or die "can't open html list file '$html_filename' for writing";
     print $fh <<HTML;
 <!DOCTYPE html>
 <html lang=en>
@@ -226,10 +226,15 @@ main {
     margin: 0;
     padding: 0;
     list-style: none;
+}
+#changesets li a {
     font-family: monospace;
 }
 #changesets.compact li {
     display: inline;
+}
+#changesets.compact li .comment {
+    display: none;
 }
 </style>
 </head>
@@ -240,20 +245,24 @@ HTML
 
     foreach my $list_filename (list_osm_filenames($metadata_dirname))
     {
-        my $twig = XML::Twig->new(keep_encoding => 1)->parsefile($list_filename);
-        foreach my $element ($twig->root->children)
+        my $twig = XML::Twig->new()->parsefile($list_filename);
+        foreach my $changeset ($twig->root->children)
         {
-            my $id = $element->att('id');
+            my $id = $changeset->att('id');
             next if $visited_changesets{$id};
             $visited_changesets{$id} = 1;
 
-            my $created_at = $element->att('created_at');
-            my $closed_at = $element->att('closed_at');
+            my $created_at = $changeset->att('created_at');
+            my $closed_at = $changeset->att('closed_at');
             next if (str2time($closed_at) < $from_timestamp);
             next if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
 
+            my $comment_tag = $changeset->first_child('tag[@k="comment"]');
+            my $comment = $comment_tag ? $comment_tag->att('v') : "";
+
             print $fh "<li>";
-            print $fh "<a href='".encode_entities(OsmApi::weburl("changeset/$id"))."'>".encode_entities($id)."</a>";
+            print $fh "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>";
+            print $fh " <span class=comment>".html_escape($comment)."</span>";
             print $fh "</li>\n";
         }
     }
@@ -332,6 +341,12 @@ sub make_compact_date
     $date =~ s/ /T/;
     $date =~ tr/-://d;
     return $date;
+}
+
+sub html_escape
+{
+    my $s = shift;
+    return encode_entities($s, '<>&"');
 }
 
 1;
