@@ -190,9 +190,8 @@ sub list
 {
     use XML::Twig;
 
-    my ($dirname, $metadata_dirname, $from_timestamp, $to_timestamp) = @_;
+    my ($html_filename, $metadata_dirname, $from_timestamp, $to_timestamp) = @_;
     my %visited_changesets = ();
-    my $html_filename = "$dirname/index.html";
     my $fh;
     my $html_style = read_asset("list.css");
     my $html_script = read_asset("list.js");

@@ -12,13 +12,15 @@ my $uid;
 my $from_date = "2001-01-01";
 my $to_date;
 my $dirname;
+my $output_filename;
 
 my $correct_options = GetOptions(
     "username|u=s" => \$username,
     "id|uid=i" => \$uid,
     "from|since=s" => \$from_date,
     "to=s" => \$to_date,
-    "directory|output=s" => \$dirname
+    "directory|output=s" => \$dirname,
+    "output-filename=s" => \$output_filename
 );
 
 my $from_timestamp = UserChangesets::parse_date($from_date);
@@ -68,9 +70,13 @@ if ($correct_options && ($ARGV[0] eq "list"))
         require_exactly_one_user_arg();
         $dirname = get_dirname();
     }
+    if (!defined($output_filename))
+    {
+        $output_filename = "$dirname/index.html";
+    }
 
     my $metadata_dirname = "$dirname/metadata";
-    UserChangesets::list($dirname, $metadata_dirname, $from_timestamp, $to_timestamp);
+    UserChangesets::list($output_filename, $metadata_dirname, $from_timestamp, $to_timestamp);
     exit;
 }
 
