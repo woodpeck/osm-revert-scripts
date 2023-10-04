@@ -189,13 +189,51 @@ sub list
 {
     my ($dirname, $metadata_dirname, $from_timestamp, $to_timestamp) = @_;
     my %visited_changesets = ();
-
     my $list_filename = "$dirname/index.html";
-    open(my $fh, '>', $list_filename) or die "can't open list file '$list_filename' for writing";
+    my $fh;
+
+    open($fh, '<', $FindBin::Bin."/list.js") or die $!;
+    my $script = do { local $/; <$fh> };
+    close $fh;
+
+    open($fh, '>', $list_filename) or die "can't open list file '$list_filename' for writing";
     print $fh <<HTML;
-<html>
+<!DOCTYPE html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>list of changesets</title>
+<meta name=color-scheme content="light dark">
+<style>
+body {
+    margin: 0;
+}
+header {
+    position: sticky;
+    top: 0;
+    padding: .5rem;
+    background: canvas;
+    box-shadow: 0 0px 6px #000;
+}
+main {
+    padding: .5rem;
+}
+#changesets {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: monospace;
+}
+#changesets.compact li {
+    display: inline;
+}
+</style>
+</head>
 <body>
-<ul>
+<main>
+<ul id=changesets>
 HTML
 
     foreach my $list_filename (list_osm_filenames($metadata_dirname))
@@ -213,6 +251,9 @@ HTML
 
     print $fh <<HTML;
 </ul>
+</main>
+<script>
+$script</script>
 </body>
 </html>
 HTML
