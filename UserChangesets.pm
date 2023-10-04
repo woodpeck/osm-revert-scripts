@@ -187,16 +187,18 @@ sub count
 
 sub list
 {
+    use XML::Twig;
+
     my ($dirname, $metadata_dirname, $from_timestamp, $to_timestamp) = @_;
     my %visited_changesets = ();
-    my $list_filename = "$dirname/index.html";
+    my $html_filename = "$dirname/index.html";
     my $fh;
 
     open($fh, '<', $FindBin::Bin."/list.js") or die $!;
     my $script = do { local $/; <$fh> };
     close $fh;
 
-    open($fh, '>', $list_filename) or die "can't open list file '$list_filename' for writing";
+    open($fh, '>', $html_filename) or die "can't open html list file '$html_filename' for writing";
     print $fh <<HTML;
 <!DOCTYPE html>
 <html lang=en>
@@ -238,15 +240,22 @@ HTML
 
     foreach my $list_filename (list_osm_filenames($metadata_dirname))
     {
-        iterate_over_changesets($list_filename, sub {
-            my ($id, $created_at, $closed_at) = @_;
-            return if (str2time($closed_at) < $from_timestamp);
-            return if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
-            return if $visited_changesets{$id};
+        my $twig = XML::Twig->new(keep_encoding => 1)->parsefile($list_filename);
+        foreach my $element ($twig->root->children)
+        {
+            my $id = $element->att('id');
+            next if $visited_changesets{$id};
             $visited_changesets{$id} = 1;
 
-            print $fh "<li><a href='".encode_entities(OsmApi::weburl("changeset/$id"))."'>".encode_entities($id)."</a></li>\n";
-        });
+            my $created_at = $element->att('created_at');
+            my $closed_at = $element->att('closed_at');
+            next if (str2time($closed_at) < $from_timestamp);
+            next if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
+
+            print $fh "<li>";
+            print $fh "<a href='".encode_entities(OsmApi::weburl("changeset/$id"))."'>".encode_entities($id)."</a>";
+            print $fh "</li>\n";
+        }
     }
 
     print $fh <<HTML;
