@@ -55,7 +55,7 @@ for (const $item of $changesets.querySelectorAll('li.item')) {
     if (!($item instanceof HTMLElement)) continue;
     const $itemCheckbox = document.createElement('input');
     $itemCheckbox.type = 'checkbox';
-    $item.prepend($itemCheckbox,` `);
+    $item.prepend($itemCheckbox, ` `);
 }
 $changesets.onclick = ev => {
     const $clickedCheckbox = ev.target;
@@ -74,8 +74,73 @@ $header.append($viewSelect, ` `, $separatorSelect);
 document.body.prepend($header);
 
 const $footer = document.createElement('footer');
-$footer.append(`Selected `, $selectedCountOutput, ` changesets`);
+{
+    const $tool = document.createElement('span');
+    $tool.append(`Selected `, $selectedCountOutput, ` changesets; do with them:`);
+    $footer.append($tool);
+}
+{
+    const $tool = document.createElement('span');
+
+    const $typeSelect = document.createElement('select');
+    $typeSelect.append(
+        new Option('URLs'),
+        new Option('ids')
+    );
+
+    const $separatorInput = document.createElement('input');
+    $separatorInput.type = 'text';
+    $separatorInput.size = 3;
+    $separatorInput.value = `\\n`;
+
+    const $button = document.createElement('button');
+    $button.append(`📋`);
+    $button.onclick = () => {
+        const separator=$separatorInput.value.replace(/\\(.)/g, (_, c) => {
+            if (c=='n') return '\n';
+            if (c=='t') return '\t';
+            return c;
+        });
+        const text = getSelectedChangesetIds().map(id => {
+            if ($typeSelect.value == 'URLs') {
+                return `${weburl}changeset/${id}`;
+            } else {
+                return id;
+            }
+        }).join(separator);
+        navigator.clipboard.writeText(text);
+    };
+
+    const $separatorInputLabel = document.createElement('label');
+    $separatorInputLabel.append(`separated by `, $separatorInput);
+    $tool.append(
+        `Copy `, $typeSelect, ` `,
+        $separatorInputLabel, ` `,
+        `to clipboard `, $button
+    );
+    $footer.append(` `,$tool);
+}
 document.body.append($footer);
+
+function getSelectedChangesetIds() {
+    const ids = [];
+    for (const $item of $changesets.querySelectorAll('li.item')) {
+        if (!($item instanceof HTMLElement)) continue;
+        const $checkbox = $item.querySelector('input[type=checkbox]');
+        if (!($checkbox instanceof HTMLInputElement)) continue;
+        if (!$checkbox.checked) continue;
+        const id = getItemId($item);
+        if (id == null) continue;
+        ids.push(id);
+    }
+    return ids;
+}
+
+function getItemId($item) {
+    const $a = $item.querySelector('a');
+    if (!$a) return;
+    return $a.textContent;
+}
 
 function getItemTime($item) {
     const $time = $item.querySelector('time');

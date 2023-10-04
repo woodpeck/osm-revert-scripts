@@ -196,6 +196,7 @@ sub list
     my $fh;
     my $html_style = read_asset("list.css");
     my $html_script = read_asset("list.js");
+    my $weburl = OsmApi::weburl();
 
     open($fh, '>:utf8', $html_filename) or die "can't open html list file '$html_filename' for writing";
     print $fh <<HTML;
@@ -248,6 +249,7 @@ HTML
 </ul>
 </main>
 <script>
+const weburl = "$weburl";
 ${html_script}</script>
 </body>
 </html>

@@ -243,7 +243,7 @@ sub post_web
 
 sub weburl
 {
-    my $path = shift;
+    my $path = shift || '';
     return $prefs->{'weburl'} . $path;
 }
 
