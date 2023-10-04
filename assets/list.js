@@ -1,5 +1,6 @@
 const $changesets = document.getElementById('changesets');
 
+let $lastClickedCheckbox;
 const $selectAllCheckbox = document.createElement('input');
 $selectAllCheckbox.type = 'checkbox';
 $selectAllCheckbox.title = `select all changesets`;
@@ -8,6 +9,7 @@ $selectAllCheckbox.onclick = () => {
         $checkbox.checked = $selectAllCheckbox.checked;
     }
     updateSelection();
+    $lastClickedCheckbox = undefined;
 };
 
 const $selectedCountOutput = document.createElement('output');
@@ -82,6 +84,15 @@ $changesets.onclick = ev => {
             const $checkbox = getItemCheckbox($item);
             $checkbox.checked = $clickedCheckbox.checked;
         }
+        $lastClickedCheckbox = undefined;
+    } else if ($item.classList.contains('changeset')) {
+        if (ev.shiftKey && $lastClickedCheckbox) {
+            $lastClickedCheckbox.checked = $clickedCheckbox.checked;
+            for ($checkbox of getCheckboxesBetweenCheckboxes($lastClickedCheckbox, $clickedCheckbox)) {
+                $checkbox.checked = $clickedCheckbox.checked;
+            }
+        }
+        $lastClickedCheckbox = $clickedCheckbox;
     }
     updateSelection();
 };
@@ -177,6 +188,14 @@ function getSelectedChangesetIds() {
         ids.push(id);
     }
     return ids;
+}
+
+function *getCheckboxesBetweenCheckboxes($checkbox1, $checkbox2) {
+    let inside = 0;
+    for (const $checkbox of $changesets.querySelectorAll('li.changeset input[type=checkbox]')) {
+        inside ^= ($checkbox == $checkbox1) ^ ($checkbox == $checkbox2);
+        if (inside) yield $checkbox;
+    }
 }
 
 function getItemId($item) {
