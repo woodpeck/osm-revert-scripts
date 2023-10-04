@@ -215,6 +215,7 @@ body {
 }
 header {
     position: sticky;
+    z-index: 1;
     top: 0;
     padding: .5rem;
     background: canvas;
@@ -228,23 +229,43 @@ main {
     padding: 0;
     list-style: none;
 }
-#changesets li :is(a, time, .changes) {
+#changesets li.separator {
+    position: relative;
+    text-align: center;
+    padding: .5rem 0;
+    margin-top: .25rem;
+}
+#changesets li.separator::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: 0;
+    top: 50%;
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(to right, transparent, #888 50%, transparent);
+}
+#changesets li.separator time {
+    background: canvas;
+    padding: .5rem;
+}
+#changesets li.item :is(a, time, .changes) {
     font-family: monospace;
 }
-#changesets li .changes {
+#changesets li.item .changes {
     background: #8884;
     border-radius: .25em;
     padding-inline: .25em;
 }
-#changesets li .changes .count {
+#changesets li.item .changes .count {
     min-width: 4.5ex;
     display: inline-block;
     text-align: right;
 }
-#changesets.compact li {
+#changesets.compact li.item {
     display: inline;
 }
-#changesets.compact li :is(time, .changes, .comment) {
+#changesets.compact li.item :is(time, .changes, .comment) {
     display: none;
 }
 </style>
@@ -274,9 +295,9 @@ HTML
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
             my $comment = $comment_tag ? $comment_tag->att('v') : "";
 
-            print $fh "<li>";
+            print $fh "<li class=item data-time='".html_escape($created_at)."'>";
             print $fh "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>";
-            print $fh " <time datetime=".html_escape($created_at).">".html_escape($time)."</time>";
+            print $fh " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>";
             print $fh " <span class=changes title='number of changes'>📝<span class=count>".html_escape($changes)."</span></span>";
             print $fh " <span class=comment>".html_escape($comment)."</span>";
             print $fh "</li>\n";
