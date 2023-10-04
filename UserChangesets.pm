@@ -227,13 +227,13 @@ main {
     padding: 0;
     list-style: none;
 }
-#changesets li a {
+#changesets li :is(a, time) {
     font-family: monospace;
 }
 #changesets.compact li {
     display: inline;
 }
-#changesets.compact li .comment {
+#changesets.compact li :is(time, .comment) {
     display: none;
 }
 </style>
@@ -257,11 +257,14 @@ HTML
             next if (str2time($closed_at) < $from_timestamp);
             next if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
 
+            my $time = time2isoz(str2time($created_at));
+            chop $time;
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
             my $comment = $comment_tag ? $comment_tag->att('v') : "";
 
             print $fh "<li>";
             print $fh "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>";
+            print $fh " <time datetime=".html_escape($created_at).">".html_escape($time)."</time>";
             print $fh " <span class=comment>".html_escape($comment)."</span>";
             print $fh "</li>\n";
         }
