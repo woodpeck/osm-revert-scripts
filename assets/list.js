@@ -4,7 +4,7 @@ const $selectAllCheckbox = document.createElement('input');
 $selectAllCheckbox.type = 'checkbox';
 $selectAllCheckbox.title = `select all changesets`;
 $selectAllCheckbox.onclick = () => {
-    for (const $checkbox of $changesets.querySelectorAll('li.item input[type=checkbox]')) {
+    for (const $checkbox of $changesets.querySelectorAll('li.changeset input[type=checkbox]')) {
         $checkbox.checked = $selectAllCheckbox.checked;
     }
     updateSelection();
@@ -43,8 +43,7 @@ $separatorSelect.oninput = () => {
     const size = Number($separatorSelect.value);
     if (!size) return;
     let lastTime;
-    for (const $item of $changesets.querySelectorAll('li.item')) {
-        if (!($item instanceof HTMLElement)) continue;
+    for (const $item of $changesets.querySelectorAll('li.changeset')) {
         const uncutTime = getItemTime($item);
         if (!uncutTime) continue;
         const time = uncutTime.slice(0, size);
@@ -67,8 +66,7 @@ $separatorSelect.oninput = () => {
     updateSelection();
 };
 
-for (const $item of $changesets.querySelectorAll('li.item')) {
-    if (!($item instanceof HTMLElement)) continue;
+for (const $item of $changesets.querySelectorAll('li.changeset')) {
     const $itemCheckbox = document.createElement('input');
     $itemCheckbox.type = 'checkbox';
     $item.prepend($itemCheckbox, ` `);
@@ -156,7 +154,7 @@ function updateSelection() {
             checkedGroupCount = 0;
             uncheckedGroupCount = 0;
             $groupCheckbox = getItemCheckbox($item);
-        } else if ($item.classList.contains('item')) {
+        } else if ($item.classList.contains('changeset')) {
             const $checkbox = getItemCheckbox($item);
             checkedTotalCount += $checkbox.checked;
             uncheckedTotalCount += !$checkbox.checked;
@@ -171,8 +169,7 @@ function updateSelection() {
 
 function getSelectedChangesetIds() {
     const ids = [];
-    for (const $item of $changesets.querySelectorAll('li.item')) {
-        if (!($item instanceof HTMLElement)) continue;
+    for (const $item of $changesets.querySelectorAll('li.changeset')) {
         const $checkbox = getItemCheckbox($item);
         if (!$checkbox.checked) continue;
         const id = getItemId($item);

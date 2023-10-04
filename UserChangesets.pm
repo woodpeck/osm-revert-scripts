@@ -235,7 +235,7 @@ HTML
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
             my $comment = $comment_tag ? $comment_tag->att('v') : "";
 
-            print $fh "<li class=item>";
+            print $fh "<li class=changeset>";
             print $fh "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>";
             print $fh " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>";
             print $fh " <span class=changes title='number of changes'>📝<span class=count>".html_escape($changes)."</span></span>";

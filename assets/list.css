@@ -53,29 +53,29 @@ header, footer {
     padding: .5rem;
     background: canvas;
 }
-#changesets li.item {
+#changesets li.changeset {
     white-space: nowrap;
 }
-#changesets li.item > * {
+#changesets li.changeset > * {
     white-space: normal;
 }
-#changesets li.item :is(a, time, .changes) {
+#changesets li.changeset :is(a, time, .changes) {
     font-family: monospace;
 }
-#changesets li.item .changes {
+#changesets li.changeset .changes {
     background: #8884;
     border-radius: .25em;
     padding-inline: .25em;
 }
-#changesets li.item .changes .count {
+#changesets li.changeset .changes .count {
     min-width: 4.5ex;
     display: inline-block;
     text-align: right;
 }
-#changesets.compact li.item {
+#changesets.compact li.changeset {
     display: inline;
 }
-#changesets.compact li.item :is(time, .changes, .comment) {
+#changesets.compact li.changeset :is(time, .changes, .comment) {
     display: none;
 }
 
