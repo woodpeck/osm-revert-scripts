@@ -241,6 +241,12 @@ sub post_web
 # Utility subs
 # ------------
 
+sub weburl
+{
+    my $path = shift;
+    return $prefs->{'weburl'} . $path;
+}
+
 sub append_pref
 {
     my $pref_name = shift;

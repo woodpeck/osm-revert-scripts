@@ -6,6 +6,7 @@ use strict;
 use warnings;
 use URI::Escape;
 use HTTP::Date qw(str2time time2isoz);
+use HTML::Entities qw(encode_entities);
 use OsmApi;
 use Changeset;
 
@@ -181,6 +182,44 @@ sub count
     print "downloaded $metadata_count changeset metadata records\n";
     print "downloaded $changes_count changeset change files\n";
 }
+
+# -----------------------------------------------------------------------------
+
+sub list
+{
+    my ($dirname, $metadata_dirname, $from_timestamp, $to_timestamp) = @_;
+    my %visited_changesets = ();
+
+    my $list_filename = "$dirname/index.html";
+    open(my $fh, '>', $list_filename) or die "can't open list file '$list_filename' for writing";
+    print $fh <<HTML;
+<html>
+<body>
+<ul>
+HTML
+
+    foreach my $list_filename (list_osm_filenames($metadata_dirname))
+    {
+        iterate_over_changesets($list_filename, sub {
+            my ($id, $created_at, $closed_at) = @_;
+            return if (str2time($closed_at) < $from_timestamp);
+            return if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
+            return if $visited_changesets{$id};
+            $visited_changesets{$id} = 1;
+
+            print $fh "<li><a href='".encode_entities(OsmApi::weburl("changeset/$id"))."'>".encode_entities($id)."</a></li>\n";
+        });
+    }
+
+    print $fh <<HTML;
+</ul>
+</body>
+</html>
+HTML
+    close $fh;
+}
+
+# -----------------------------------------------------------------------------
 
 sub list_osm_filenames
 {

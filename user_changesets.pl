@@ -44,8 +44,10 @@ if ($correct_options && ($ARGV[0] eq "download") && ($ARGV[1] eq "metadata") || 
         mkdir $changes_dirname unless -d $changes_dirname;
         UserChangesets::download_changes($metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp);
     }
+    exit;
 }
-elsif ($correct_options && ($ARGV[0] eq "count"))
+
+if ($correct_options && ($ARGV[0] eq "count"))
 {
     if (!defined($dirname))
     {
@@ -56,14 +58,28 @@ elsif ($correct_options && ($ARGV[0] eq "count"))
     my $metadata_dirname = "$dirname/metadata";
     my $changes_dirname = "$dirname/changes";
     UserChangesets::count($metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp);
+    exit;
 }
-else
+
+if ($correct_options && ($ARGV[0] eq "list"))
 {
-    print <<EOF;
+    if (!defined($dirname))
+    {
+        require_exactly_one_user_arg();
+        $dirname = get_dirname();
+    }
+
+    my $metadata_dirname = "$dirname/metadata";
+    UserChangesets::list($dirname, $metadata_dirname, $from_timestamp, $to_timestamp);
+    exit;
+}
+
+print <<EOF;
 Usage:
   $0 download metadata <options>
   $0 download changes <options>
   $0 count <options>
+  $0 list <options>               generate a html file with a list of changesets
 
 options:
   --username <username>
@@ -75,8 +91,6 @@ options:
   download requires one of: username, uid
   count requires one of: username, uid, directory
 EOF
-    exit;
-}
 
 sub require_exactly_one_user_arg
 {
