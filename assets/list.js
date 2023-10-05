@@ -56,10 +56,15 @@ $items.onclick = ev => {
 
 const $header = document.createElement('header');
 {
+    const $tool = document.createElement('span');
+    $tool.classList.add('tool');
     const count = $items.querySelectorAll('li.changeset').length;
-    $header.append($selectAllCheckbox, `×${count}`);
+    $tool.append($selectAllCheckbox, `×${count}`);
+    $header.append($tool);
 }
 {
+    const $tool = document.createElement('span');
+    $tool.classList.add('tool');
     const $viewSelect = document.createElement('select');
     $viewSelect.append(
         new Option("Expanded view", 'expanded'),
@@ -68,9 +73,12 @@ const $header = document.createElement('header');
     $viewSelect.oninput = () => {
         $items.classList.toggle('compact', $viewSelect.value == 'compact');
     };
-    $header.append(` `, $viewSelect);
+    $tool.append(` `, $viewSelect);
+    $header.append($tool);
 }
 {
+    const $tool = document.createElement('span');
+    $tool.classList.add('tool');
     const separatorSizes = [
         // 1234567890123456789
         // 2020-01-02T03:04:05Z
@@ -131,13 +139,15 @@ const $header = document.createElement('header');
             count = 0;
         }
     };
-    $header.append(` `, $separatorSelect);
+    $tool.append(` `, $separatorSelect);
+    $header.append($tool);
 }
 document.body.prepend($header);
 
 const $footer = document.createElement('footer');
 {
     const $tool = document.createElement('span');
+    $tool.classList.add('tool');
     const $dummyCheckbox = document.createElement('input');
     $dummyCheckbox.type = 'checkbox';
     $dummyCheckbox.checked = true;
@@ -147,6 +157,7 @@ const $footer = document.createElement('footer');
 }
 {
     const $tool = document.createElement('span');
+    $tool.classList.add('tool');
 
     const $typeSelect = document.createElement('select');
     $typeSelect.append(
@@ -188,6 +199,7 @@ const $footer = document.createElement('footer');
 }
 {
     const $tool = document.createElement('span');
+    $tool.classList.add('tool');
     const $button = document.createElement('button');
     $button.append(`Open with RC`);
     $button.onclick = async() => {
