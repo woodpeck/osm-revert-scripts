@@ -70,6 +70,9 @@ header, footer {
 #items li.changeset :is(a, time, .changes) {
     font-family: monospace;
 }
+#items li.changeset[data-status="running"]   input[type=checkbox] { accent-color: #9a6700; }
+#items li.changeset[data-status="succeeded"] input[type=checkbox] { accent-color: #1a7f37; }
+#items li.changeset[data-status="failed"]    input[type=checkbox] { accent-color: #d1242f; }
 #items li.changeset .changes {
     background: #8884;
     border-radius: .25em;

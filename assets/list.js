@@ -17,6 +17,7 @@ $selectedCountOutput.title = `number of selected changesets`;
 $selectedCountOutput.textContent = 0;
 
 for (const $item of $items.querySelectorAll('li.changeset')) {
+    $item.id = `changeset-` + getItemId($item);
     const $checkbox = document.createElement('input');
     $checkbox.type = 'checkbox';
     const changesCount = getItemChangesCount($item);
@@ -189,13 +190,19 @@ const $footer = document.createElement('footer');
     const $button = document.createElement('button');
     $button.append(`Open with RC`);
     $button.onclick = async() => {
+        let $item;
         try {
             $button.disabled = true;
             for (const id of getSelectedChangesetIds()) {
+                $item = document.getElementById(`changeset-` + id);
+                $item.dataset.status = 'running';
                 const changesetUrl = weburl + `changeset/` + encodeURIComponent(id);
                 const rcPath = `import?url=` + encodeURIComponent(changesetUrl);
                 await openRcPath($button, rcPath);
+                $item.dataset.status = 'succeeded';
             }
+        } catch {
+            if ($item) $item.dataset.status = 'failed';
         } finally {
             $button.disabled = false;
         }
