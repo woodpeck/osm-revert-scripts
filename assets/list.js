@@ -1,11 +1,11 @@
-const $changesets = document.getElementById('changesets');
+const $items = document.getElementById('items');
 
 let $lastClickedCheckbox;
 const $selectAllCheckbox = document.createElement('input');
 $selectAllCheckbox.type = 'checkbox';
 $selectAllCheckbox.title = `select all changesets`;
 $selectAllCheckbox.onclick = () => {
-    for (const $checkbox of $changesets.querySelectorAll('li.changeset input[type=checkbox]')) {
+    for (const $checkbox of $items.querySelectorAll('li.changeset input[type=checkbox]')) {
         $checkbox.checked = $selectAllCheckbox.checked;
     }
     updateSelection();
@@ -15,7 +15,7 @@ $selectAllCheckbox.onclick = () => {
 const $selectedCountOutput = document.createElement('output');
 $selectedCountOutput.textContent = 0;
 
-for (const $item of $changesets.querySelectorAll('li.changeset')) {
+for (const $item of $items.querySelectorAll('li.changeset')) {
     const $checkbox = document.createElement('input');
     $checkbox.type = 'checkbox';
     const changesCount = getItemChangesCount($item);
@@ -27,7 +27,7 @@ for (const $item of $changesets.querySelectorAll('li.changeset')) {
     $checkbox.dataset.size = size;
     $item.prepend($checkbox, ` `);
 }
-$changesets.onclick = ev => {
+$items.onclick = ev => {
     const $clickedCheckbox = ev.target;
     if (!($clickedCheckbox instanceof HTMLInputElement)) return;
     if ($clickedCheckbox.type != 'checkbox') return;
@@ -53,7 +53,7 @@ $changesets.onclick = ev => {
 
 const $header = document.createElement('header');
 {
-    const count = $changesets.querySelectorAll('li.changeset').length;
+    const count = $items.querySelectorAll('li.changeset').length;
     $header.append($selectAllCheckbox,`×${count}`);
 }
 {
@@ -63,7 +63,7 @@ const $header = document.createElement('header');
         new Option("Compact view", 'compact')
     );
     $viewSelect.oninput = () => {
-        $changesets.classList.toggle('compact', $viewSelect.value == 'compact');
+        $items.classList.toggle('compact', $viewSelect.value == 'compact');
     };
     $header.append(` `,$viewSelect);
 }
@@ -83,7 +83,7 @@ const $header = document.createElement('header');
         ...separatorSizes.map(([text, size]) => new Option(`Split by ${text}`, size))
     );
     $separatorSelect.oninput = () => {
-        for (const $separator of $changesets.querySelectorAll('li.separator')) {
+        for (const $separator of $items.querySelectorAll('li.separator')) {
             $separator.remove();
         }
         const size = Number($separatorSelect.value);
@@ -91,7 +91,7 @@ const $header = document.createElement('header');
         let count = 0;
         let lastTime;
         let $checkbox;
-        for (const $item of $changesets.querySelectorAll('li.changeset')) {
+        for (const $item of $items.querySelectorAll('li.changeset')) {
             count++;
             const uncutTime = getItemTime($item);
             if (!uncutTime) continue;
@@ -184,7 +184,7 @@ function updateSelection() {
     let checkedGroupCount = 0;
     let uncheckedGroupCount = 0;
     let $groupCheckbox;
-    for (const $item of $changesets.querySelectorAll('li')) {
+    for (const $item of $items.querySelectorAll('li')) {
         if ($item.classList.contains('separator')) {
             if ($groupCheckbox) {
                 $groupCheckbox.checked = checkedGroupCount && !uncheckedGroupCount;
@@ -208,7 +208,7 @@ function updateSelection() {
 
 function getSelectedChangesetIds() {
     const ids = [];
-    for (const $item of $changesets.querySelectorAll('li.changeset')) {
+    for (const $item of $items.querySelectorAll('li.changeset')) {
         const $checkbox = getItemCheckbox($item);
         if (!$checkbox.checked) continue;
         const id = getItemId($item);
@@ -220,7 +220,7 @@ function getSelectedChangesetIds() {
 
 function *getCheckboxesBetweenCheckboxes($checkbox1, $checkbox2) {
     let inside = 0;
-    for (const $checkbox of $changesets.querySelectorAll('li.changeset input[type=checkbox]')) {
+    for (const $checkbox of $items.querySelectorAll('li.changeset input[type=checkbox]')) {
         inside ^= ($checkbox == $checkbox1) ^ ($checkbox == $checkbox2);
         if (inside) yield $checkbox;
     }

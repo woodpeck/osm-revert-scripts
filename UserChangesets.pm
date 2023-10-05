@@ -212,7 +212,7 @@ ${html_style}</style>
 </head>
 <body>
 <main>
-<ul id=changesets>
+<ul id=items>
 HTML
 
     foreach my $list_filename (list_osm_filenames($metadata_dirname))

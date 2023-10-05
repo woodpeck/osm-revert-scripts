@@ -25,17 +25,17 @@ header, footer {
     box-shadow: 0 0px 6px #000;
 }
 
-#changesets {
+#items {
     margin: 0;
     padding: 0;
     list-style: none;
 }
-#changesets li.separator {
+#items li.separator {
     position: relative;
     padding: .5rem 0;
     margin-top: .25rem;
 }
-#changesets li.separator::before {
+#items li.separator::before {
     content: '';
     position: absolute;
     z-index: -1;
@@ -45,7 +45,7 @@ header, footer {
     width: 100%;
     background: linear-gradient(to right, transparent, #888 50%, transparent);
 }
-#changesets li.separator time {
+#items li.separator time {
     position: absolute;
     inset: 0;
     width: fit-content;
@@ -53,33 +53,33 @@ header, footer {
     padding: .5rem;
     background: canvas;
 }
-#changesets li.changeset {
+#items li.changeset {
     white-space: nowrap;
 }
-#changesets li.changeset > * {
+#items li.changeset > * {
     white-space: normal;
 }
-#changesets li.changeset input[type=checkbox][data-size="1"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888; }
-#changesets li.changeset input[type=checkbox][data-size="2"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C; }
-#changesets li.changeset input[type=checkbox][data-size="3"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889; }
-#changesets li.changeset input[type=checkbox][data-size="4"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889, 7px 0 0 0 canvas, 8px 0 0 0 #8886; }
-#changesets li.changeset :is(a, time, .changes) {
+#items li.changeset input[type=checkbox][data-size="1"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888; }
+#items li.changeset input[type=checkbox][data-size="2"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C; }
+#items li.changeset input[type=checkbox][data-size="3"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889; }
+#items li.changeset input[type=checkbox][data-size="4"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889, 7px 0 0 0 canvas, 8px 0 0 0 #8886; }
+#items li.changeset :is(a, time, .changes) {
     font-family: monospace;
 }
-#changesets li.changeset .changes {
+#items li.changeset .changes {
     background: #8884;
     border-radius: .25em;
     padding-inline: .25em;
 }
-#changesets li.changeset .changes .count {
+#items li.changeset .changes .count {
     min-width: 4.5ex;
     display: inline-block;
     text-align: right;
 }
-#changesets.compact li.changeset {
+#items.compact li.changeset {
     display: inline;
 }
-#changesets.compact li.changeset :is(time, .changes, .comment) {
+#items.compact li.changeset :is(time, .changes, .comment) {
     display: none;
 }
 
