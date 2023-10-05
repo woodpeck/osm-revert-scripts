@@ -175,13 +175,15 @@ sub count
             return if $visited_changesets{$id};
             $visited_changesets{$id} = 1;
             $metadata_count++;
-            my $changes_filename = "$changes_dirname/$id.osc";
-            $changes_count++ if -e $changes_filename;
+            if (defined($changes_dirname)) {
+                my $changes_filename = "$changes_dirname/$id.osc";
+                $changes_count++ if -e $changes_filename;
+            }
         });
     }
 
     print "downloaded $metadata_count changeset metadata records\n";
-    print "downloaded $changes_count changeset change files\n";
+    print "downloaded $changes_count changeset change files\n" if defined($changes_dirname);
 }
 
 # -----------------------------------------------------------------------------
