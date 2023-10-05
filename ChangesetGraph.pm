@@ -142,7 +142,7 @@ sub read_changesets($$)
     {
         next unless $filename =~ qr/(\d+)\.osm$/;
         my $cid = $1;
-        my $twig = XML::Twig->new(keep_encoding => 1)->parsefile($filename);
+        my $twig = XML::Twig->new()->parsefile($filename);
         my $changeset = $twig->root->first_child('changeset');
         my $comment_tag = $changeset->first_child('tag[@k="comment"]');
         my $comment = $comment_tag ? $comment_tag->att('v') : "";
@@ -162,7 +162,7 @@ sub read_changeset_edges($$$)
     {
         next unless $filename =~ qr/(\d+)\.${direction}$/;
         my $cid = $1;
-        open my $fh, '<', $filename;
+        open my $fh, '<:utf8', $filename;
         chomp(my @lines = <$fh>);
         close $fh;
         push @{$edges->{"c$cid"}}, (map {
@@ -175,13 +175,9 @@ sub read_changeset_edges($$$)
 sub write_html($$$$$$)
 {
     my ($dirname, $show_ids, $show_users, $show_uids, $js_nodes, $js_links) = @_;
-    my $fh;
+    my $js_draw_graph = read_asset("graph.js");
 
-    open $fh, '<', $FindBin::Bin . "/graph.js";
-    my $js_draw_graph = do { local $/; <$fh> };
-    close $fh;
-
-    open $fh, '>', "$dirname/index.html";
+    open my $fh, '>:utf8', "$dirname/index.html";
     print $fh <<EOF;
 <head>
 <style> body { margin: 0; } </style>
@@ -190,6 +186,7 @@ sub write_html($$$$$$)
 <body>
 <div id="graph"></div>
 <script>
+const weburl = "${\(OsmApi::weburl())}";
 ${\(get_option_const('showIds', $show_ids))}
 ${\(get_option_const('showUsers', $show_users))}
 ${\(get_option_const('showUids', $show_uids))}
@@ -218,6 +215,15 @@ sub to_js_string($)
     $s =~ s/\\/\\\\/g;
     $s =~ s/'/\\'/g;
     return qq{'$s'};
+}
+
+sub read_asset
+{
+    my $filename = shift;
+    open(my $fh, '<:utf8', $FindBin::Bin."/assets/".$filename) or die $!;
+    my $asset = do { local $/; <$fh> };
+    close $fh;
+    return $asset;
 }
 
 1;
