@@ -106,15 +106,18 @@ const $header = document.createElement('header');
             let label = time.replace('T', ' ');
             if (label.length == 13) label += ':--';
 
+            const $selector = document.createElement('span');
+            $selector.classList.add('selector');
             $checkbox = document.createElement('input');
             $checkbox.type = 'checkbox';
             $checkbox.title = `select changesets in ${label}`;
+            $selector.append($checkbox);
 
             const $time = document.createElement('time');
             $time.append(label);
             const $separator = document.createElement('li');
             $separator.classList.add('separator');
-            $separator.append($checkbox,` `,$time);
+            $separator.append($selector,` `,$time);
             $item.before($separator);
         }
         addCount();

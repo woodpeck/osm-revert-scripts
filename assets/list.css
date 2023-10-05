@@ -45,6 +45,10 @@ header, footer {
     width: 100%;
     background: linear-gradient(to right, transparent, #888 50%, transparent);
 }
+#items li.separator .selector {
+    padding-right: .5rem;
+    background: canvas;
+}
 #items li.separator time {
     position: absolute;
     inset: 0;
