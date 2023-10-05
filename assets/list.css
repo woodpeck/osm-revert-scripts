@@ -28,6 +28,7 @@ header, footer {
     align-items: baseline;
     padding: .5rem;
     box-shadow: 0 0px 6px #000;
+    z-index: 1;
 }
 
 #items {
