@@ -98,3 +98,6 @@ footer output {
     padding: .125em;
     text-align: right;
 }
+footer button.error {
+    color: #A00;
+}

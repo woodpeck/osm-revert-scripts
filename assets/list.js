@@ -167,7 +167,7 @@ const $footer = document.createElement('footer');
         });
         const text = getSelectedChangesetIds().map(id => {
             if ($typeSelect.value == 'URLs') {
-                return `${weburl}changeset/${id}`;
+                return weburl + `changeset/` + encodeURIComponent(id);
             } else {
                 return id;
             }
@@ -182,6 +182,25 @@ const $footer = document.createElement('footer');
         $separatorInputLabel, ` `,
         `to clipboard `, $button
     );
+    $footer.append(` `,$tool);
+}
+{
+    const $tool = document.createElement('span');
+    const $button = document.createElement('button');
+    $button.append(`Open with RC`);
+    $button.onclick = async() => {
+        try {
+            $button.disabled = true;
+            for (const id of getSelectedChangesetIds()) {
+                const changesetUrl = weburl + `changeset/` + encodeURIComponent(id);
+                const rcPath = `import?url=` + encodeURIComponent(changesetUrl);
+                await openRcPath($button, rcPath);
+            }
+        } finally {
+            $button.disabled = false;
+        }
+    }
+    $tool.append($button);
     $footer.append(` `,$tool);
 }
 document.body.append($footer);
@@ -254,4 +273,24 @@ function getItemChangesCount($item) {
 
 function getItemCheckbox($item) {
     return $item.querySelector('input[type=checkbox]');
+}
+
+async function openRcPath($button, rcPath) {
+    const rcUrl = `http://127.0.0.1:8111/` + rcPath;
+    try {
+        const response = await fetch(rcUrl);
+        if (!response.ok) throw new Error();
+        clearError();
+    } catch {
+        setError();
+        throw new Error();
+    }
+    function setError() {
+        $button.classList.add('error');
+        $button.title = `Remote control command failed. Make sure you have an editor open and remote control enabled.`;
+    }
+    function clearError() {
+        $button.classList.remove('error');
+        $button.title = '';
+    }
 }
