@@ -33,6 +33,9 @@ our $oauth2_client_ids = {
     "api.openstreetmap.org:443" => "j2hkpmK8D3XRgXqU-X0fyaIZsehbTUdfZDE4eg-7JJA",
     "www.openhistoricalmap.org:443" => "JH6N562wvXBEEntUsYIhXVcfiizLSQvU6Hgw7nVIkVg"
 };
+our $translated_weburls = {
+    "https://api.openstreetmap.org/" => "https://www.openstreetmap.org/"
+};
 
 INIT
 {
@@ -85,13 +88,19 @@ INIT
 
     $dummy = HTTP::Response->new(200);
 
-    $prefs->{'weburl'} = $prefs->{'apiurl'};
-    if ($prefs->{'weburl'} =~ /(.*\/)api\/0.6\//)
+    my $weburl = $prefs->{'apiurl'};
+    if ($weburl =~ /(.*\/)api\/0.6\//)
     {
-        $prefs->{'weburl'} = $1;
+        $weburl = $1;
     }
+    if (defined($translated_weburls->{$weburl}))
+    {
+        $weburl = $translated_weburls->{$weburl};
+    }
+    $prefs->{'weburl'} = $weburl;
 
-    if (!defined($prefs->{oauth2_client_id}) && defined($oauth2_client_ids->{$host})) {
+    if (!defined($prefs->{oauth2_client_id}) && defined($oauth2_client_ids->{$host}))
+    {
         $prefs->{oauth2_client_id} = $oauth2_client_ids->{$host};
     }
 }
@@ -240,6 +249,12 @@ sub post_web
 
 # Utility subs
 # ------------
+
+sub weburl
+{
+    my $path = shift || '';
+    return $prefs->{'weburl'} . $path;
+}
 
 sub append_pref
 {

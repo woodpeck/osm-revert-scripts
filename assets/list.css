@@ -1,0 +1,111 @@
+body {
+    margin: 0;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+        'header'
+        'main'
+        'footer';
+}
+header {
+    grid-area: header;
+}
+main {
+    grid-area: main;
+    overflow: auto;
+    padding: .5rem;
+}
+footer {
+    grid-area: footer;
+}
+header, footer {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 1rem;
+    row-gap: .25rem;
+    align-items: baseline;
+    padding: .5rem;
+    box-shadow: 0 0px 6px #000;
+}
+
+#items {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+#items li.separator {
+    position: relative;
+    padding: .5rem 0;
+    margin-top: .25rem;
+}
+#items li.separator::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    left: 0;
+    top: 50%;
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(to right, transparent, #888 50%, transparent);
+}
+#items li.separator .selector {
+    padding-right: .5rem;
+    background: canvas;
+}
+#items li.separator time {
+    position: absolute;
+    inset: 0;
+    width: fit-content;
+    margin: auto;
+    padding: .5rem;
+    background: canvas;
+}
+#items li.changeset {
+    white-space: nowrap;
+}
+#items li.changeset > * {
+    white-space: normal;
+}
+#items li.changeset input[type=checkbox][data-status="running"]   { accent-color: #9a6700; }
+#items li.changeset input[type=checkbox][data-status="succeeded"] { accent-color: #1a7f37; }
+#items li.changeset input[type=checkbox][data-status="failed"]    { accent-color: #d1242f; }
+#items li.changeset input[type=checkbox][data-size="1"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888; }
+#items li.changeset input[type=checkbox][data-size="2"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C; }
+#items li.changeset input[type=checkbox][data-size="3"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889; }
+#items li.changeset input[type=checkbox][data-size="4"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889, 7px 0 0 0 canvas, 8px 0 0 0 #8886; }
+#items li.changeset :is(a, time, .changes) {
+    font-family: monospace;
+}
+#items li.changeset .changes {
+    background: #8884;
+    border-radius: .25em;
+    padding-inline: .25em;
+}
+#items li.changeset .changes .count {
+    min-width: 4.5ex;
+    display: inline-block;
+    text-align: right;
+}
+#items:not(.compact) li.changeset {
+    text-indent: -1.5rem;
+    padding-left: 1.5rem;
+}
+#items.compact li.changeset {
+    display: inline;
+}
+#items.compact li.changeset :is(time, .changes, .comment) {
+    display: none;
+}
+
+footer output {
+    display: inline-block;
+    width: 5.5ex;
+    border: dotted 1px #888;
+    padding: .125em;
+    text-align: right;
+}
+footer button.error {
+    color: #A00;
+}
