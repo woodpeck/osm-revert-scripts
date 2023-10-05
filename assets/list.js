@@ -15,59 +15,6 @@ $selectAllCheckbox.onclick = () => {
 const $selectedCountOutput = document.createElement('output');
 $selectedCountOutput.textContent = 0;
 
-const $viewSelect = document.createElement('select');
-$viewSelect.append(
-    new Option("Expanded view", 'expanded'),
-    new Option("Compact view", 'compact')
-);
-$viewSelect.oninput = () => {
-    $changesets.classList.toggle('compact', $viewSelect.value == 'compact');
-};
-
-const separatorSizes = [
-    // 1234567890123456789
-    // 2020-01-02T03:04:05Z
-    ['minute', 16],
-    ['hour', 13],
-    ['day', 10],
-    ['month', 7],
-    ['year', 4]
-];
-const $separatorSelect = document.createElement('select');
-$separatorSelect.append(
-    new Option(`No split`, 0),
-    ...separatorSizes.map(([text, size]) => new Option(`Split by ${text}`, size))
-);
-$separatorSelect.oninput = () => {
-    for (const $separator of $changesets.querySelectorAll('li.separator')) {
-        $separator.remove();
-    }
-    const size = Number($separatorSelect.value);
-    if (!size) return;
-    let lastTime;
-    for (const $item of $changesets.querySelectorAll('li.changeset')) {
-        const uncutTime = getItemTime($item);
-        if (!uncutTime) continue;
-        const time = uncutTime.slice(0, size);
-        if (lastTime == time) continue;
-        lastTime = time;
-        let label = time.replace('T', ' ');
-        if (label.length == 13) label += ':--';
-
-        const $checkbox = document.createElement('input');
-        $checkbox.type = 'checkbox';
-        $checkbox.title = `select changesets in ${label}`;
-
-        const $time = document.createElement('time');
-        $time.append(label);
-        const $separator = document.createElement('li');
-        $separator.classList.add('separator');
-        $separator.append($checkbox,` `,$time);
-        $item.before($separator);
-    }
-    updateSelection();
-};
-
 for (const $item of $changesets.querySelectorAll('li.changeset')) {
     const $checkbox = document.createElement('input');
     $checkbox.type = 'checkbox';
@@ -105,7 +52,81 @@ $changesets.onclick = ev => {
 };
 
 const $header = document.createElement('header');
-$header.append($selectAllCheckbox,` `,$viewSelect, ` `, $separatorSelect);
+{
+    const count = $changesets.querySelectorAll('li.changeset').length;
+    $header.append($selectAllCheckbox,`×${count}`);
+}
+{
+    const $viewSelect = document.createElement('select');
+    $viewSelect.append(
+        new Option("Expanded view", 'expanded'),
+        new Option("Compact view", 'compact')
+    );
+    $viewSelect.oninput = () => {
+        $changesets.classList.toggle('compact', $viewSelect.value == 'compact');
+    };
+    $header.append(` `,$viewSelect);
+}
+{
+    const separatorSizes = [
+        // 1234567890123456789
+        // 2020-01-02T03:04:05Z
+        ['minute', 16],
+        ['hour', 13],
+        ['day', 10],
+        ['month', 7],
+        ['year', 4]
+    ];
+    const $separatorSelect = document.createElement('select');
+    $separatorSelect.append(
+        new Option(`No split`, 0),
+        ...separatorSizes.map(([text, size]) => new Option(`Split by ${text}`, size))
+    );
+    $separatorSelect.oninput = () => {
+        for (const $separator of $changesets.querySelectorAll('li.separator')) {
+            $separator.remove();
+        }
+        const size = Number($separatorSelect.value);
+        if (!size) return;
+        let count = 0;
+        let lastTime;
+        let $checkbox;
+        for (const $item of $changesets.querySelectorAll('li.changeset')) {
+            count++;
+            const uncutTime = getItemTime($item);
+            if (!uncutTime) continue;
+            const time = uncutTime.slice(0, size);
+            if (lastTime == time) continue;
+            lastTime = time;
+            count--;
+            addCount();
+            count++;
+
+            let label = time.replace('T', ' ');
+            if (label.length == 13) label += ':--';
+
+            $checkbox = document.createElement('input');
+            $checkbox.type = 'checkbox';
+            $checkbox.title = `select changesets in ${label}`;
+
+            const $time = document.createElement('time');
+            $time.append(label);
+            const $separator = document.createElement('li');
+            $separator.classList.add('separator');
+            $separator.append($checkbox,` `,$time);
+            $item.before($separator);
+        }
+        addCount();
+        updateSelection();
+
+        function addCount() {
+            if (!$checkbox) return;
+            $checkbox.after(`×${count}`);
+            count = 0;
+        }
+    };
+    $header.append(` `, $separatorSelect);
+}
 document.body.prepend($header);
 
 const $footer = document.createElement('footer');
