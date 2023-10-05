@@ -59,6 +59,10 @@ header, footer {
 #changesets li.changeset > * {
     white-space: normal;
 }
+#changesets li.changeset input[type=checkbox][data-size="1"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888; }
+#changesets li.changeset input[type=checkbox][data-size="2"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C; }
+#changesets li.changeset input[type=checkbox][data-size="3"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889; }
+#changesets li.changeset input[type=checkbox][data-size="4"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889, 7px 0 0 0 canvas, 8px 0 0 0 #8886; }
 #changesets li.changeset :is(a, time, .changes) {
     font-family: monospace;
 }

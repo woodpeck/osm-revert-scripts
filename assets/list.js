@@ -69,9 +69,16 @@ $separatorSelect.oninput = () => {
 };
 
 for (const $item of $changesets.querySelectorAll('li.changeset')) {
-    const $itemCheckbox = document.createElement('input');
-    $itemCheckbox.type = 'checkbox';
-    $item.prepend($itemCheckbox, ` `);
+    const $checkbox = document.createElement('input');
+    $checkbox.type = 'checkbox';
+    const changesCount = getItemChangesCount($item);
+    let size = 0;
+    if (changesCount > 0) {
+        const cappedChangesCount = Math.min(9999, changesCount);
+        size = 1 + Math.floor(Math.log10(cappedChangesCount));
+    }
+    $checkbox.dataset.size = size;
+    $item.prepend($checkbox, ` `);
 }
 $changesets.onclick = ev => {
     const $clickedCheckbox = ev.target;
@@ -208,6 +215,12 @@ function getItemTime($item) {
     const $time = $item.querySelector('time');
     if (!$time) return;
     return $time.dateTime;
+}
+
+function getItemChangesCount($item) {
+    const $n = $item.querySelector('.changes .count');
+    if (!$n) return;
+    return Number($n.textContent);
 }
 
 function getItemCheckbox($item) {
