@@ -210,6 +210,19 @@ const $footer = document.createElement('footer');
     });
     $footer.append(` `,$tool);
 }
+{
+    const $tool = document.createElement('span');
+    $tool.classList.add('tool');
+    const $button = document.createElement('button');
+    $button.append(`Clear statuses`);
+    $button.onclick = () => {
+        for (const $checkbox of $items.querySelectorAll('li.changeset input[type=checkbox]')) {
+            setCheckboxStatus($checkbox);
+        }
+    };
+    $tool.append($button);
+    $footer.append($tool);
+}
 document.body.append($footer);
 
 function updateSelection() {
