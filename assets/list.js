@@ -198,30 +198,16 @@ const $footer = document.createElement('footer');
     $footer.append(` `,$tool);
 }
 {
-    const $tool = document.createElement('span');
-    $tool.classList.add('tool');
-    const $button = document.createElement('button');
-    $button.append(`Open with RC`);
-    $button.onclick = async() => {
-        let $checkbox;
-        try {
-            $button.disabled = true;
-            for (const id of getSelectedChangesetIds()) {
-                const $item = document.getElementById(`changeset-` + id);
-                if ($item) $checkbox = getItemCheckbox($item);
-                if ($checkbox) setCheckboxStatus($checkbox, 'running');
-                const changesetUrl = weburl + `changeset/` + encodeURIComponent(id);
-                const rcPath = `import?url=` + encodeURIComponent(changesetUrl);
-                await openRcPath($button, rcPath);
-                if ($checkbox) setCheckboxStatus($checkbox, 'succeeded');
-            }
-        } catch {
-            if ($checkbox) setCheckboxStatus($checkbox, 'failed');
-        } finally {
-            $button.disabled = false;
-        }
-    }
-    $tool.append($button);
+    const $tool = makeRcTool(`Open with RC`, id => {
+        const changesetUrl = weburl + `changeset/` + encodeURIComponent(id);
+        return `import?url=` + encodeURIComponent(changesetUrl);
+    });
+    $footer.append(` `,$tool);
+}
+{
+    const $tool = makeRcTool(`Revert with RC`, id => {
+        return `revert_changeset?id=` + encodeURIComponent(id);
+    });
     $footer.append(` `,$tool);
 }
 document.body.append($footer);
@@ -305,6 +291,34 @@ function setCheckboxStatus($checkbox, status) {
     } else {
         $checkbox.dataset.status = status;
         $checkbox.title = status;
+    }
+}
+
+function makeRcTool(name, getRcPath) {
+    const $tool = document.createElement('span');
+    $tool.classList.add('tool');
+    const $button = document.createElement('button');
+    $button.append(name);
+    $button.onclick = () => runRcBatch($button, getRcPath);
+    $tool.append($button);
+    return $tool;
+}
+
+async function runRcBatch($button, getRcPath) {
+    let $checkbox;
+    try {
+        $button.disabled = true;
+        for (const id of getSelectedChangesetIds()) {
+            const $item = document.getElementById(`changeset-` + id);
+            if ($item) $checkbox = getItemCheckbox($item);
+            if ($checkbox) setCheckboxStatus($checkbox, 'running');
+            await openRcPath($button, getRcPath(id));
+            if ($checkbox) setCheckboxStatus($checkbox, 'succeeded');
+        }
+    } catch {
+        if ($checkbox) setCheckboxStatus($checkbox, 'failed');
+    } finally {
+        $button.disabled = false;
     }
 }
 
