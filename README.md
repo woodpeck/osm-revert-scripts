@@ -97,6 +97,7 @@ Register osmtools as a oauth2 app
 5. In *Permissions* check:
     - *Read user preferences*
     - *Modify the map*
+    - *Read private GPS traces*
     - *Upload GPS traces*
     - *Modify notes*
 6. Click *Register* or *Create Oauth2 application* below the registration form.
