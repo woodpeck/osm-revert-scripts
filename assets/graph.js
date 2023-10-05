@@ -41,7 +41,7 @@ const myGraph = ForceGraph()
     }).onNodeClick(node => {
         const t = node.id[0];
         const id = node.id.substring(1);
-        if (t == 'c') window.open("https://www.openstreetmap.org/changeset/" + id);
+        if (t == 'c') window.open(weburl + `changeset/` + encodeURIComponent(id));
     });
 
 if (showIds || showUsers || showUids) {

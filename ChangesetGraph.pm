@@ -186,6 +186,7 @@ sub write_html($$$$$$)
 <body>
 <div id="graph"></div>
 <script>
+const weburl = "${\(OsmApi::weburl())}";
 ${\(get_option_const('showIds', $show_ids))}
 ${\(get_option_const('showUsers', $show_users))}
 ${\(get_option_const('showUids', $show_uids))}
