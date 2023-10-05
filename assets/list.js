@@ -13,6 +13,7 @@ $selectAllCheckbox.onclick = () => {
 };
 
 const $selectedCountOutput = document.createElement('output');
+$selectedCountOutput.title = `number of selected changesets`;
 $selectedCountOutput.textContent = 0;
 
 for (const $item of $items.querySelectorAll('li.changeset')) {
@@ -132,7 +133,11 @@ document.body.prepend($header);
 const $footer = document.createElement('footer');
 {
     const $tool = document.createElement('span');
-    $tool.append(`Selected `, $selectedCountOutput, ` changesets; do with them:`);
+    const $dummyCheckbox = document.createElement('input');
+    $dummyCheckbox.type = 'checkbox';
+    $dummyCheckbox.checked = true;
+    $dummyCheckbox.disabled = true;
+    $tool.append($dummyCheckbox, `×`, $selectedCountOutput, ` ⇒`);
     $footer.append($tool);
 }
 {
