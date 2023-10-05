@@ -27,31 +27,41 @@ for (const $item of $items.querySelectorAll('li.changeset')) {
         size = 1 + Math.floor(Math.log10(cappedChangesCount));
     }
     $checkbox.dataset.size = size;
-    $item.prepend($checkbox, ` `);
+    const $disclosureButton = document.createElement('button');
+    $disclosureButton.classList.add('disclosure');
+    updateDisclosureButton($disclosureButton);
+    const $holder = document.createElement('span');
+    $holder.classList.add('holder');
+    $holder.append($checkbox, ` `, $disclosureButton, ` `, $item.firstElementChild);
+    $item.prepend($holder);
 }
 $items.onclick = ev => {
-    const $clickedCheckbox = ev.target;
-    if (!($clickedCheckbox instanceof HTMLInputElement)) return;
-    if ($clickedCheckbox.type != 'checkbox') return;
-    let $item = $clickedCheckbox.closest('li');
-    if ($item.classList.contains('separator')) {
-        while ($item = $item.nextElementSibling) {
-            if ($item.classList.contains('separator')) break;
-            const $checkbox = getItemCheckbox($item);
-            setCheckboxChecked($checkbox, $clickedCheckbox.checked);
-        }
-        $lastClickedCheckbox = undefined;
-    } else if ($item.classList.contains('changeset')) {
-        setCheckboxStatus($clickedCheckbox);
-        if (ev.shiftKey && $lastClickedCheckbox) {
-            setCheckboxChecked($lastClickedCheckbox, $clickedCheckbox.checked);
-            for ($checkbox of getCheckboxesBetweenCheckboxes($lastClickedCheckbox, $clickedCheckbox)) {
-                setCheckboxChecked($checkbox, $clickedCheckbox.checked);
+    const $clicked = ev.target;
+    if ($clicked instanceof HTMLInputElement && $clicked.type == 'checkbox') {
+        let $item = $clicked.closest('li');
+        if ($item.classList.contains('separator')) {
+            while ($item = $item.nextElementSibling) {
+                if ($item.classList.contains('separator')) break;
+                const $checkbox = getItemCheckbox($item);
+                setCheckboxChecked($checkbox, $clicked.checked);
             }
+            $lastClickedCheckbox = undefined;
+        } else if ($item.classList.contains('changeset')) {
+            setCheckboxStatus($clicked);
+            if (ev.shiftKey && $lastClickedCheckbox) {
+                setCheckboxChecked($lastClickedCheckbox, $clicked.checked);
+                for ($checkbox of getCheckboxesBetweenCheckboxes($lastClickedCheckbox, $clicked)) {
+                    setCheckboxChecked($checkbox, $clicked.checked);
+                }
+            }
+            $lastClickedCheckbox = $clicked;
         }
-        $lastClickedCheckbox = $clickedCheckbox;
+        updateSelection();
+    } else if ($clicked instanceof HTMLButtonElement && $clicked.classList.contains('disclosure')) {
+        const $item = $clicked.closest('li');
+        const isCompact = $item.classList.toggle('compact');
+        updateDisclosureButton($clicked, isCompact);
     }
-    updateSelection();
 };
 
 const $header = document.createElement('header');
@@ -71,7 +81,11 @@ const $header = document.createElement('header');
         new Option("Compact view", 'compact')
     );
     $viewSelect.oninput = () => {
-        $items.classList.toggle('compact', $viewSelect.value == 'compact');
+        for (const $item of $items.querySelectorAll('li.changeset')) {
+            $item.classList.toggle('compact', $viewSelect.value == 'compact');
+            const $disclosureButton = $item.querySelector('button.disclosure');
+            updateDisclosureButton($disclosureButton, $viewSelect.value == 'compact');
+        }
     };
     $tool.append(` `, $viewSelect);
     $header.append($tool);
@@ -224,6 +238,11 @@ const $footer = document.createElement('footer');
     $footer.append($tool);
 }
 document.body.append($footer);
+
+function updateDisclosureButton($disclosureButton, isCompact) {
+    $disclosureButton.textContent = isCompact ? `+` : `−`;
+    $disclosureButton.title = isCompact ? `expand` : `collapse`;
+}
 
 function updateSelection() {
     let checkedTotalCount = 0;

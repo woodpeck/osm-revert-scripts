@@ -63,11 +63,8 @@ header, footer {
     padding: .5rem;
     background: canvas;
 }
-#items li.changeset {
+#items li.changeset .holder {
     white-space: nowrap;
-}
-#items li.changeset > * {
-    white-space: normal;
 }
 #items li.changeset input[type=checkbox][data-status="running"]   { accent-color: #9a6700; }
 #items li.changeset input[type=checkbox][data-status="succeeded"] { accent-color: #1a7f37; }
@@ -76,6 +73,14 @@ header, footer {
 #items li.changeset input[type=checkbox][data-size="2"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C; }
 #items li.changeset input[type=checkbox][data-size="3"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889; }
 #items li.changeset input[type=checkbox][data-size="4"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889, 7px 0 0 0 canvas, 8px 0 0 0 #8886; }
+#items li.changeset button.disclosure {
+    display: inline-grid;
+    place-content: center;
+    width: .75rem;
+    height: .75rem;
+    border: solid 1px #888;
+    font-size: .7rem;
+}
 #items li.changeset :is(a, time, .changes) {
     font-family: monospace;
 }
@@ -89,14 +94,14 @@ header, footer {
     display: inline-block;
     text-align: right;
 }
-#items:not(.compact) li.changeset {
+#items li.changeset:not(.compact) {
     text-indent: -1.5rem;
     padding-left: 1.5rem;
 }
-#items.compact li.changeset {
+#items li.changeset.compact {
     display: inline;
 }
-#items.compact li.changeset :is(time, .changes, .comment) {
+#items li.changeset.compact :is(time, .changes, .comment) {
     display: none;
 }
 
