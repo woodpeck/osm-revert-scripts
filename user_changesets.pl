@@ -3,6 +3,7 @@
 use strict;
 use FindBin;
 use lib $FindBin::Bin;
+use File::Path qw(make_path);
 use Getopt::Long;
 use URI::Escape;
 use UserChangesets;
@@ -56,13 +57,12 @@ if ($correct_options && ($ARGV[0] eq "download") && ($ARGV[1] eq "metadata") || 
 {
     die "parameters required: one of (display_name, uid)" unless defined($user_arg) && defined($dirname);
 
-    mkdir $dirname unless -d $dirname;
-    mkdir $metadata_dirname unless -d $metadata_dirname;
+    make_path($metadata_dirname);
     UserChangesets::download_metadata($metadata_dirname, $user_arg, $from_timestamp, $to_timestamp);
 
     if ($ARGV[1] eq "changes")
     {
-        mkdir $changes_dirname unless -d $changes_dirname;
+        make_path($changes_dirname);
         UserChangesets::download_changes($metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp);
     }
     exit;
