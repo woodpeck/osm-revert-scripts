@@ -63,6 +63,9 @@ header, footer {
 #items li.changeset > * {
     white-space: normal;
 }
+#items li.changeset input[type=checkbox][data-status="running"]   { accent-color: #9a6700; }
+#items li.changeset input[type=checkbox][data-status="succeeded"] { accent-color: #1a7f37; }
+#items li.changeset input[type=checkbox][data-status="failed"]    { accent-color: #d1242f; }
 #items li.changeset input[type=checkbox][data-size="1"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888; }
 #items li.changeset input[type=checkbox][data-size="2"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C; }
 #items li.changeset input[type=checkbox][data-size="3"] { box-shadow: 1px 0 0 0 canvas, 2px 0 0 0 #888, 3px 0 0 0 canvas, 4px 0 0 0 #888C, 5px 0 0 0 canvas, 6px 0 0 0 #8889; }
@@ -70,9 +73,6 @@ header, footer {
 #items li.changeset :is(a, time, .changes) {
     font-family: monospace;
 }
-#items li.changeset[data-status="running"]   input[type=checkbox] { accent-color: #9a6700; }
-#items li.changeset[data-status="succeeded"] input[type=checkbox] { accent-color: #1a7f37; }
-#items li.changeset[data-status="failed"]    input[type=checkbox] { accent-color: #d1242f; }
 #items li.changeset .changes {
     background: #8884;
     border-radius: .25em;

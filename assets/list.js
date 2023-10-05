@@ -6,7 +6,7 @@ $selectAllCheckbox.type = 'checkbox';
 $selectAllCheckbox.title = `select all changesets`;
 $selectAllCheckbox.onclick = () => {
     for (const $checkbox of $items.querySelectorAll('li.changeset input[type=checkbox]')) {
-        $checkbox.checked = $selectAllCheckbox.checked;
+        setCheckboxChecked($checkbox, $selectAllCheckbox.checked);
     }
     updateSelection();
     $lastClickedCheckbox = undefined;
@@ -38,14 +38,15 @@ $items.onclick = ev => {
         while ($item = $item.nextElementSibling) {
             if ($item.classList.contains('separator')) break;
             const $checkbox = getItemCheckbox($item);
-            $checkbox.checked = $clickedCheckbox.checked;
+            setCheckboxChecked($checkbox, $clickedCheckbox.checked);
         }
         $lastClickedCheckbox = undefined;
     } else if ($item.classList.contains('changeset')) {
+        setCheckboxStatus($clickedCheckbox);
         if (ev.shiftKey && $lastClickedCheckbox) {
-            $lastClickedCheckbox.checked = $clickedCheckbox.checked;
+            setCheckboxChecked($lastClickedCheckbox, $clickedCheckbox.checked);
             for ($checkbox of getCheckboxesBetweenCheckboxes($lastClickedCheckbox, $clickedCheckbox)) {
-                $checkbox.checked = $clickedCheckbox.checked;
+                setCheckboxChecked($checkbox, $clickedCheckbox.checked);
             }
         }
         $lastClickedCheckbox = $clickedCheckbox;
@@ -56,7 +57,7 @@ $items.onclick = ev => {
 const $header = document.createElement('header');
 {
     const count = $items.querySelectorAll('li.changeset').length;
-    $header.append($selectAllCheckbox,`×${count}`);
+    $header.append($selectAllCheckbox, `×${count}`);
 }
 {
     const $viewSelect = document.createElement('select');
@@ -67,7 +68,7 @@ const $header = document.createElement('header');
     $viewSelect.oninput = () => {
         $items.classList.toggle('compact', $viewSelect.value == 'compact');
     };
-    $header.append(` `,$viewSelect);
+    $header.append(` `, $viewSelect);
 }
 {
     const separatorSizes = [
@@ -190,19 +191,20 @@ const $footer = document.createElement('footer');
     const $button = document.createElement('button');
     $button.append(`Open with RC`);
     $button.onclick = async() => {
-        let $item;
+        let $checkbox;
         try {
             $button.disabled = true;
             for (const id of getSelectedChangesetIds()) {
-                $item = document.getElementById(`changeset-` + id);
-                $item.dataset.status = 'running';
+                const $item = document.getElementById(`changeset-` + id);
+                if ($item) $checkbox = getItemCheckbox($item);
+                if ($checkbox) setCheckboxStatus($checkbox, 'running');
                 const changesetUrl = weburl + `changeset/` + encodeURIComponent(id);
                 const rcPath = `import?url=` + encodeURIComponent(changesetUrl);
                 await openRcPath($button, rcPath);
-                $item.dataset.status = 'succeeded';
+                if ($checkbox) setCheckboxStatus($checkbox, 'succeeded');
             }
         } catch {
-            if ($item) $item.dataset.status = 'failed';
+            if ($checkbox) setCheckboxStatus($checkbox, 'failed');
         } finally {
             $button.disabled = false;
         }
@@ -265,13 +267,11 @@ function getItemId($item) {
     if (!$a) return;
     return $a.textContent;
 }
-
 function getItemTime($item) {
     const $time = $item.querySelector('time');
     if (!$time) return;
     return $time.dateTime;
 }
-
 function getItemChangesCount($item) {
     const $n = $item.querySelector('.changes .count');
     if (!$n) return;
@@ -280,6 +280,20 @@ function getItemChangesCount($item) {
 
 function getItemCheckbox($item) {
     return $item.querySelector('input[type=checkbox]');
+}
+
+function setCheckboxChecked($checkbox, checked) {
+    $checkbox.checked = checked;
+    setCheckboxStatus($checkbox);
+}
+function setCheckboxStatus($checkbox, status) {
+    if (status == null) {
+        delete $checkbox.dataset.status;
+        $checkbox.removeAttribute('title');
+    } else {
+        $checkbox.dataset.status = status;
+        $checkbox.title = status;
+    }
 }
 
 async function openRcPath($button, rcPath) {
