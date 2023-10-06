@@ -83,7 +83,10 @@ for (const $item of $items.querySelectorAll('li.changeset')) {
     $disclosureButton.classList.add('disclosure');
     const $holder = document.createElement('span');
     $holder.classList.add('holder');
-    $holder.append($checkbox, ` `, $disclosureButton, ` `, $item.firstElementChild);
+    const $controls = document.createElement('span');
+    $controls.classList.add('controls');
+    $controls.append($checkbox, ` `, $disclosureButton);
+    $holder.append($controls, ` `, $item.firstElementChild);
     $item.prepend($holder);
     updateItemDisclosure($item);
 }

@@ -76,6 +76,15 @@ header, footer {
 #items li.changeset .holder {
     white-space: nowrap;
 }
+#items li.changeset .controls {
+    display: inline-flex;
+    gap: 0.25rem;
+    align-items: center;
+    vertical-align: -0.125rem;
+}
+#items li.changeset input[type=checkbox] {
+    margin-block: 0;
+}
 #items li.changeset input[type=checkbox][data-status="running"]   { accent-color: #9a6700; }
 #items li.changeset input[type=checkbox][data-status="succeeded"] { accent-color: #1a7f37; }
 #items li.changeset input[type=checkbox][data-status="failed"]    { accent-color: #d1242f; }
