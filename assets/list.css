@@ -73,6 +73,9 @@ header, footer {
     text-indent: -1.5rem;
     padding-left: 1.5rem;
 }
+#items li.changeset > * {
+    text-indent: initial;
+}
 #items li.changeset.compact {
     display: inline;
 }
@@ -139,6 +142,9 @@ header, footer {
     min-width: var(--area-width);
     font-family: monospace;
     font-size: unset;
+}
+#items li.changeset .area.empty .number {
+    text-align: center;
 }
 
 header {
