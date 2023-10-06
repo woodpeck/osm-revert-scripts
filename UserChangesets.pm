@@ -194,6 +194,7 @@ sub list
 
     my ($html_filename, $metadata_dirname, $from_timestamp, $to_timestamp) = @_;
     my %changeset_items = ();
+    my %changeset_dates = ();
     my $fh;
     my $html_style = read_asset("list.css");
     my $html_script = read_asset("list.js");
@@ -213,7 +214,9 @@ sub list
             next if (str2time($closed_at) < $from_timestamp);
             next if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
 
-            my $time = time2isoz(str2time($created_at));
+            my $timestamp = str2time($created_at);
+            $changeset_dates{$id} = $timestamp;
+            my $time = time2isoz($timestamp);
             chop $time;
             my $changes = $changeset->att('changes_count');
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
@@ -254,7 +257,7 @@ ${html_style}</style>
 <ul id=items>
 HTML
 
-    foreach my $id (sort {$b <=> $a} keys %changeset_items)
+    foreach my $id (sort {$changeset_dates{$b} <=> $changeset_dates{$a}} keys %changeset_dates)
     {
         print $fh $changeset_items{$id};
     }
