@@ -25,9 +25,7 @@ const $globalDisclosureButtons = [false, true].map(isCompact => {
     $button.textContent = !isCompact ? `+` : `−`;
     $button.title = !isCompact ? `expand all` : `collapse all`;
     $button.onclick = () => {
-        for (const $button of $globalDisclosureButtons) {
-            $button.disabled = true;
-        }
+        disableVisibilityControls(true);
         requestAnimationFrame(time => walker($items.firstElementChild, time));
     };
     return $button;
@@ -43,9 +41,7 @@ const $globalDisclosureButtons = [false, true].map(isCompact => {
         if ($item) {
             requestAnimationFrame(time => walker($item, time));
         } else {
-            for (const $button of $globalDisclosureButtons) {
-                $button.disabled = false;
-            }
+            disableVisibilityControls(false);
         }
     }
 });
@@ -287,6 +283,17 @@ const $footer = document.createElement('footer');
     $footer.append($tool);
 }
 document.body.append($footer);
+
+function disableVisibilityControls(disabled) {
+    for (const $button of $globalDisclosureButtons) {
+        $button.disabled = disabled;
+    }
+    for (const modeControls of widgetVisibilityControls) {
+        for (const [,, $checkbox] of modeControls) {
+            $checkbox.disabled = disabled;
+        }
+    }
+}
 
 function updateItemDisclosure($item) {
     const isCompact = $item.classList.contains('compact');
