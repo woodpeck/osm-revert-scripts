@@ -66,6 +66,9 @@ header, footer {
     background: canvas;
 }
 
+#items.without-line-breaks li.changeset {
+    white-space: nowrap;
+}
 #items li.changeset:not(.compact) {
     text-indent: -1.5rem;
     padding-left: 1.5rem;

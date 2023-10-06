@@ -200,6 +200,20 @@ const $header = document.createElement('header');
 }
 {
     const $tool = document.createElement('span');
+    $tool.classList.add('tool');
+    const $select = document.createElement('select');
+    $select.append(
+        new Option(`Line breaks`, 'br'),
+        new Option(`No line breaks`, 'nobr'),
+    );
+    $select.oninput = () => {
+        $items.classList.toggle('without-line-breaks', $select.value == 'nobr');
+    };
+    $tool.append($select);
+    $header.append(` `, $tool);
+}
+{
+    const $tool = document.createElement('span');
     $tool.classList.add('tool', 'visibility');
     for (const [isCompact, modeWidgetVisibilityControls] of widgetVisibilityControls.entries()) {
         const $subtool = document.createElement('span');
