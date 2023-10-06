@@ -113,6 +113,10 @@ header, footer {
 #items li.changeset a {
     min-width: var(--id-width);
 }
+#items li.changeset a .pad {
+    user-select: none;
+    opacity: .25;
+}
 #items li.changeset .changes .count {
     min-width: var(--changes-width);
 }

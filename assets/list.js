@@ -68,7 +68,12 @@ for (const $item of $items.querySelectorAll('li.changeset')) {
         const id = $a.textContent;
         $item.dataset.id = id;
         $item.id = `changeset-` + id;
-        $a.textContent = id.padStart(maxIdLength, '·');
+        if (id.length < maxIdLength) {
+            const $pad = document.createElement('span');
+            $pad.classList.add('pad');
+            $pad.textContent = '·'.repeat(maxIdLength - id.length);
+            $a.prepend($pad);
+        }
     }
     const $checkbox = document.createElement('input');
     $checkbox.type = 'checkbox';
