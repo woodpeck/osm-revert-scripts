@@ -1,3 +1,9 @@
+const compactedWidgets = [
+    ['time', `time`],
+    ['.changes', `changes`],
+    ['.comment', `comment`],
+];
+
 const $items = document.getElementById('items');
 
 let $lastClickedCheckbox;
@@ -29,11 +35,11 @@ for (const $item of $items.querySelectorAll('li.changeset')) {
     $checkbox.dataset.size = size;
     const $disclosureButton = document.createElement('button');
     $disclosureButton.classList.add('disclosure');
-    updateDisclosureButton($disclosureButton);
     const $holder = document.createElement('span');
     $holder.classList.add('holder');
     $holder.append($checkbox, ` `, $disclosureButton, ` `, $item.firstElementChild);
     $item.prepend($holder);
+    updateItemDisclosure($item);
 }
 $items.onclick = ev => {
     const $clicked = ev.target;
@@ -59,8 +65,8 @@ $items.onclick = ev => {
         updateSelection();
     } else if ($clicked instanceof HTMLButtonElement && $clicked.classList.contains('disclosure')) {
         const $item = $clicked.closest('li');
-        const isCompact = $item.classList.toggle('compact');
-        updateDisclosureButton($clicked, isCompact);
+        $item.classList.toggle('compact');
+        updateItemDisclosure($item);
     }
 };
 
@@ -83,8 +89,7 @@ const $header = document.createElement('header');
     $viewSelect.oninput = () => {
         for (const $item of $items.querySelectorAll('li.changeset')) {
             $item.classList.toggle('compact', $viewSelect.value == 'compact');
-            const $disclosureButton = $item.querySelector('button.disclosure');
-            updateDisclosureButton($disclosureButton, $viewSelect.value == 'compact');
+            updateItemDisclosure($item);
         }
     };
     $tool.append(` `, $viewSelect);
@@ -239,9 +244,16 @@ const $footer = document.createElement('footer');
 }
 document.body.append($footer);
 
-function updateDisclosureButton($disclosureButton, isCompact) {
+function updateItemDisclosure($item) {
+    const isCompact = $item.classList.contains('compact');
+    const $disclosureButton = getItemDisclosureButton($item);
     $disclosureButton.textContent = isCompact ? `+` : `−`;
     $disclosureButton.title = isCompact ? `expand` : `collapse`;
+    for (const [selector, name] of compactedWidgets) {
+        const $widget = $item.querySelector(selector);
+        if (!$widget) continue;
+        $widget.hidden = isCompact;
+    }
 }
 
 function updateSelection() {
@@ -310,6 +322,9 @@ function getItemChangesCount($item) {
 
 function getItemCheckbox($item) {
     return $item.querySelector('input[type=checkbox]');
+}
+function getItemDisclosureButton($item) {
+    return $item.querySelector('button.disclosure');
 }
 
 function setCheckboxChecked($checkbox, checked) {

@@ -101,9 +101,6 @@ header, footer {
 #items li.changeset.compact {
     display: inline;
 }
-#items li.changeset.compact :is(time, .changes, .comment) {
-    display: none;
-}
 
 footer output {
     display: inline-block;
