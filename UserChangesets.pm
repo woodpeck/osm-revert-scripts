@@ -264,6 +264,7 @@ HTML
 </main>
 <script>
 const weburl = "${\(OsmApi::weburl())}";
+const maxIdLength = $max_id_length;
 
 ${html_script}</script>
 </body>

@@ -37,7 +37,13 @@ $selectedCountOutput.title = `number of selected changesets`;
 $selectedCountOutput.textContent = 0;
 
 for (const $item of $items.querySelectorAll('li.changeset')) {
-    $item.id = `changeset-` + getItemId($item);
+    const $a = $item.querySelector('a');
+    if ($a) {
+        const id = $a.textContent;
+        $item.dataset.id = id;
+        $item.id = `changeset-` + id;
+        $a.textContent = id.padStart(maxIdLength, '·');
+    }
     const $checkbox = document.createElement('input');
     $checkbox.type = 'checkbox';
     const changesCount = getItemChangesCount($item);
@@ -306,7 +312,7 @@ function getSelectedChangesetIds() {
     for (const $item of $items.querySelectorAll('li.changeset')) {
         const $checkbox = getItemCheckbox($item);
         if (!$checkbox.checked) continue;
-        const id = getItemId($item);
+        const id = $item.dataset.id;
         if (id == null) continue;
         ids.push(id);
     }
@@ -321,11 +327,6 @@ function *getCheckboxesBetweenCheckboxes($checkbox1, $checkbox2) {
     }
 }
 
-function getItemId($item) {
-    const $a = $item.querySelector('a');
-    if (!$a) return;
-    return $a.textContent;
-}
 function getItemTime($item) {
     const $time = $item.querySelector('time');
     if (!$time) return;
