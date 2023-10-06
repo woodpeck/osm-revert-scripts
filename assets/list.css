@@ -106,11 +106,11 @@ header, footer {
     font-size: .7rem;
 }
 
-#items li.changeset :is(a, time, .changes) {
+#items li.changeset :is(a, time, .changes, .area) {
     font-family: monospace;
     white-space: nowrap;
 }
-#items li.changeset :is(a, .changes .count) {
+#items li.changeset :is(a, .changes .count, .area) {
     display: inline-block;
     text-align: right;
 }
@@ -128,6 +128,10 @@ header, footer {
     background: #8884;
     border-radius: .25em;
     padding-inline: .25em;
+}
+#items li.changeset .area {
+    outline: dashed 1px;
+    width: 10ch;
 }
 
 header {

@@ -219,6 +219,11 @@ sub list
             my $time = time2isoz($timestamp);
             chop $time;
             my $changes = $changeset->att('changes_count');
+            my $min_lat = $changeset->att('min_lat');
+            my $max_lat = $changeset->att('max_lat');
+            my $min_lon = $changeset->att('min_lon');
+            my $max_lon = $changeset->att('max_lon');
+            my $area = sprintf("%.2f", ($max_lat - $min_lat) * ($max_lon - $min_lon)) . "°²";
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
             my $comment = $comment_tag ? $comment_tag->att('v') : "";
 
@@ -229,6 +234,7 @@ sub list
                 "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
                 " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>" .
                 " <span class=changes title='number of changes'>📝<span class=count>".html_escape($changes)."</span></span>" .
+                " <span class=area title='bounding box area'>".html_escape($area)."</span>" .
                 " <span class=comment>".html_escape($comment)."</span>" .
                 "</li>\n";
         }
