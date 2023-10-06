@@ -116,12 +116,17 @@ header {
 header > :first-child {
     margin-left: -1.5rem;
 }
-header button {
+header .tool.visibility {
+    display: flex;
+    flex-wrap: wrap;
+    gap: inherit;
+}
+header .tool.visibility button {
     width: 1.25rem;
     height: 1.25rem;
     padding: 0;
 }
-header label {
+header .tool.visibility label {
     white-space: nowrap;
 }
 

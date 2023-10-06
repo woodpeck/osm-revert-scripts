@@ -124,17 +124,6 @@ const $header = document.createElement('header');
     $tool.append($selectAllCheckbox, `×${count}`);
     $header.append($tool);
 }
-for (const [isCompact, modeWidgetVisibilityControls] of widgetVisibilityControls.entries()) {
-    const $tool = document.createElement('span');
-    $tool.classList.add('tool');
-    $tool.append($globalDisclosureButtons[Number(isCompact)]);
-    for (const [selector, name, $checkbox] of modeWidgetVisibilityControls) {
-        const $label = document.createElement('label');
-        $label.append($checkbox, ` `, name);
-        $tool.append(` `, $label);
-    }
-    $header.append($tool);
-}
 {
     const $tool = document.createElement('span');
     $tool.classList.add('tool');
@@ -199,7 +188,23 @@ for (const [isCompact, modeWidgetVisibilityControls] of widgetVisibilityControls
         }
     };
     $tool.append(` `, $separatorSelect);
-    $header.append($tool);
+    $header.append(` `, $tool);
+}
+{
+    const $tool = document.createElement('span');
+    $tool.classList.add('tool', 'visibility');
+    for (const [isCompact, modeWidgetVisibilityControls] of widgetVisibilityControls.entries()) {
+        const $subtool = document.createElement('span');
+        $subtool.classList.add('tool');
+        $subtool.append($globalDisclosureButtons[Number(isCompact)]);
+        for (const [, name, $checkbox] of modeWidgetVisibilityControls) {
+            const $label = document.createElement('label');
+            $label.append($checkbox, ` `, name);
+            $subtool.append(` `, $label);
+        }
+        $tool.append(` `, $subtool);
+    }
+    $header.append(` `, $tool);
 }
 document.body.prepend($header);
 
@@ -254,20 +259,20 @@ const $footer = document.createElement('footer');
         $separatorInputLabel, ` `,
         `to clipboard `, $button
     );
-    $footer.append(` `,$tool);
+    $footer.append(` `, $tool);
 }
 {
     const $tool = makeRcTool(`Open with RC`, id => {
         const changesetUrl = weburl + `changeset/` + encodeURIComponent(id);
         return `import?url=` + encodeURIComponent(changesetUrl);
     });
-    $footer.append(` `,$tool);
+    $footer.append(` `, $tool);
 }
 {
     const $tool = makeRcTool(`Revert with RC`, id => {
         return `revert_changeset?id=` + encodeURIComponent(id);
     });
-    $footer.append(` `,$tool);
+    $footer.append(` `, $tool);
 }
 {
     const $tool = document.createElement('span');
@@ -280,7 +285,7 @@ const $footer = document.createElement('footer');
         }
     };
     $tool.append($button);
-    $footer.append($tool);
+    $footer.append(` `, $tool);
 }
 document.body.append($footer);
 
