@@ -28,20 +28,20 @@ const $globalDisclosureButtons = [false, true].map(isCompact => {
         for (const $button of $globalDisclosureButtons) {
             $button.disabled = true;
         }
-        requestAnimationFrame(() => walker($items.firstElementChild));
+        requestAnimationFrame(time => walker($items.firstElementChild, time));
     };
     return $button;
 
-    function walker($item) {
-        const batchSize = 256;
-        for (let i = 0; i < batchSize; i++, $item = $item.nextElementSibling) {
+    function walker($item, time) {
+        for (let i = 0;; i++, $item = $item.nextElementSibling) {
+            if (i >= 10 && performance.now() - time >= 20) break;
             if (!$item) break;
             if (!$item.classList.contains('changeset')) continue;
             $item.classList.toggle('compact', isCompact);
             updateItemDisclosure($item);
         }
         if ($item) {
-            requestAnimationFrame(() => walker($item));
+            requestAnimationFrame(time => walker($item, time));
         } else {
             for (const $button of $globalDisclosureButtons) {
                 $button.disabled = false;
