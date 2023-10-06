@@ -200,6 +200,7 @@ sub list
     my $html_script = read_asset("list.js");
     my $max_id_length = 0;
     my $max_changes_length = 0;
+    my $max_area_length = 0;
 
     foreach my $list_filename (list_osm_filenames($metadata_dirname))
     {
@@ -223,18 +224,19 @@ sub list
             my $max_lat = $changeset->att('max_lat');
             my $min_lon = $changeset->att('min_lon');
             my $max_lon = $changeset->att('max_lon');
-            my $area = sprintf("%.2f", ($max_lat - $min_lat) * ($max_lon - $min_lon)) . "°²";
+            my $area = sprintf("%.2f", ($max_lat - $min_lat) * ($max_lon - $min_lon));
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
             my $comment = $comment_tag ? $comment_tag->att('v') : "";
 
             $max_id_length = length($id) if length($id) > $max_id_length;
             $max_changes_length = length($changes) if length($changes) > $max_changes_length;
+            $max_area_length = length($area) if length($area) > $max_area_length;
             $changeset_items{$id} = 
                 "<li class=changeset>" .
                 "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
                 " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>" .
-                " <span class=changes title='number of changes'>📝<span class=count>".html_escape($changes)."</span></span>" .
-                " <span class=area title='bounding box area'>".html_escape($area)."</span>" .
+                " <span class=changes title='number of changes'>📝<span class=number>".html_escape($changes)."</span></span>" .
+                " <span class=area title='bounding box area'><span class=number>".html_escape($area)."</span>°²</span>" .
                 " <span class=comment>".html_escape($comment)."</span>" .
                 "</li>\n";
         }
@@ -255,6 +257,7 @@ sub list
     --changesets-count-width: ${\(length keys(%changeset_items))}ch;
     --id-width: ${max_id_length}ch;
     --changes-width: ${max_changes_length}ch;
+    --area-width: ${max_area_length}ch;
 }
 ${html_style}</style>
 </head>

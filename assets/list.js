@@ -1,6 +1,7 @@
 const widgetData = [
     ['time', `time`],
     ['.changes', `changes`],
+    ['.area', `area`],
     ['.comment', `comment`],
 ];
 
@@ -388,7 +389,7 @@ function getItemTime($item) {
     return $time.dateTime;
 }
 function getItemChangesCount($item) {
-    const $n = $item.querySelector('.changes .count');
+    const $n = $item.querySelector('.changes .number');
     if (!$n) return;
     return Number($n.textContent);
 }

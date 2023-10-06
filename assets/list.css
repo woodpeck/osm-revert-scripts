@@ -110,7 +110,7 @@ header, footer {
     font-family: monospace;
     white-space: nowrap;
 }
-#items li.changeset :is(a, .changes .count, .area) {
+#items li.changeset :is(a, .changes .number, .area .number) {
     display: inline-block;
     text-align: right;
 }
@@ -121,7 +121,7 @@ header, footer {
     user-select: none;
     opacity: .25;
 }
-#items li.changeset .changes .count {
+#items li.changeset .changes .number {
     min-width: var(--changes-width);
 }
 #items li.changeset .changes {
@@ -131,7 +131,14 @@ header, footer {
 }
 #items li.changeset .area {
     outline: dashed 1px;
-    width: 10ch;
+    padding-inline: .125rem;
+    font-family: unset;
+    font-size: .8rem;
+}
+#items li.changeset .area .number {
+    min-width: var(--area-width);
+    font-family: monospace;
+    font-size: unset;
 }
 
 header {
