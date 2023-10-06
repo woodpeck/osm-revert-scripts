@@ -193,11 +193,40 @@ sub list
     use XML::Twig;
 
     my ($html_filename, $metadata_dirname, $from_timestamp, $to_timestamp) = @_;
-    my %visited_changesets = ();
+    my %changeset_items = ();
     my $fh;
     my $html_style = read_asset("list.css");
     my $html_script = read_asset("list.js");
     my $weburl = OsmApi::weburl();
+
+    foreach my $list_filename (list_osm_filenames($metadata_dirname))
+    {
+        my $twig = XML::Twig->new()->parsefile($list_filename);
+        foreach my $changeset ($twig->root->children)
+        {
+            my $id = $changeset->att('id');
+            next if $changeset_items{$id};
+
+            my $created_at = $changeset->att('created_at');
+            my $closed_at = $changeset->att('closed_at');
+            next if (str2time($closed_at) < $from_timestamp);
+            next if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
+
+            my $time = time2isoz(str2time($created_at));
+            chop $time;
+            my $changes = $changeset->att('changes_count');
+            my $comment_tag = $changeset->first_child('tag[@k="comment"]');
+            my $comment = $comment_tag ? $comment_tag->att('v') : "";
+
+            $changeset_items{$id} = 
+                "<li class=changeset>" .
+                "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
+                " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>" .
+                " <span class=changes title='number of changes'>📝<span class=count>".html_escape($changes)."</span></span>" .
+                " <span class=comment>".html_escape($comment)."</span>" .
+                "</li>\n";
+        }
+    }
 
     open($fh, '>:utf8', $html_filename) or die "can't open html list file '$html_filename' for writing";
     print $fh <<HTML;
@@ -217,33 +246,9 @@ ${html_style}</style>
 <ul id=items>
 HTML
 
-    foreach my $list_filename (list_osm_filenames($metadata_dirname))
+    foreach my $id (sort {$b <=> $a} keys %changeset_items)
     {
-        my $twig = XML::Twig->new()->parsefile($list_filename);
-        foreach my $changeset ($twig->root->children)
-        {
-            my $id = $changeset->att('id');
-            next if $visited_changesets{$id};
-            $visited_changesets{$id} = 1;
-
-            my $created_at = $changeset->att('created_at');
-            my $closed_at = $changeset->att('closed_at');
-            next if (str2time($closed_at) < $from_timestamp);
-            next if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
-
-            my $time = time2isoz(str2time($created_at));
-            chop $time;
-            my $changes = $changeset->att('changes_count');
-            my $comment_tag = $changeset->first_child('tag[@k="comment"]');
-            my $comment = $comment_tag ? $comment_tag->att('v') : "";
-
-            print $fh "<li class=changeset>";
-            print $fh "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>";
-            print $fh " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>";
-            print $fh " <span class=changes title='number of changes'>📝<span class=count>".html_escape($changes)."</span></span>";
-            print $fh " <span class=comment>".html_escape($comment)."</span>";
-            print $fh "</li>\n";
-        }
+        print $fh $changeset_items{$id};
     }
 
     print $fh <<HTML;
