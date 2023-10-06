@@ -1,16 +1,24 @@
-const widgets = [
+const widgetData = [
     ['time', `time`],
     ['.changes', `changes`],
     ['.comment', `comment`],
 ];
-const widgetVisibilityControls = [false, true].map(isCompact => [isCompact, widgets.map(([selector, name]) => {
+
+const $items = document.getElementById('items');
+
+const widgetVisibilityControls = [false, true].map(isCompact => widgetData.map(([selector, name]) => {
     const $checkbox = document.createElement('input');
     $checkbox.type = 'checkbox';
     $checkbox.checked = !isCompact;
+    $checkbox.onclick = () => {
+        let compactnessSelector = `.compact`;
+        if (!isCompact) compactnessSelector = `:not(${compactnessSelector})`;
+        for (const $widget of $items.querySelectorAll(`li.changeset${compactnessSelector} ${selector}`)) {
+            $widget.hidden = !$checkbox.checked;
+        }
+    };
     return [selector, name, $checkbox];
-})]);
-
-const $items = document.getElementById('items');
+}));
 
 let $lastClickedCheckbox;
 const $selectAllCheckbox = document.createElement('input');
@@ -84,7 +92,7 @@ const $header = document.createElement('header');
     $tool.append($selectAllCheckbox, `×${count}`);
     $header.append($tool);
 }
-for (const [isCompact, modeWidgetVisibilityControls] of widgetVisibilityControls) {
+for (const [isCompact, modeWidgetVisibilityControls] of widgetVisibilityControls.entries()) {
     const $tool = document.createElement('span');
     $tool.classList.add('tool');
     const $globalDisclosureButton = document.createElement('button');
@@ -258,10 +266,10 @@ function updateItemDisclosure($item) {
     const $disclosureButton = getItemDisclosureButton($item);
     $disclosureButton.textContent = isCompact ? `+` : `−`;
     $disclosureButton.title = isCompact ? `expand` : `collapse`;
-    for (const [selector] of widgets) {
+    for (const [selector,, $checkbox] of widgetVisibilityControls[Number(isCompact)]) {
         const $widget = $item.querySelector(selector);
         if (!$widget) continue;
-        $widget.hidden = isCompact;
+        $widget.hidden = !$checkbox.checked;
     }
 }
 
