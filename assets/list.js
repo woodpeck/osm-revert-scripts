@@ -20,6 +20,28 @@ const widgetVisibilityControls = [false, true].map(isCompact => widgetData.map((
     return [selector, name, $checkbox];
 }));
 
+const $globalDisclosureButtons = [false, true].map(isCompact => {
+    const $button = document.createElement('button');
+    $button.textContent = !isCompact ? `+` : `−`;
+    $button.title = !isCompact ? `expand all` : `collapse all`;
+    $button.onclick = () => {
+        try {
+            for (const $button of $globalDisclosureButtons) {
+                $button.disabled = true;
+            }
+            for (const $item of $items.querySelectorAll('li.changeset')) {
+                $item.classList.toggle('compact', isCompact);
+                updateItemDisclosure($item);
+            }
+        } finally {
+            for (const $button of $globalDisclosureButtons) {
+                $button.disabled = false;
+            }
+        }
+    };
+    return $button;
+});
+
 let $lastClickedCheckbox;
 const $selectAllCheckbox = document.createElement('input');
 $selectAllCheckbox.type = 'checkbox';
@@ -101,16 +123,7 @@ const $header = document.createElement('header');
 for (const [isCompact, modeWidgetVisibilityControls] of widgetVisibilityControls.entries()) {
     const $tool = document.createElement('span');
     $tool.classList.add('tool');
-    const $globalDisclosureButton = document.createElement('button');
-    $globalDisclosureButton.textContent = !isCompact ? `+` : `−`;
-    $globalDisclosureButton.title = !isCompact ? `expand all` : `collapse all`;
-    $globalDisclosureButton.onclick = () => {
-        for (const $item of $items.querySelectorAll('li.changeset')) {
-            $item.classList.toggle('compact', isCompact);
-            updateItemDisclosure($item);
-        }
-    };
-    $tool.append($globalDisclosureButton);
+    $tool.append($globalDisclosureButtons[Number(isCompact)]);
     for (const [selector, name, $checkbox] of modeWidgetVisibilityControls) {
         const $label = document.createElement('label');
         $label.append($checkbox, ` `, name);
