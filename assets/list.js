@@ -1,8 +1,14 @@
-const compactedWidgets = [
+const widgets = [
     ['time', `time`],
     ['.changes', `changes`],
     ['.comment', `comment`],
 ];
+const widgetVisibilityControls = [false, true].map(isCompact => [isCompact, widgets.map(([selector, name]) => {
+    const $checkbox = document.createElement('input');
+    $checkbox.type = 'checkbox';
+    $checkbox.checked = !isCompact;
+    return [selector, name, $checkbox];
+})]);
 
 const $items = document.getElementById('items');
 
@@ -78,21 +84,24 @@ const $header = document.createElement('header');
     $tool.append($selectAllCheckbox, `×${count}`);
     $header.append($tool);
 }
-{
+for (const [isCompact, modeWidgetVisibilityControls] of widgetVisibilityControls) {
     const $tool = document.createElement('span');
     $tool.classList.add('tool');
-    const $viewSelect = document.createElement('select');
-    $viewSelect.append(
-        new Option("Expanded view", 'expanded'),
-        new Option("Compact view", 'compact')
-    );
-    $viewSelect.oninput = () => {
+    const $globalDisclosureButton = document.createElement('button');
+    $globalDisclosureButton.textContent = !isCompact ? `+` : `−`;
+    $globalDisclosureButton.title = !isCompact ? `expand all` : `collapse all`;
+    $globalDisclosureButton.onclick = () => {
         for (const $item of $items.querySelectorAll('li.changeset')) {
-            $item.classList.toggle('compact', $viewSelect.value == 'compact');
+            $item.classList.toggle('compact', isCompact);
             updateItemDisclosure($item);
         }
     };
-    $tool.append(` `, $viewSelect);
+    $tool.append($globalDisclosureButton);
+    for (const [selector, name, $checkbox] of modeWidgetVisibilityControls) {
+        const $label = document.createElement('label');
+        $label.append($checkbox, ` `, name);
+        $tool.append(` `, $label);
+    }
     $header.append($tool);
 }
 {
@@ -249,7 +258,7 @@ function updateItemDisclosure($item) {
     const $disclosureButton = getItemDisclosureButton($item);
     $disclosureButton.textContent = isCompact ? `+` : `−`;
     $disclosureButton.title = isCompact ? `expand` : `collapse`;
-    for (const [selector, name] of compactedWidgets) {
+    for (const [selector] of widgets) {
         const $widget = $item.querySelector(selector);
         if (!$widget) continue;
         $widget.hidden = isCompact;
