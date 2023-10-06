@@ -231,7 +231,7 @@ sub list
                 defined($changeset->att('min_lon')) && defined($changeset->att('max_lon'))
             )
             {
-                $area = sprintf("%.2f", ($changeset->att('max_lat') - $changeset->att('min_lat')) * ($changeset->att('max_lon') - $changeset->att('min_lon')));
+                $area = sprintf("%.5f", ($changeset->att('max_lat') - $changeset->att('min_lat')) * ($changeset->att('max_lon') - $changeset->att('min_lon')));
                 $max_area_length = length($area) if length($area) > $max_area_length;
             }
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
