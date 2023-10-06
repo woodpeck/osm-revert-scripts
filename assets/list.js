@@ -25,21 +25,29 @@ const $globalDisclosureButtons = [false, true].map(isCompact => {
     $button.textContent = !isCompact ? `+` : `−`;
     $button.title = !isCompact ? `expand all` : `collapse all`;
     $button.onclick = () => {
-        try {
-            for (const $button of $globalDisclosureButtons) {
-                $button.disabled = true;
-            }
-            for (const $item of $items.querySelectorAll('li.changeset')) {
-                $item.classList.toggle('compact', isCompact);
-                updateItemDisclosure($item);
-            }
-        } finally {
+        for (const $button of $globalDisclosureButtons) {
+            $button.disabled = true;
+        }
+        requestAnimationFrame(() => walker($items.firstElementChild));
+    };
+    return $button;
+
+    function walker($item) {
+        const batchSize = 256;
+        for (let i = 0; i < batchSize; i++, $item = $item.nextElementSibling) {
+            if (!$item) break;
+            if (!$item.classList.contains('changeset')) continue;
+            $item.classList.toggle('compact', isCompact);
+            updateItemDisclosure($item);
+        }
+        if ($item) {
+            requestAnimationFrame(() => walker($item));
+        } else {
             for (const $button of $globalDisclosureButtons) {
                 $button.disabled = false;
             }
         }
-    };
-    return $button;
+    }
 });
 
 let $lastClickedCheckbox;
