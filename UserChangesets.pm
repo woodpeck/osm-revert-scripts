@@ -197,7 +197,8 @@ sub list
     my $fh;
     my $html_style = read_asset("list.css");
     my $html_script = read_asset("list.js");
-    my $weburl = OsmApi::weburl();
+    my $max_id_length = 0;
+    my $max_changes_length = 0;
 
     foreach my $list_filename (list_osm_filenames($metadata_dirname))
     {
@@ -218,6 +219,8 @@ sub list
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
             my $comment = $comment_tag ? $comment_tag->att('v') : "";
 
+            $max_id_length = length($id) if length($id) > $max_id_length;
+            $max_changes_length = length($changes) if length($changes) > $max_changes_length;
             $changeset_items{$id} = 
                 "<li class=changeset>" .
                 "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
@@ -239,6 +242,11 @@ sub list
 <title>list of changesets</title>
 <meta name=color-scheme content="light dark">
 <style>
+:root {
+    --changesets-count-width: ${\(length keys(%changeset_items))}ch;
+    --id-width: ${max_id_length}ch;
+    --changes-width: ${max_changes_length}ch;
+}
 ${html_style}</style>
 </head>
 <body>
@@ -255,7 +263,7 @@ HTML
 </ul>
 </main>
 <script>
-const weburl = "$weburl";
+const weburl = "${\(OsmApi::weburl())}";
 
 ${html_script}</script>
 </body>

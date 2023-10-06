@@ -63,6 +63,14 @@ header, footer {
     padding: .5rem;
     background: canvas;
 }
+
+#items li.changeset:not(.compact) {
+    text-indent: -1.5rem;
+    padding-left: 1.5rem;
+}
+#items li.changeset.compact {
+    display: inline;
+}
 #items li.changeset .holder {
     white-space: nowrap;
 }
@@ -81,30 +89,30 @@ header, footer {
     border: solid 1px #888;
     font-size: .7rem;
 }
+
 #items li.changeset :is(a, time, .changes) {
     font-family: monospace;
+    white-space: nowrap;
+}
+#items li.changeset :is(a, .changes .count) {
+    display: inline-block;
+    text-align: right;
+}
+#items li.changeset a {
+    min-width: var(--id-width);
+}
+#items li.changeset .changes .count {
+    min-width: var(--changes-width);
 }
 #items li.changeset .changes {
     background: #8884;
     border-radius: .25em;
     padding-inline: .25em;
 }
-#items li.changeset .changes .count {
-    min-width: 4.5ex;
-    display: inline-block;
-    text-align: right;
-}
-#items li.changeset:not(.compact) {
-    text-indent: -1.5rem;
-    padding-left: 1.5rem;
-}
-#items li.changeset.compact {
-    display: inline;
-}
 
 footer output {
     display: inline-block;
-    width: 5.5ex;
+    width: var(--changesets-count-width);
     border: dotted 1px #888;
     padding: .125em;
     text-align: right;
