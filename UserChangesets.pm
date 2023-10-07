@@ -5,6 +5,7 @@ package UserChangesets;
 use utf8;
 use strict;
 use warnings;
+use POSIX qw(floor);
 use Math::Trig qw(deg2rad);
 use URI::Escape;
 use HTTP::Date qw(str2time time2isoz);
@@ -227,7 +228,7 @@ sub list
             my $max_lat = $changeset->att('max_lat');
             my $min_lon = $changeset->att('min_lon');
             my $max_lon = $changeset->att('max_lon');
-            my ($area, $log_area, $int_log_area);
+            my ($area, $log_area, $int_log_area, $km2_area);
             if (
                 defined($min_lat) && defined($max_lat) &&
                 defined($min_lon) && defined($max_lon)
@@ -239,6 +240,7 @@ sub list
                     $int_log_area = -int($log_area);
                     $int_log_area = 0 if $int_log_area < 0;
                     $int_log_area = $max_int_log_area if $int_log_area > $max_int_log_area;
+                    $km2_area = format_to_significant_figures(510072000 * $area, 3);
                 }
             }
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
@@ -259,7 +261,7 @@ sub list
             }
             else
             {
-                $item .= " <span class=area title='log(bounding box area)' data-log-size=$int_log_area>".html_escape($log_area)."</span>";
+                $item .= " <span class=area title='log(bounding box area); ".html_escape($km2_area)." km²' data-log-size=$int_log_area>".html_escape($log_area)."</span>";
             }
             $item .=
                 " <span class=comment>".html_escape($comment)."</span>" .
@@ -396,6 +398,22 @@ sub open_asset
 {
     my ($fh_ref, $filename) = @_;
     open($$fh_ref, '<:utf8', $FindBin::Bin."/assets/".$filename) or die $!;
+}
+
+sub format_to_significant_figures
+{
+    my ($v, $n) = @_;
+    my $e = floor(log($v) / log(10));
+    my $p = -($n - $e - 1);
+    if ($p<0 && $p>-$n) {
+        return sprintf "%.*g", $n, $v;
+    } else {
+        my $s = "";
+        $s .= "0." . ("0" x (-1 - $e)) if $e < 0;
+        $s .= int($v * 0.1 ** $p);
+        $s .= "0" x $p if $p >= 0;
+        return $s;
+    }
 }
 
 1;
