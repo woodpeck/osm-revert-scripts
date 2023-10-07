@@ -5,6 +5,7 @@ package UserChangesets;
 use utf8;
 use strict;
 use warnings;
+use Math::Trig qw(deg2rad);
 use URI::Escape;
 use HTTP::Date qw(str2time time2isoz);
 use HTML::Entities qw(encode_entities);
@@ -225,15 +226,17 @@ sub list
             my $changes = $changeset->att('changes_count');
             $max_changes_length = length($changes) if length($changes) > $max_changes_length;
 
+            my $min_lat = $changeset->att('min_lat');
+            my $max_lat = $changeset->att('max_lat');
+            my $min_lon = $changeset->att('min_lon');
+            my $max_lon = $changeset->att('max_lon');
             my ($area, $log_area);
             if (
-                defined($changeset->att('min_lat')) && defined($changeset->att('max_lat')) &&
-                defined($changeset->att('min_lon')) && defined($changeset->att('max_lon'))
+                defined($min_lat) && defined($max_lat) &&
+                defined($min_lon) && defined($max_lon)
             )
             {
-                $area =
-                    ($changeset->att('max_lat') - $changeset->att('min_lat')) *
-                    ($changeset->att('max_lon') - $changeset->att('min_lon'));
+                $area = (sin(deg2rad($max_lat)) - sin(deg2rad($min_lat))) * ($max_lon - $min_lon) / 720; # 1 = entire Earth surface
                 if ($area > 0) {
                     $log_area = sprintf("%.2f",log($area) / log(10));
                     $max_area_length = length($log_area) if length($log_area) > $max_area_length;
@@ -257,7 +260,7 @@ sub list
             }
             else
             {
-                $item .= " <span class=area title='log10(bounding box area in °²)'><span class=number>".html_escape($log_area)."</span></span>";
+                $item .= " <span class=area title='log(bounding box area)'><span class=number>".html_escape($log_area)."</span></span>";
             }
             $item .=
                 " <span class=comment>".html_escape($comment)."</span>" .
