@@ -147,6 +147,7 @@ header, footer {
     box-sizing: border-box;
     border: dashed 1px #888;
     background: #F803;
+    pointer-events: none;
 }
 #items li.changeset .area.zero:before {
     width: 1ch;
