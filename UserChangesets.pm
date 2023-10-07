@@ -196,9 +196,6 @@ sub list
     my ($html_filename, $metadata_dirname, $from_timestamp, $to_timestamp) = @_;
     my %changeset_items = ();
     my %changeset_dates = ();
-    my $fh;
-    my $html_style = read_asset("list.css");
-    my $html_script = read_asset("list.js");
     my $max_id_length = 0;
     my $max_changes_length = 0;
     my $max_area_length = 2;
@@ -269,46 +266,52 @@ sub list
         }
     }
 
+    my ($fh, $fh_template, $fh_asset);
     open($fh, '>:utf8', $html_filename) or die "can't open html list file '$html_filename' for writing";
-    print $fh <<HTML;
-<!DOCTYPE html>
-<html lang=en>
-<head>
-<meta charset=utf-8>
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>list of changesets</title>
-<meta name=color-scheme content="light dark">
-<style>
-:root {
-    --changesets-count-width: ${\(length keys(%changeset_items))}ch;
-    --id-width: ${max_id_length}ch;
-    --changes-width: ${max_changes_length}ch;
-    --area-width: ${max_area_length}ch;
-}
-${html_style}</style>
-</head>
-<body>
-<main>
-<ul id=items>
-HTML
-
-    foreach my $id (sort {$changeset_dates{$b} <=> $changeset_dates{$a}} keys %changeset_dates)
+    open_asset(\$fh_template, "list.html");
+    while (<$fh_template>)
     {
-        print $fh $changeset_items{$id};
+        if (!/<\!-- \{embed (.*)\} -->/)
+        {
+            print $fh $_;
+        }
+        elsif ($1 eq "style")
+        {
+            print $fh
+                "<style>\n" .
+                ":root {\n" .
+                "    --changesets-count-width: ".length(keys %changeset_items)."ch;\n" .
+                "    --id-width: ${max_id_length}ch;\n" .
+                "    --changes-width: ${max_changes_length}ch;\n" .
+                "    --area-width: ${max_area_length}ch;\n" .
+                "}\n\n";
+            open_asset(\$fh_asset, "list.css");
+            print $fh $_ while <$fh_asset>;
+            close $fh_asset;
+            print $fh
+                "</style>\n";
+        }
+        elsif ($1 eq "items")
+        {
+            foreach my $id (sort {$changeset_dates{$b} <=> $changeset_dates{$a}} keys %changeset_dates)
+            {
+                print $fh $changeset_items{$id};
+            }
+        }
+        elsif ($1 eq "script")
+        {
+            print $fh
+                "<script>\n" .
+                "const weburl = '".OsmApi::weburl()."';\n" .
+                "const maxIdLength = $max_id_length;\n\n";
+            open_asset(\$fh_asset, "list.js");
+            print $fh $_ while <$fh_asset>;
+            close $fh_asset;
+            print $fh
+                "</script>";
+        }
     }
-
-    print $fh <<HTML;
-</ul>
-</main>
-<script>
-const weburl = "${\(OsmApi::weburl())}";
-const maxIdLength = $max_id_length;
-
-${html_script}</script>
-</body>
-</html>
-HTML
+    close $fh_template;
     close $fh;
 }
 
@@ -383,13 +386,10 @@ sub html_escape
     return encode_entities($s, '<>&"');
 }
 
-sub read_asset
+sub open_asset
 {
-    my $filename = shift;
-    open(my $fh, '<:utf8', $FindBin::Bin."/assets/".$filename) or die $!;
-    my $asset = do { local $/; <$fh> };
-    close $fh;
-    return $asset;
+    my ($fh_ref, $filename) = @_;
+    open($$fh_ref, '<:utf8', $FindBin::Bin."/assets/".$filename) or die $!;
 }
 
 1;
