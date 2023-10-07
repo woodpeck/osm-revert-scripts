@@ -198,7 +198,7 @@ sub list
     my %changeset_dates = ();
     my $max_id_length = 0;
     my $max_changes_length = 0;
-    my $max_area_length = 2;
+    my $max_int_log_area = 11;
 
     foreach my $list_filename (list_osm_filenames($metadata_dirname))
     {
@@ -227,7 +227,7 @@ sub list
             my $max_lat = $changeset->att('max_lat');
             my $min_lon = $changeset->att('min_lon');
             my $max_lon = $changeset->att('max_lon');
-            my ($area, $log_area);
+            my ($area, $log_area, $int_log_area);
             if (
                 defined($min_lat) && defined($max_lat) &&
                 defined($min_lon) && defined($max_lon)
@@ -235,8 +235,10 @@ sub list
             {
                 $area = (sin(deg2rad($max_lat)) - sin(deg2rad($min_lat))) * ($max_lon - $min_lon) / 720; # 1 = entire Earth surface
                 if ($area > 0) {
-                    $log_area = sprintf("%.2f",log($area) / log(10));
-                    $max_area_length = length($log_area) if length($log_area) > $max_area_length;
+                    $log_area = sprintf "%.2f", log($area) / log(10);
+                    $int_log_area = -int($log_area);
+                    $int_log_area = 0 if $int_log_area < 0;
+                    $int_log_area = $max_int_log_area if $int_log_area > $max_int_log_area;
                 }
             }
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
@@ -249,15 +251,15 @@ sub list
                 " <span class=changes title='number of changes'>📝<span class=number>".html_escape($changes)."</span></span>";
             if (!defined($area))
             {
-                $item .= " <span class='area empty' title='no bounding box'><span class=number>✕</span></span>";
+                $item .= " <span class='area empty' title='no bounding box'>✕</span>";
             }
             elsif ($area == 0)
             {
-                $item .= " <span class='area empty' title='zero-sized bounding box'><span class=number>·</span></span>";
+                $item .= " <span class='area zero' title='zero-sized bounding box'>·</span>";
             }
             else
             {
-                $item .= " <span class=area title='log(bounding box area)'><span class=number>".html_escape($log_area)."</span></span>";
+                $item .= " <span class=area title='log(bounding box area)' data-log-size=$int_log_area>".html_escape($log_area)."</span>";
             }
             $item .=
                 " <span class=comment>".html_escape($comment)."</span>" .
@@ -283,11 +285,15 @@ sub list
                 "    --changesets-count-width: ".length(keys %changeset_items)."ch;\n" .
                 "    --id-width: ${max_id_length}ch;\n" .
                 "    --changes-width: ${max_changes_length}ch;\n" .
-                "    --area-width: ${max_area_length}ch;\n" .
                 "}\n\n";
             open_asset(\$fh_asset, "list.css");
             print $fh $_ while <$fh_asset>;
             close $fh_asset;
+            for (0 .. $max_int_log_area)
+            {
+                my $width = sprintf "%.2f", 6.5 - $_ / 2;
+                print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
+            }
             print $fh
                 "</style>\n";
         }

@@ -113,7 +113,7 @@ header, footer {
     font-family: monospace;
     white-space: nowrap;
 }
-#items li.changeset :is(a, .changes .number, .area .number) {
+#items li.changeset :is(a, .changes .number, .area) {
     display: inline-block;
     text-align: right;
 }
@@ -133,17 +133,26 @@ header, footer {
     padding-inline: .25em;
 }
 #items li.changeset .area {
-    outline: dashed 1px;
-    padding-inline: .125rem;
-    font-family: unset;
-    font-size: .8rem;
+    width: 6ch;
+    padding-inline: .25ch;
+    position: relative;
+    background: #08F2;
 }
-#items li.changeset .area .number {
-    min-width: var(--area-width);
-    font-family: monospace;
-    font-size: unset;
+#items li.changeset .area:not(.empty):before {
+    content: '';
+    display: block;
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    box-sizing: border-box;
+    border: dashed 1px #888;
+    background: #F803;
 }
-#items li.changeset .area.empty .number {
+#items li.changeset .area.zero:before {
+    width: 1ch;
+    height: 1ch;
+}
+#items li.changeset .area:is(.zero, .empty) {
     text-align: center;
 }
 
