@@ -13,6 +13,7 @@ my $from_date = "2001-01-01";
 my $to_date;
 my ($dirname, $metadata_dirname, $changes_dirname);
 my $output_filename;
+my $changes_counts = 0;
 
 my $correct_options = GetOptions(
     "username|u=s" => \$username,
@@ -22,7 +23,8 @@ my $correct_options = GetOptions(
     "directory|dirname|output=s" => \$dirname,
     "metadata-directory|metadata-dirname=s" => \$metadata_dirname,
     "changes-directory|changes-dirname=s" => \$changes_dirname,
-    "output-filename=s" => \$output_filename
+    "output-filename=s" => \$output_filename,
+    "changes-counts!" => \$changes_counts
 );
 
 my $from_timestamp = UserChangesets::parse_date($from_date);
@@ -78,7 +80,11 @@ if ($correct_options && ($ARGV[0] eq "count"))
 if ($correct_options && ($ARGV[0] eq "list"))
 {
     die "parameters required: one of (display_name, uid, directory) or both (metadata-directory, output-filename)" unless defined($metadata_dirname) && defined($output_filename);
-    UserChangesets::list($output_filename, $metadata_dirname, $from_timestamp, $to_timestamp);
+    die "changes-counts require one of: (display_name, uid, directory, changes-directory)" if $changes_counts && !defined($changes_dirname);
+    UserChangesets::list(
+        $metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp,
+        $output_filename, $changes_counts
+    );
     exit;
 }
 
@@ -98,4 +104,5 @@ options:
   --metadata-directory <directory>  derived from --directory if not provided
   --changes-directory <directory>   derived from --directory if not provided
   --output-filename <filename>      derived from --directory if not provided
+  --changes-counts                  for list command: show create/modify/delete counts
 EOF

@@ -389,7 +389,7 @@ function getItemTime($item) {
     return $time.dateTime;
 }
 function getItemChangesCount($item) {
-    const $n = $item.querySelector('.changes .number');
+    const $n = $item.querySelector('.changes .number.total');
     if (!$n) return;
     return Number($n.textContent);
 }

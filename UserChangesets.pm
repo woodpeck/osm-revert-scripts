@@ -194,16 +194,24 @@ sub list
 {
     use XML::Twig;
 
-    my ($html_filename, $metadata_dirname, $from_timestamp, $to_timestamp) = @_;
+    my (
+        $metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp,
+        $output_filename, $with_changes_counts
+    ) = @_;
     my %changeset_items = ();
     my %changeset_dates = ();
-    my $max_id_length = 0;
-    my $max_changes_length = 0;
+    my $max_id_length = 1;
+    my $max_total_changes_length = 1;
+    my $max_create_changes_length = 1;
+    my $max_modify_changes_length = 1;
+    my $max_delete_changes_length = 1;
     my $max_int_log_area = 11;
 
-    foreach my $list_filename (list_osm_filenames($metadata_dirname))
+    foreach my $metadata_filename (list_osm_filenames($metadata_dirname))
     {
-        my $twig = XML::Twig->new()->parsefile($list_filename);
+        print STDERR "reading changeset metadata file $metadata_filename\n" if $OsmApi::prefs->{'debug'};
+
+        my $twig = XML::Twig->new()->parsefile($metadata_filename);
         foreach my $changeset ($twig->root->children)
         {
             my $id = $changeset->att('id');
@@ -214,15 +222,35 @@ sub list
             next if (str2time($closed_at) < $from_timestamp);
             next if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
 
-            $max_id_length = length($id) if length($id) > $max_id_length;
+            update_max_length(\$max_id_length, $id);
 
             my $timestamp = str2time($created_at);
             $changeset_dates{$id} = $timestamp;
             my $time = time2isoz($timestamp);
             chop $time;
 
-            my $changes = $changeset->att('changes_count');
-            $max_changes_length = length($changes) if length($changes) > $max_changes_length;
+            my $total_changes_count = $changeset->att('changes_count');
+            update_max_length(\$max_total_changes_length, $total_changes_count);
+
+            my ($create_changes_count, $modify_changes_count, $delete_changes_count);
+            my $changes_filename = "$changes_dirname/$id.osc";
+            if ($with_changes_counts && -e $changes_filename)
+            {
+                print STDERR "reading changeset changes file $changes_filename\n" if $OsmApi::prefs->{'debug'};
+                $create_changes_count = 0;
+                $modify_changes_count = 0;
+                $delete_changes_count = 0;
+                XML::Twig->new(
+                    twig_handlers => {
+                        create => sub { $create_changes_count++ },
+                        modify => sub { $modify_changes_count++ },
+                        delete => sub { $delete_changes_count++ }
+                    }
+                )->parsefile($changes_filename);
+                update_max_length(\$max_create_changes_length, $create_changes_count);
+                update_max_length(\$max_modify_changes_length, $modify_changes_count);
+                update_max_length(\$max_delete_changes_length, $delete_changes_count);
+            }
 
             my $min_lat = $changeset->att('min_lat');
             my $max_lat = $changeset->att('max_lat');
@@ -249,7 +277,7 @@ sub list
                 "<li class=changeset>" .
                 "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
                 " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>" .
-                " <span class=changes title='number of changes'>📝<span class=number>".html_escape($changes)."</span></span>";
+                " " . get_changes_widget($with_changes_counts, $total_changes_count, $create_changes_count, $modify_changes_count, $delete_changes_count);
             if (!defined($area))
             {
                 $item .= " <span class='area empty' title='no bounding box'>✕</span>";
@@ -270,7 +298,7 @@ sub list
     }
 
     my ($fh, $fh_template, $fh_asset);
-    open($fh, '>:utf8', $html_filename) or die "can't open html list file '$html_filename' for writing";
+    open($fh, '>:utf8', $output_filename) or die "can't open html list file '$output_filename' for writing";
     open_asset(\$fh_template, "list.html");
     while (<$fh_template>)
     {
@@ -285,7 +313,15 @@ sub list
                 ":root {\n" .
                 "    --changesets-count-width: ".length(keys %changeset_items)."ch;\n" .
                 "    --id-width: ${max_id_length}ch;\n" .
-                "    --changes-width: ${max_changes_length}ch;\n" .
+                "    --total-changes-width: ${max_total_changes_length}ch;\n";
+            if ($with_changes_counts)
+            {
+                print $fh
+                    "    --create-changes-width: ${max_create_changes_length}ch;\n" .
+                    "    --modify-changes-width: ${max_modify_changes_length}ch;\n" .
+                    "    --delete-changes-width: ${max_delete_changes_length}ch;\n";
+            }
+            print $fh
                 "}\n\n";
             open_asset(\$fh_asset, "list.css");
             print $fh $_ while <$fh_asset>;
@@ -320,6 +356,29 @@ sub list
     }
     close $fh_template;
     close $fh;
+}
+
+sub get_changes_widget
+{
+    my ($with_changes_counts, $total_count, $create_count, $modify_count, $delete_count) = @_;
+    my $sum_count;
+    my $widget = "";
+    $widget .= "<span class=changes title='number of changes'>📝";
+    $widget .= "<span class='number total'>".html_escape($total_count)."</span>";
+
+    if ($with_changes_counts)
+    {
+        if (defined($create_count) && defined($modify_count) && defined($delete_count))
+        {
+            $sum_count = $create_count + $modify_count + $delete_count;
+        }
+        $widget .= defined($sum_count) && $total_count == $sum_count ? "=" : "≠";
+        $widget .= "<span class='number create' title='number of create changes'>".html_escape($create_count // "?")."</span>+";
+        $widget .= "<span class='number modify' title='number of modify changes'>".html_escape($modify_count // "?")."</span>+";
+        $widget .= "<span class='number delete' title='number of delete changes'>".html_escape($delete_count // "?")."</span>";
+    }
+    $widget .= "</span>";
+    return $widget;
 }
 
 # -----------------------------------------------------------------------------
@@ -427,6 +486,12 @@ sub format_to_significant_figures
         $s .= "0" x $p if $p >= 0;
         return $s;
     }
+}
+
+sub update_max_length
+{
+    my ($max_length_ref, $value) = @_;
+    $$max_length_ref = length($value) if length($value) > $$max_length_ref;
 }
 
 1;

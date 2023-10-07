@@ -124,9 +124,10 @@ header, footer {
     user-select: none;
     opacity: .25;
 }
-#items li.changeset .changes .number {
-    min-width: var(--changes-width);
-}
+#items li.changeset .changes .number.total  { min-width: var(--total-changes-width); }
+#items li.changeset .changes .number.create { min-width: var(--create-changes-width); }
+#items li.changeset .changes .number.modify { min-width: var(--modify-changes-width); }
+#items li.changeset .changes .number.delete { min-width: var(--delete-changes-width); }
 #items li.changeset .changes {
     background: #8884;
     border-radius: .25em;
