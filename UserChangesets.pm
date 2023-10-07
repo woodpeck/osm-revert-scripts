@@ -200,7 +200,7 @@ sub list
     my $html_script = read_asset("list.js");
     my $max_id_length = 0;
     my $max_changes_length = 0;
-    my $max_area_length = 0;
+    my $max_area_length = 2;
 
     foreach my $list_filename (list_osm_filenames($metadata_dirname))
     {
@@ -225,29 +225,44 @@ sub list
             my $changes = $changeset->att('changes_count');
             $max_changes_length = length($changes) if length($changes) > $max_changes_length;
 
-            my $area;
+            my ($area, $log_area);
             if (
                 defined($changeset->att('min_lat')) && defined($changeset->att('max_lat')) &&
                 defined($changeset->att('min_lon')) && defined($changeset->att('max_lon'))
             )
             {
-                $area = sprintf("%.5f", ($changeset->att('max_lat') - $changeset->att('min_lat')) * ($changeset->att('max_lon') - $changeset->att('min_lon')));
-                $max_area_length = length($area) if length($area) > $max_area_length;
+                $area =
+                    ($changeset->att('max_lat') - $changeset->att('min_lat')) *
+                    ($changeset->att('max_lon') - $changeset->att('min_lon'));
+                if ($area > 0) {
+                    $log_area = sprintf("%.2f",log($area) / log(10));
+                    $max_area_length = length($log_area) if length($log_area) > $max_area_length;
+                }
             }
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
             my $comment = $comment_tag ? $comment_tag->att('v') : "";
 
-            $changeset_items{$id} = 
+            my $item =
                 "<li class=changeset>" .
                 "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
                 " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>" .
-                " <span class=changes title='number of changes'>📝<span class=number>".html_escape($changes)."</span></span>" .
-                ( defined($area)
-                    ? " <span class=area title='bounding box area'><span class=number>".html_escape($area)."</span>°²</span>"
-                    : " <span class='area empty' title='no bounding box'><span class=number>∅</span>°²</span>"
-                ) .
+                " <span class=changes title='number of changes'>📝<span class=number>".html_escape($changes)."</span></span>";
+            if (!defined($area))
+            {
+                $item .= " <span class='area empty' title='no bounding box'><span class=number>✕</span></span>";
+            }
+            elsif ($area == 0)
+            {
+                $item .= " <span class='area empty' title='zero-sized bounding box'><span class=number>·</span></span>";
+            }
+            else
+            {
+                $item .= " <span class=area title='log10(bounding box area in °²)'><span class=number>".html_escape($log_area)."</span></span>";
+            }
+            $item .=
                 " <span class=comment>".html_escape($comment)."</span>" .
                 "</li>\n";
+            $changeset_items{$id} = $item;
         }
     }
 
