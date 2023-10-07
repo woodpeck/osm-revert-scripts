@@ -155,6 +155,9 @@ header, footer {
 #items li.changeset .area:is(.zero, .empty) {
     text-align: center;
 }
+#items li.changeset .area.empty {
+    color: #800;
+}
 
 header {
     padding-left: 2rem;
