@@ -13,6 +13,8 @@ use HTML::Entities qw(encode_entities);
 use OsmApi;
 use Changeset;
 
+our $max_int_log_area = 11;
+
 # -----------------------------------------------------------------------------
 # Converts date string from script arguments to timestamp
 # Returns undefined if date format is not recognized
@@ -205,7 +207,6 @@ sub list
     my $max_create_changes_length = 1;
     my $max_modify_changes_length = 1;
     my $max_delete_changes_length = 1;
-    my $max_int_log_area = 11;
 
     foreach my $metadata_filename (list_osm_filenames($metadata_dirname))
     {
@@ -252,24 +253,6 @@ sub list
                 update_max_length(\$max_delete_changes_length, $delete_changes_count);
             }
 
-            my $min_lat = $changeset->att('min_lat');
-            my $max_lat = $changeset->att('max_lat');
-            my $min_lon = $changeset->att('min_lon');
-            my $max_lon = $changeset->att('max_lon');
-            my ($area, $log_area, $int_log_area);
-            if (
-                defined($min_lat) && defined($max_lat) &&
-                defined($min_lon) && defined($max_lon)
-            )
-            {
-                $area = (sin(deg2rad($max_lat)) - sin(deg2rad($min_lat))) * ($max_lon - $min_lon) / 720; # 1 = entire Earth surface
-                if ($area > 0) {
-                    $log_area = sprintf "%.2f", log($area) / log(10);
-                    $int_log_area = -int($log_area);
-                    $int_log_area = 0 if $int_log_area < 0;
-                    $int_log_area = $max_int_log_area if $int_log_area > $max_int_log_area;
-                }
-            }
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
             my $comment = $comment_tag ? $comment_tag->att('v') : "";
 
@@ -277,20 +260,11 @@ sub list
                 "<li class=changeset>" .
                 "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
                 " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>" .
-                " " . get_changes_widget($with_changes_counts, $total_changes_count, $create_changes_count, $modify_changes_count, $delete_changes_count);
-            if (!defined($area))
-            {
-                $item .= " <span class='area empty' title='no bounding box'>✕</span>";
-            }
-            elsif ($area == 0)
-            {
-                $item .= " <span class='area zero' title='zero-sized bounding box'>·</span>";
-            }
-            else
-            {
-                $item .= " <span class=area title='-log10(bbox area); ".html_escape(earth_area_with_units($area))."' data-log-size=$int_log_area>".html_escape($log_area)."</span>";
-            }
-            $item .=
+                " " . get_changes_widget($with_changes_counts, $total_changes_count, $create_changes_count, $modify_changes_count, $delete_changes_count) .
+                " " . get_area_widget(
+                    $changeset->att('min_lat'), $changeset->att('max_lat'),
+                    $changeset->att('min_lon'), $changeset->att('max_lon')
+                ) .
                 " <span class=comment>".html_escape($comment)."</span>" .
                 "</li>\n";
             $changeset_items{$id} = $item;
@@ -379,6 +353,39 @@ sub get_changes_widget
     }
     $widget .= "</span>";
     return $widget;
+}
+
+sub get_area_widget
+{
+    my ($min_lat, $max_lat, $min_lon, $max_lon) = @_;
+    my ($area, $log_area, $int_log_area);
+
+    if (
+        defined($min_lat) && defined($max_lat) &&
+        defined($min_lon) && defined($max_lon)
+    )
+    {
+        $area = (sin(deg2rad($max_lat)) - sin(deg2rad($min_lat))) * ($max_lon - $min_lon) / 720; # 1 = entire Earth surface
+        if ($area > 0) {
+            $log_area = sprintf "%.2f", log($area) / log(10);
+            $int_log_area = -int($log_area);
+            $int_log_area = 0 if $int_log_area < 0;
+            $int_log_area = $max_int_log_area if $int_log_area > $max_int_log_area;
+        }
+    }
+
+    if (!defined($area))
+    {
+        return " <span class='area empty' title='no bounding box'>✕</span>";
+    }
+    elsif ($area == 0)
+    {
+        return " <span class='area zero' title='zero-sized bounding box'>·</span>";
+    }
+    else
+    {
+        return " <span class=area title='-log10(bbox area); ".html_escape(earth_area_with_units($area))."' data-log-size=$int_log_area>".html_escape($log_area)."</span>";
+    }
 }
 
 # -----------------------------------------------------------------------------
