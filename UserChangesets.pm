@@ -228,7 +228,7 @@ sub list
             my $max_lat = $changeset->att('max_lat');
             my $min_lon = $changeset->att('min_lon');
             my $max_lon = $changeset->att('max_lon');
-            my ($area, $log_area, $int_log_area, $km2_area);
+            my ($area, $log_area, $int_log_area);
             if (
                 defined($min_lat) && defined($max_lat) &&
                 defined($min_lon) && defined($max_lon)
@@ -240,7 +240,6 @@ sub list
                     $int_log_area = -int($log_area);
                     $int_log_area = 0 if $int_log_area < 0;
                     $int_log_area = $max_int_log_area if $int_log_area > $max_int_log_area;
-                    $km2_area = format_to_significant_figures(510072000 * $area, 3);
                 }
             }
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
@@ -261,7 +260,7 @@ sub list
             }
             else
             {
-                $item .= " <span class=area title='log(bounding box area); ".html_escape($km2_area)." km²' data-log-size=$int_log_area>".html_escape($log_area)."</span>";
+                $item .= " <span class=area title='-log10(bbox area); ".html_escape(earth_area_with_units($area))."' data-log-size=$int_log_area>".html_escape($log_area)."</span>";
             }
             $item .=
                 " <span class=comment>".html_escape($comment)."</span>" .
@@ -398,6 +397,20 @@ sub open_asset
 {
     my ($fh_ref, $filename) = @_;
     open($$fh_ref, '<:utf8', $FindBin::Bin."/assets/".$filename) or die $!;
+}
+
+sub earth_area_with_units
+{
+    my $area = shift;
+    my $km2_area = 510072000 * $area;
+    if (log($km2_area) / log(10) >= -1)
+    {
+        return format_to_significant_figures($km2_area, 3) . " km²";
+    }
+    else
+    {
+        return format_to_significant_figures($km2_area * 1000000, 3) . " m²";
+    }
 }
 
 sub format_to_significant_figures
