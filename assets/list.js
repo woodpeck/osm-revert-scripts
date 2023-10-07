@@ -1,13 +1,13 @@
 const widgetData = [
-    ['time', `time`],
-    ['.changes', `changes`],
-    ['.area', `area`],
-    ['.comment', `comment`],
+    ['time', `time`, `📅`],
+    ['.changes', `changes`, `📝`],
+    ['.area', `area`, `📐`],
+    ['.comment', `comment`, `💬`],
 ];
 
 const $items = document.getElementById('items');
 
-const widgetVisibilityControls = [false, true].map(isCompact => widgetData.map(([selector, name]) => {
+const $widgetVisibilityControls = [false, true].map(isCompact => widgetData.map(([selector]) => {
     const $checkbox = document.createElement('input');
     $checkbox.type = 'checkbox';
     $checkbox.checked = !isCompact;
@@ -18,7 +18,7 @@ const widgetVisibilityControls = [false, true].map(isCompact => widgetData.map((
             $widget.hidden = !$checkbox.checked;
         }
     };
-    return [selector, name, $checkbox];
+    return $checkbox;
 }));
 
 const $globalDisclosureButtons = [false, true].map(isCompact => {
@@ -216,13 +216,15 @@ const $header = document.createElement('header');
 {
     const $tool = document.createElement('span');
     $tool.classList.add('tool', 'visibility');
-    for (const [isCompact, modeWidgetVisibilityControls] of widgetVisibilityControls.entries()) {
+    for (const [isCompact, $modeWidgetVisibilityControls] of $widgetVisibilityControls.entries()) {
         const $subtool = document.createElement('span');
         $subtool.classList.add('tool');
-        $subtool.append($globalDisclosureButtons[Number(isCompact)]);
-        for (const [, name, $checkbox] of modeWidgetVisibilityControls) {
+        $subtool.append($globalDisclosureButtons[isCompact]);
+        for (const [i, $checkbox] of $modeWidgetVisibilityControls.entries()) {
+            const [, name, icon] = widgetData[i];
             const $label = document.createElement('label');
-            $label.append($checkbox, ` `, name);
+            $label.append($checkbox, ` `, icon);
+            $label.title = name;
             $subtool.append(` `, $label);
         }
         $tool.append(` `, $subtool);
@@ -316,8 +318,8 @@ function disableVisibilityControls(disabled) {
     for (const $button of $globalDisclosureButtons) {
         $button.disabled = disabled;
     }
-    for (const modeControls of widgetVisibilityControls) {
-        for (const [,, $checkbox] of modeControls) {
+    for (const $modeControls of $widgetVisibilityControls) {
+        for (const $checkbox of $modeControls) {
             $checkbox.disabled = disabled;
         }
     }
@@ -328,7 +330,8 @@ function updateItemDisclosure($item) {
     const $disclosureButton = getItemDisclosureButton($item);
     $disclosureButton.textContent = isCompact ? `+` : `−`;
     $disclosureButton.title = isCompact ? `expand` : `collapse`;
-    for (const [selector,, $checkbox] of widgetVisibilityControls[Number(isCompact)]) {
+    for (const [i, $checkbox] of $widgetVisibilityControls[Number(isCompact)].entries()) {
+        const [selector] = widgetData[i];
         const $widget = $item.querySelector(selector);
         if (!$widget) continue;
         $widget.hidden = !$checkbox.checked;
