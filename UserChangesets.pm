@@ -242,7 +242,7 @@ sub list
             if (($with_operation_counts || $with_element_counts) && -e $changes_filename)
             {
                 print STDERR "reading changeset changes file $changes_filename\n" if $OsmApi::prefs->{'debug'};
-                parse_changes($changes_filename, \%change_counts, \%max_change_counts_length, $with_operation_counts, $with_element_counts);
+                parse_changes($changes_filename, \%change_counts, \%max_change_counts_length);
             }
 
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
@@ -289,25 +289,14 @@ sub list
                 print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
             }
             print $fh "#items li.changeset .changes .number.oa.ea { min-width: ".$max_change_counts_length{"aa"}."ch; }\n";
-            if ($with_operation_counts)
+            if ($with_operation_counts || $with_element_counts)
             {
-                foreach my $o ("c", "m", "d")
+                foreach my $o ("a", "c", "m", "d")
                 {
-                    print $fh "#items li.changeset .changes .number.o${o}.ea { min-width: ".$max_change_counts_length{"${o}a"}."ch; }\n";
-                    if ($with_element_counts)
+                    foreach my $e ("a", "n", "w", "r")
                     {
-                        foreach my $e ("n", "w", "r")
-                        {
-                            print $fh "#items li.changeset .changes .number.o${o}.e${e} { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n";
-                        }
+                        print $fh "#items li.changeset .changes .number.o${o}.e${e} { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n" unless "${o}${e}" eq "aa";
                     }
-                }
-            }
-            elsif ($with_element_counts)
-            {
-                foreach my $e ("n", "w", "r")
-                {
-                    print $fh "#items li.changeset .changes .number.oa.e${e} { min-width: ".$max_change_counts_length{"a${e}"}."ch; }\n";
                 }
             }
             print $fh
@@ -339,88 +328,52 @@ sub list
 
 sub parse_changes
 {
-    my ($filename, $counts, $max_counts_length, $with_operation_counts, $with_element_counts) = @_;
-    if ($with_operation_counts)
+    my ($filename, $counts, $max_counts_length) = @_;
+    foreach my $o ("a", "c", "m", "d")
     {
-        foreach my $o ("c", "m", "d")
+        foreach my $e ("a", "n", "w", "r")
         {
-            $counts->{"${o}a"} = 0;
-            if ($with_element_counts)
-            {
-                foreach my $e ("n", "w", "r")
-                {
-                    $counts->{"${o}${e}"} = 0
-                }
-            }
-        }
-    }
-    elsif ($with_element_counts)
-    {
-        foreach my $e ("n", "w", "r")
-        {
-            $counts->{"a${e}"} = 0
+            $counts->{"${o}${e}"} = 0 unless "${o}${e}" eq "aa";
         }
     }
 
-    if ($with_operation_counts && !$with_element_counts)
-    {
-        XML::Twig->new(
-            twig_handlers => {
-                create => sub { $counts->{"ca"}++ }, # TODO actually this is wrong, need to count elements inside
-                modify => sub { $counts->{"ma"}++ },
-                delete => sub { $counts->{"da"}++ },
-            }
-        )->parsefile($filename);
-    }
-    if (!$with_operation_counts && $with_element_counts)
-    {
-        XML::Twig->new(
-            twig_handlers => {
-                node     => sub { $counts->{"an"}++ },
-                way      => sub { $counts->{"aw"}++ },
-                relation => sub { $counts->{"ar"}++ },
-            }
-        )->parsefile($filename);
-    }
-    if ($with_operation_counts && $with_element_counts)
-    {
-        my $in_o;
-        XML::Twig->new(
-            start_tag_handlers => {
-                create => sub { $in_o = "c" },
-                modify => sub { $in_o = "m" },
-                delete => sub { $in_o = "d" },
+    my $in_o;
+    XML::Twig->new(
+        start_tag_handlers => {
+            create => sub { $in_o = "c" },
+            modify => sub { $in_o = "m" },
+            delete => sub { $in_o = "d" },
+        },
+        twig_handlers => {
+            node => sub {
+                return unless defined($in_o);
+                $counts->{"${in_o}a"}++; 
+                $counts->{"${in_o}n"}++;
+                $counts->{"an"}++;
             },
-            twig_handlers => {
-                node     => sub { $counts->{"${in_o}n"}++ if defined($in_o) },
-                way      => sub { $counts->{"${in_o}w"}++ if defined($in_o) },
-                relation => sub { $counts->{"${in_o}r"}++ if defined($in_o) },
-                create => sub { $in_o = undef; $counts->{"ca"}++ },
-                modify => sub { $in_o = undef; $counts->{"ma"}++ },
-                delete => sub { $in_o = undef; $counts->{"da"}++ },
+            way => sub {
+                return unless defined($in_o);
+                $counts->{"${in_o}a"}++; 
+                $counts->{"${in_o}w"}++;
+                $counts->{"aw"}++;
             },
-        )->parsefile($filename);
-    }
+            relation => sub {
+                return unless defined($in_o);
+                $counts->{"${in_o}a"}++; 
+                $counts->{"${in_o}r"}++;
+                $counts->{"ar"}++;
+            },
+            create => sub { $in_o = undef },
+            modify => sub { $in_o = undef },
+            delete => sub { $in_o = undef },
+        },
+    )->parsefile($filename);
 
-    if ($with_operation_counts)
+    foreach my $o ("a", "c", "m", "d")
     {
-        foreach my $o ("c", "m", "d")
+        foreach my $e ("a", "n", "w", "r")
         {
-            update_max_length(\$max_counts_length->{"${o}a"}, $counts->{"${o}a"});
-            if ($with_element_counts)
-            {
-                foreach my $e ("n", "w", "r")
-                {
-                    update_max_length(\$max_counts_length->{"${o}${e}"}, $counts->{"${o}${e}"});
-                }
-            }
-        }
-    }
-    elsif ($with_element_counts)
-    {
-        foreach my $e ("n", "w", "r")
-        {
-            update_max_length(\$max_counts_length->{"a${e}"}, $counts->{"a${e}"});
+            update_max_length(\$max_counts_length->{"${o}${e}"}, $counts->{"${o}${e}"}) unless "${o}${e}" eq "aa";
         }
     }
 }
