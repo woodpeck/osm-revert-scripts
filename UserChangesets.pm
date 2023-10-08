@@ -198,15 +198,19 @@ sub list
 
     my (
         $metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp,
-        $output_filename, $with_changes_counts
+        $output_filename, $with_operation_counts, $with_element_counts
     ) = @_;
     my %changeset_items = ();
     my %changeset_dates = ();
     my $max_id_length = 1;
-    my $max_total_changes_length = 1;
-    my $max_create_changes_length = 1;
-    my $max_modify_changes_length = 1;
-    my $max_delete_changes_length = 1;
+    my %max_change_counts_length = ();
+    foreach my $o ("a", "c", "m", "d")
+    {
+        foreach my $e ("a", "c", "m", "d")
+        {
+            $max_change_counts_length{"${o}${e}"} = 1;
+        }
+    }
 
     foreach my $metadata_filename (list_osm_filenames($metadata_dirname))
     {
@@ -230,27 +234,65 @@ sub list
             my $time = time2isoz($timestamp);
             chop $time;
 
-            my $total_changes_count = $changeset->att('changes_count');
-            update_max_length(\$max_total_changes_length, $total_changes_count);
+            my %change_counts = ();
+            $change_counts{"aa"} = $changeset->att('changes_count');
+            update_max_length(\$max_change_counts_length{"aa"}, $change_counts{"aa"});
 
-            my ($create_changes_count, $modify_changes_count, $delete_changes_count);
             my $changes_filename = "$changes_dirname/$id.osc";
-            if ($with_changes_counts && -e $changes_filename)
+            if ($with_operation_counts && -e $changes_filename)
             {
                 print STDERR "reading changeset changes file $changes_filename\n" if $OsmApi::prefs->{'debug'};
-                $create_changes_count = 0;
-                $modify_changes_count = 0;
-                $delete_changes_count = 0;
-                XML::Twig->new(
-                    twig_handlers => {
-                        create => sub { $create_changes_count++ },
-                        modify => sub { $modify_changes_count++ },
-                        delete => sub { $delete_changes_count++ }
+                foreach my $o ("c", "m", "d")
+                {
+                    $change_counts{"${o}a"} = 0;
+                    if ($with_element_counts)
+                    {
+                        foreach my $e ("n", "w", "r")
+                        {
+                            $change_counts{"${o}${e}"} = 0
+                        }
                     }
-                )->parsefile($changes_filename);
-                update_max_length(\$max_create_changes_length, $create_changes_count);
-                update_max_length(\$max_modify_changes_length, $modify_changes_count);
-                update_max_length(\$max_delete_changes_length, $delete_changes_count);
+                }
+                if ($with_element_counts)
+                {
+                    my $in_o;
+                    XML::Twig->new(
+                        start_tag_handlers => {
+                            create => sub { $in_o = "c" },
+                            modify => sub { $in_o = "m" },
+                            delete => sub { $in_o = "d" },
+                        },
+                        twig_handlers => {
+                            node     => sub { $change_counts{"${in_o}n"}++ if defined($in_o) },
+                            way      => sub { $change_counts{"${in_o}w"}++ if defined($in_o) },
+                            relation => sub { $change_counts{"${in_o}r"}++ if defined($in_o) },
+                            create => sub { $in_o = undef; $change_counts{"ca"}++ },
+                            modify => sub { $in_o = undef; $change_counts{"ma"}++ },
+                            delete => sub { $in_o = undef; $change_counts{"da"}++ },
+                        },
+                    )->parsefile($changes_filename);
+                }
+                else
+                {
+                    XML::Twig->new(
+                        twig_handlers => {
+                            create => sub { $change_counts{"ca"}++ },
+                            modify => sub { $change_counts{"ma"}++ },
+                            delete => sub { $change_counts{"da"}++ },
+                        }
+                    )->parsefile($changes_filename);
+                }
+                foreach my $o ("c", "m", "d")
+                {
+                    update_max_length(\$max_change_counts_length{"${o}a"}, $change_counts{"${o}a"});
+                    if ($with_element_counts)
+                    {
+                        foreach my $e ("n", "w", "r")
+                        {
+                            update_max_length(\$max_change_counts_length{"${o}${e}"}, $change_counts{"${o}${e}"});
+                        }
+                    }
+                }
             }
 
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
@@ -260,7 +302,7 @@ sub list
                 "<li class=changeset>" .
                 "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
                 " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>" .
-                " " . get_changes_widget($with_changes_counts, $total_changes_count, $create_changes_count, $modify_changes_count, $delete_changes_count) .
+                " " . get_changes_widget(\%change_counts, $with_operation_counts, $with_element_counts) .
                 " " . get_area_widget(
                     $changeset->att('min_lat'), $changeset->att('max_lat'),
                     $changeset->att('min_lon'), $changeset->att('max_lon')
@@ -287,15 +329,6 @@ sub list
                 ":root {\n" .
                 "    --changesets-count-width: ".length(keys %changeset_items)."ch;\n" .
                 "    --id-width: ${max_id_length}ch;\n" .
-                "    --total-changes-width: ${max_total_changes_length}ch;\n";
-            if ($with_changes_counts)
-            {
-                print $fh
-                    "    --create-changes-width: ${max_create_changes_length}ch;\n" .
-                    "    --modify-changes-width: ${max_modify_changes_length}ch;\n" .
-                    "    --delete-changes-width: ${max_delete_changes_length}ch;\n";
-            }
-            print $fh
                 "}\n\n";
             open_asset(\$fh_asset, "list.css");
             print $fh $_ while <$fh_asset>;
@@ -304,6 +337,21 @@ sub list
             {
                 my $width = sprintf "%.2f", 6.5 - $_ / 2;
                 print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
+            }
+            print $fh "#items li.changeset .changes .number.oa.ea { min-width: ".$max_change_counts_length{"aa"}."ch; }\n";
+            if ($with_operation_counts)
+            {
+                foreach my $o ("c", "m", "d")
+                {
+                    print $fh "#items li.changeset .changes .number.o${o}.ea { min-width: ".$max_change_counts_length{"${o}a"}."ch; }\n";
+                    if ($with_element_counts)
+                    {
+                        foreach my $e ("n", "w", "r")
+                        {
+                            print $fh "#items li.changeset .changes .number.o${o}.e${e} { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n";
+                        }
+                    }
+                }
             }
             print $fh
                 "</style>\n";
@@ -334,22 +382,38 @@ sub list
 
 sub get_changes_widget
 {
-    my ($with_changes_counts, $total_count, $create_count, $modify_count, $delete_count) = @_;
+    my ($counts, $with_operation_counts, $with_element_counts) = @_; # with two-letter keys: one of (a c m d) + one of (a n w r)
     my $sum_count;
     my $widget = "";
     $widget .= "<span class=changes title='number of changes'>📝";
-    $widget .= "<span class='number total'>".html_escape($total_count)."</span>";
+    $widget .= "<span class='number oa ea'>".html_escape($counts->{'aa'})."</span>";
 
-    if ($with_changes_counts)
+    if ($with_operation_counts)
     {
-        if (defined($create_count) && defined($modify_count) && defined($delete_count))
+        if (defined($counts->{"ca"}) && defined($counts->{"ma"}) && defined($counts->{"da"}))
         {
-            $sum_count = $create_count + $modify_count + $delete_count;
+            $sum_count = $counts->{"ca"} + $counts->{"ma"} + $counts->{"da"};
         }
-        $widget .= defined($sum_count) && $total_count == $sum_count ? "=" : "≠";
-        $widget .= "<span class='number create' title='number of create changes'>".html_escape($create_count // "?")."</span>+";
-        $widget .= "<span class='number modify' title='number of modify changes'>".html_escape($modify_count // "?")."</span>+";
-        $widget .= "<span class='number delete' title='number of delete changes'>".html_escape($delete_count // "?")."</span>";
+        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
+        my $i = 0;
+        foreach my $operation ("create", "modify", "delete")
+        {
+            $widget .= "+" if $i++;
+            my $o = substr($operation, 0, 1);
+            $widget .= "<span class='number o$o ea' title='number of $operation changes'>".html_escape($counts->{"${o}a"} // "?")."</span>";
+            if ($with_element_counts)
+            {
+                $widget .= "(";
+                my $j = 0;
+                foreach my $element ("node", "way", "relation")
+                {
+                    $widget .= "+" if $j++;
+                    my $e = substr($element, 0, 1);
+                    $widget .= "<span class='number o$o e$e' title='number of $operation $element changes'>".html_escape($counts->{"${o}${e}"} // "?")."</span>$e";
+                }
+                $widget .= ")";
+            }
+        }
     }
     $widget .= "</span>";
     return $widget;
