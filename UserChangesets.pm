@@ -386,48 +386,52 @@ sub get_changes_widget
     $widget .= "<span class=changes title='number of changes'>📝";
     $widget .= "<span class='number oa ea'>".html_escape($counts->{'aa'})."</span>";
 
-    if ($with_operation_counts)
+    if (defined($counts->{"ca"}) && defined($counts->{"ma"}) && defined($counts->{"da"}))
     {
-        if (defined($counts->{"ca"}) && defined($counts->{"ma"}) && defined($counts->{"da"}))
-        {
-            $sum_count = $counts->{"ca"} + $counts->{"ma"} + $counts->{"da"};
-        }
+        $sum_count = $counts->{"ca"} + $counts->{"ma"} + $counts->{"da"};
+    }
+    elsif (defined($counts->{"an"}) && defined($counts->{"aw"}) && defined($counts->{"ar"}))
+    {
+        $sum_count = $counts->{"an"} + $counts->{"aw"} + $counts->{"ar"};
+    }
+
+    if ($with_operation_counts && !$with_element_counts)
+    {
         $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
         my $i = 0;
         foreach my $operation ("create", "modify", "delete")
         {
             $widget .= "+" if $i++;
             my $o = substr($operation, 0, 1);
-            $widget .= "<span class=o$o>" if $with_element_counts;
             $widget .= "<span class='number o$o ea' title='number of $operation changes'>".html_escape($counts->{"${o}a"} // "?")."</span>";
-            if ($with_element_counts)
-            {
-                $widget .= "(";
-                my $j = 0;
-                foreach my $element ("node", "way", "relation")
-                {
-                    $widget .= "+" if $j++;
-                    my $e = substr($element, 0, 1);
-                    $widget .= "<span class='number o$o e$e' title='number of $operation $element changes'>".html_escape($counts->{"${o}${e}"} // "?")."</span>$e";
-                }
-                $widget .= ")";
-            }
-            $widget .= "</span>" if $with_element_counts;
         }
     }
-    elsif ($with_element_counts)
+    elsif (!$with_operation_counts && $with_element_counts)
     {
-        if (defined($counts->{"an"}) && defined($counts->{"aw"}) && defined($counts->{"ar"}))
-        {
-            $sum_count = $counts->{"an"} + $counts->{"aw"} + $counts->{"ar"};
-        }
         $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
-        my $j = 0;
+        my $i = 0;
         foreach my $element ("node", "way", "relation")
         {
-            $widget .= "+" if $j++;
+            $widget .= "+" if $i++;
             my $e = substr($element, 0, 1);
             $widget .= "<span class='number oa e$e' title='number of $element changes'>".html_escape($counts->{"a${e}"} // "?")."</span>$e";
+        }
+    }
+    elsif ($with_operation_counts && $with_element_counts)
+    {
+        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
+        my $i = 0;
+        foreach my $operation ("create", "modify", "delete")
+        {
+            my $o = substr($operation, 0, 1);
+            $widget .= "<span class=o$o>";
+            foreach my $element ("node", "way", "relation")
+            {
+                $widget .= "+" if $i++;
+                my $e = substr($element, 0, 1);
+                $widget .= "<span class='number o$o e$e' title='number of $operation $element changes'>".html_escape($counts->{"${o}${e}"} // "?")."</span>$e";
+            }
+            $widget .= "</span>";
         }
     }
 
