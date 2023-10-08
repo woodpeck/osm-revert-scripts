@@ -400,6 +400,7 @@ sub get_changes_widget
         {
             $widget .= "+" if $i++;
             my $o = substr($operation, 0, 1);
+            $widget .= "<span class=o$o>" if $with_element_counts;
             $widget .= "<span class='number o$o ea' title='number of $operation changes'>".html_escape($counts->{"${o}a"} // "?")."</span>";
             if ($with_element_counts)
             {
@@ -413,6 +414,7 @@ sub get_changes_widget
                 }
                 $widget .= ")";
             }
+            $widget .= "</span>" if $with_element_counts;
         }
     }
     $widget .= "</span>";
