@@ -239,60 +239,10 @@ sub list
             update_max_length(\$max_change_counts_length{"aa"}, $change_counts{"aa"});
 
             my $changes_filename = "$changes_dirname/$id.osc";
-            if ($with_operation_counts && -e $changes_filename)
+            if (($with_operation_counts || $with_element_counts) && -e $changes_filename)
             {
                 print STDERR "reading changeset changes file $changes_filename\n" if $OsmApi::prefs->{'debug'};
-                foreach my $o ("c", "m", "d")
-                {
-                    $change_counts{"${o}a"} = 0;
-                    if ($with_element_counts)
-                    {
-                        foreach my $e ("n", "w", "r")
-                        {
-                            $change_counts{"${o}${e}"} = 0
-                        }
-                    }
-                }
-                if ($with_element_counts)
-                {
-                    my $in_o;
-                    XML::Twig->new(
-                        start_tag_handlers => {
-                            create => sub { $in_o = "c" },
-                            modify => sub { $in_o = "m" },
-                            delete => sub { $in_o = "d" },
-                        },
-                        twig_handlers => {
-                            node     => sub { $change_counts{"${in_o}n"}++ if defined($in_o) },
-                            way      => sub { $change_counts{"${in_o}w"}++ if defined($in_o) },
-                            relation => sub { $change_counts{"${in_o}r"}++ if defined($in_o) },
-                            create => sub { $in_o = undef; $change_counts{"ca"}++ },
-                            modify => sub { $in_o = undef; $change_counts{"ma"}++ },
-                            delete => sub { $in_o = undef; $change_counts{"da"}++ },
-                        },
-                    )->parsefile($changes_filename);
-                }
-                else
-                {
-                    XML::Twig->new(
-                        twig_handlers => {
-                            create => sub { $change_counts{"ca"}++ },
-                            modify => sub { $change_counts{"ma"}++ },
-                            delete => sub { $change_counts{"da"}++ },
-                        }
-                    )->parsefile($changes_filename);
-                }
-                foreach my $o ("c", "m", "d")
-                {
-                    update_max_length(\$max_change_counts_length{"${o}a"}, $change_counts{"${o}a"});
-                    if ($with_element_counts)
-                    {
-                        foreach my $e ("n", "w", "r")
-                        {
-                            update_max_length(\$max_change_counts_length{"${o}${e}"}, $change_counts{"${o}${e}"});
-                        }
-                    }
-                }
+                parse_changes($changes_filename, \%change_counts, \%max_change_counts_length, $with_operation_counts, $with_element_counts);
             }
 
             my $comment_tag = $changeset->first_child('tag[@k="comment"]');
@@ -353,6 +303,13 @@ sub list
                     }
                 }
             }
+            elsif ($with_element_counts)
+            {
+                foreach my $e ("n", "w", "r")
+                {
+                    print $fh "#items li.changeset .changes .number.oa.e${e} { min-width: ".$max_change_counts_length{"a${e}"}."ch; }\n";
+                }
+            }
             print $fh
                 "</style>\n";
         }
@@ -380,9 +337,97 @@ sub list
     close $fh;
 }
 
+sub parse_changes
+{
+    my ($filename, $counts, $max_counts_length, $with_operation_counts, $with_element_counts) = @_;
+    if ($with_operation_counts)
+    {
+        foreach my $o ("c", "m", "d")
+        {
+            $counts->{"${o}a"} = 0;
+            if ($with_element_counts)
+            {
+                foreach my $e ("n", "w", "r")
+                {
+                    $counts->{"${o}${e}"} = 0
+                }
+            }
+        }
+    }
+    elsif ($with_element_counts)
+    {
+        foreach my $e ("n", "w", "r")
+        {
+            $counts->{"a${e}"} = 0
+        }
+    }
+
+    if ($with_operation_counts && !$with_element_counts)
+    {
+        XML::Twig->new(
+            twig_handlers => {
+                create => sub { $counts->{"ca"}++ }, # TODO actually this is wrong, need to count elements inside
+                modify => sub { $counts->{"ma"}++ },
+                delete => sub { $counts->{"da"}++ },
+            }
+        )->parsefile($filename);
+    }
+    if (!$with_operation_counts && $with_element_counts)
+    {
+        XML::Twig->new(
+            twig_handlers => {
+                node     => sub { $counts->{"an"}++ },
+                way      => sub { $counts->{"aw"}++ },
+                relation => sub { $counts->{"ar"}++ },
+            }
+        )->parsefile($filename);
+    }
+    if ($with_operation_counts && $with_element_counts)
+    {
+        my $in_o;
+        XML::Twig->new(
+            start_tag_handlers => {
+                create => sub { $in_o = "c" },
+                modify => sub { $in_o = "m" },
+                delete => sub { $in_o = "d" },
+            },
+            twig_handlers => {
+                node     => sub { $counts->{"${in_o}n"}++ if defined($in_o) },
+                way      => sub { $counts->{"${in_o}w"}++ if defined($in_o) },
+                relation => sub { $counts->{"${in_o}r"}++ if defined($in_o) },
+                create => sub { $in_o = undef; $counts->{"ca"}++ },
+                modify => sub { $in_o = undef; $counts->{"ma"}++ },
+                delete => sub { $in_o = undef; $counts->{"da"}++ },
+            },
+        )->parsefile($filename);
+    }
+
+    if ($with_operation_counts)
+    {
+        foreach my $o ("c", "m", "d")
+        {
+            update_max_length(\$max_counts_length->{"${o}a"}, $counts->{"${o}a"});
+            if ($with_element_counts)
+            {
+                foreach my $e ("n", "w", "r")
+                {
+                    update_max_length(\$max_counts_length->{"${o}${e}"}, $counts->{"${o}${e}"});
+                }
+            }
+        }
+    }
+    elsif ($with_element_counts)
+    {
+        foreach my $e ("n", "w", "r")
+        {
+            update_max_length(\$max_counts_length->{"a${e}"}, $counts->{"a${e}"});
+        }
+    }
+}
+
 sub get_changes_widget
 {
-    my ($counts, $with_operation_counts, $with_element_counts) = @_; # with two-letter keys: one of (a c m d) + one of (a n w r)
+    my ($counts, $with_operation_counts, $with_element_counts) = @_;
     my $sum_count;
     my $widget = "";
     $widget .= "<span class=changes title='number of changes'>📝";
@@ -417,6 +462,22 @@ sub get_changes_widget
             $widget .= "</span>" if $with_element_counts;
         }
     }
+    elsif ($with_element_counts)
+    {
+        if (defined($counts->{"an"}) && defined($counts->{"aw"}) && defined($counts->{"ar"}))
+        {
+            $sum_count = $counts->{"an"} + $counts->{"aw"} + $counts->{"ar"};
+        }
+        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
+        my $j = 0;
+        foreach my $element ("node", "way", "relation")
+        {
+            $widget .= "+" if $j++;
+            my $e = substr($element, 0, 1);
+            $widget .= "<span class='number oa e$e' title='number of $element changes'>".html_escape($counts->{"a${e}"} // "?")."</span>$e";
+        }
+    }
+
     $widget .= "</span>";
     return $widget;
 }
