@@ -15,6 +15,16 @@ use XML::Twig;
 use OsmApi;
 use Changeset;
 
+use constant {
+    NODE => 0,
+    WAY => 1,
+    RELATION => 2,
+};
+use constant {
+    CHANGES => 0,
+    TIMESTAMP => 1,
+};
+
 our $max_int_log_area = 11;
 
 # -----------------------------------------------------------------------------
@@ -207,7 +217,7 @@ sub list
     ) = @_;
 
     my $changesets = read_metadata($metadata_dirname, $from_timestamp, $to_timestamp);
-    my @ids = sort {$changesets->{$b}->{created_at_timestamp} <=> $changesets->{$a}->{created_at_timestamp}} keys %$changesets;
+    my @ids = sort {$changesets->{$b}{created_at_timestamp} <=> $changesets->{$a}{created_at_timestamp}} keys %$changesets;
     my $need_changes = $with_operation_counts || $with_element_counts || $target_delete_tag;
     my $data;
     if ($need_changes)
@@ -269,7 +279,7 @@ sub read_changes
         my $changes_filename = "$changes_dirname/$id.osc";
         next unless -f $changes_filename;
         my $timestamp = (stat $changes_filename)[9];
-        next if exists $data->{changeset}->{$id} && $data->{changeset}->{$id}->{timestamp} <= $timestamp;
+        next if exists $data->{changesets}{$id} && $data->{changesets}{$id}[TIMESTAMP] <= $timestamp;
         $bytes_to_parse += (stat $changes_filename)[7];
         push @ids_to_parse, $id;
     }
@@ -308,35 +318,44 @@ sub read_changes
 sub blank_data
 {
     return {
-        changeset => {},
-        node => {},
-        way => {},
-        relation => {},
+        changesets => {},
+        elements => [{}, {}, {}],
     };
+}
+
+sub element_type
+{
+    my ($type_string) = @_;
+    return NODE if $type_string eq "node";
+    return WAY if $type_string eq "way";
+    return RELATION if $type_string eq "relation";
+    die "unknown element type $type_string";
 }
 
 sub merge_data
 {
     my ($data1, $data2) = @_;
-    foreach my $id (keys %{$data2->{changeset}})
+    foreach my $id (keys %{$data2->{changesets}})
     {
-        $data1->{changeset}->{$id} = $data2->{changeset}->{$id};
+        $data1->{changesets}{$id} = $data2->{changesets}{$id};
     }
-    foreach my $type ("node", "way", "relation")
+    my $elements1 = $data1->{elements};
+    my $elements2 = $data2->{elements};
+    foreach my $type (NODE, WAY, RELATION)
     {
-        foreach my $id (keys %{$data2->{$type}})
+        foreach my $id (keys %{$elements2->[$type]})
         {
-            if (exists $data1->{$type}->{$id})
+            if (exists $elements1->[$type]{$id})
             {
-                $data1->{$type}->{$id} = {};
-                foreach my $version (keys %{$data2->{$type}->{$id}})
+                $elements1->[$type]{$id} = {};
+                foreach my $version (keys %{$elements2->[$type]{$id}})
                 {
-                    $data1->{$type}->{$id}->{$version} = $data2->{$type}->{$id}->{$version};
+                    $elements1->[$type]{$id}{$version} = $elements2->[$type]{$id}{$version};
                 }
             }
             else
             {
-                $data1->{$type}->{$id} = $data2->{$type}->{$id};
+                $elements1->[$type]{$id} = $elements2->[$type]{$id};
             }
         }
     }
@@ -350,7 +369,7 @@ sub parse_changes_file
     my $save_change = sub {
         my ($element) = @_;
         push @changes, [
-            $element->gi,
+            element_type($element->gi),
             int $element->att('id'),
             int $element->att('version'),
         ]
@@ -372,10 +391,10 @@ sub parse_changes_file
             },
         },
     )->parsefile($filename);
-    $data->{changeset}->{$id} = {
-        timestamp => $timestamp,
-        changes => \@changes,
-    };
+    $data->{changesets}{$id} = [
+        \@changes,
+        $timestamp,
+    ];
 }
 
 ### TODO remove old read subs below
