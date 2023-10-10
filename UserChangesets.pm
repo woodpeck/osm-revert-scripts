@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use POSIX qw(floor);
 use Math::Trig qw(deg2rad);
+use Math::Round qw(round);
 use File::Path qw(make_path);
 use URI::Escape;
 use HTTP::Date qw(str2time time2isoz);
@@ -22,8 +23,19 @@ use constant {
 };
 use constant {
     CHANGES => 0,
-    TIMESTAMP => 1,
+    DOWNLOAD_TIMESTAMP => 1,
 };
+use constant {
+    CHANGESET => 0,
+    TIMESTAMP => 1,
+    UID => 2,
+    VISIBLE => 3,
+    TAGS => 4,
+    LAT => 5, LON => 6,
+    NDS => 5,
+    MEMBERS => 5,
+};
+use constant SCALE => 10000000;
 
 our $max_int_log_area = 11;
 
@@ -279,7 +291,7 @@ sub read_changes
         my $changes_filename = "$changes_dirname/$id.osc";
         next unless -f $changes_filename;
         my $timestamp = (stat $changes_filename)[9];
-        next if exists $data->{changesets}{$id} && $data->{changesets}{$id}[TIMESTAMP] <= $timestamp;
+        next if exists $data->{changesets}{$id} && $data->{changesets}{$id}[DOWNLOAD_TIMESTAMP] <= $timestamp;
         $bytes_to_parse += (stat $changes_filename)[7];
         push @ids_to_parse, $id;
     }
@@ -347,7 +359,6 @@ sub merge_data
         {
             if (exists $elements1->[$type]{$id})
             {
-                $elements1->[$type]{$id} = {};
                 foreach my $version (keys %{$elements2->[$type]{$id}})
                 {
                     $elements1->[$type]{$id}{$version} = $elements2->[$type]{$id}{$version};
@@ -366,28 +377,38 @@ sub parse_changes_file
     my ($data, $id, $filename, $timestamp) = @_;
 
     my @changes = ();
-    my $save_change = sub {
-        my ($element) = @_;
-        push @changes, [
-            element_type($element->gi),
-            int $element->att('id'),
-            int $element->att('version'),
-        ]
-    };
 
     XML::Twig->new(
         twig_handlers => {
             node => sub {
                 my($twig, $element) = @_;
-                $save_change->($element);
+                my ($type, $id, $version, @edata) = parse_common_element_data($element);
+                push @changes, [$type, $id, $version];
+                if ($edata[VISIBLE])
+                {
+                    push @edata,
+                        round(SCALE * $element->att('lat')),
+                        round(SCALE * $element->att('lon'));
+                }
+                $data->{elements}[$type]{$id}{$version} = \@edata;
             },
             way => sub {
                 my($twig, $element) = @_;
-                $save_change->($element);
+                my ($type, $id, $version, @edata) = parse_common_element_data($element);
+                push @changes, [$type, $id, $version];
+                $data->{elements}[$type]{$id}{$version} = [
+                    @edata,
+                    # TODO nds
+                ];
             },
             relation => sub {
                 my($twig, $element) = @_;
-                $save_change->($element);
+                my ($type, $id, $version, @edata) = parse_common_element_data($element);
+                push @changes, [$type, $id, $version];
+                $data->{elements}[$type]{$id}{$version} = [
+                    @edata,
+                    # TODO members
+                ];
             },
         },
     )->parsefile($filename);
@@ -396,6 +417,21 @@ sub parse_changes_file
         $timestamp,
     ];
 }
+
+sub parse_common_element_data
+{
+    my ($element) = @_;
+    return (
+        element_type($element->gi),
+        int $element->att('id'),
+        int $element->att('version'),
+        int $element->att('changeset'),
+        str2time($element->att('timestamp')),
+        int $element->att('uid'),
+        $element->att('visible') eq 'true',
+        {}, # TODO tags
+    );
+};
 
 ### TODO remove old read subs below
 
