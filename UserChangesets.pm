@@ -274,11 +274,14 @@ sub read_changes
         $bytes_to_parse += (stat $changes_filename)[7];
         push @ids_to_parse, $id;
     }
-    return $data if scalar(@ids_to_parse) == 0;
+    my $files_to_parse = scalar(@ids_to_parse);
+    return $data if $files_to_parse == 0;
     
-    print STDERR "going to parse ".scalar(@ids_to_parse)." files, $bytes_to_parse bytes\n";
+    print STDERR "going to parse $files_to_parse files, $bytes_to_parse bytes\n";
     my $new_data_chunk = OsmData::blank_data();
     my $have_changes_to_store = 0;
+    my $files_parsed = 0;
+    my $bytes_parsed = 0;
     my $quit = 0;
     local $SIG{INT} = sub {
         print STDERR "will interrupt after parsing and storing the current changes file";
@@ -288,10 +291,12 @@ sub read_changes
     {
         last if $quit;
         my $changes_filename = "$changes_dirname/$id.osc";
-        print STDERR "reading changes file $changes_filename\n" if $OsmApi::prefs->{'debug'};
+        print STDERR "reading changes file $changes_filename ($files_parsed/$files_to_parse files) ($bytes_parsed/$bytes_to_parse bytes)\n" if $OsmApi::prefs->{'debug'};
         my $timestamp = (stat $changes_filename)[9];
         OsmData::parse_changes_file($new_data_chunk, $id, $changes_filename, $timestamp);
         $have_changes_to_store = 1;
+        $bytes_parsed += (stat $changes_filename)[7];
+        $files_parsed++;
     }
     if (defined($changes_store_dirname) && $have_changes_to_store) {
         make_path($changes_store_dirname);
