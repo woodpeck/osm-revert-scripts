@@ -7,9 +7,11 @@ use strict;
 use warnings;
 use POSIX qw(floor);
 use Math::Trig qw(deg2rad);
+use File::Path qw(make_path);
 use URI::Escape;
 use HTTP::Date qw(str2time time2isoz);
 use HTML::Entities qw(encode_entities);
+use XML::Twig;
 use OsmApi;
 use Changeset;
 
@@ -93,6 +95,7 @@ sub download_metadata
 
         if (defined($top_created_at))
         {
+            make_path($metadata_dirname);
             my $list_filename = "$metadata_dirname/" . make_filename_from_date_attr_value($top_created_at);
             open(my $list_fh, '>', $list_filename) or die "can't open changeset list file '$list_filename' for writing";
             print $list_fh $list;
@@ -148,6 +151,7 @@ sub download_changes
 
     foreach my $id (@changesets_queue)
     {
+        make_path($changes_dirname);
         print("downloading $id.osc (" . (1 + keys %changesets_downloaded) . "/" . (keys %changesets_in_range) . ")\n");
         my $changes_filename = "$changes_dirname/$id.osc";
         my $osc = Changeset::download($id) or die "failed to download changeset $id";
@@ -194,11 +198,194 @@ sub count
 
 sub list
 {
-    use XML::Twig;
+    use Storable;
 
     my (
+        $metadata_dirname, $changes_dirname, $changes_store_dirname,
+        $from_timestamp, $to_timestamp,
+        $output_filename, $with_operation_counts, $with_element_counts, $target_delete_tag
+    ) = @_;
+
+    my $changesets = read_metadata($metadata_dirname, $from_timestamp, $to_timestamp);
+    my @ids = sort {$changesets->{$b}->{created_at_timestamp} <=> $changesets->{$a}->{created_at_timestamp}} keys %$changesets;
+    my $need_changes = $with_operation_counts || $with_element_counts || $target_delete_tag;
+    my $data;
+    if ($need_changes)
+    {
+        $data = read_changes($changes_dirname, $changes_store_dirname, @ids);
+    }
+}
+
+sub read_metadata
+{
+    my ($metadata_dirname, $from_timestamp, $to_timestamp) = @_;
+
+    my $changesets = {};
+    foreach my $metadata_filename (list_osm_filenames($metadata_dirname))
+    {
+        print STDERR "reading metadata file $metadata_filename\n" if $OsmApi::prefs->{'debug'};
+
+        my $twig = XML::Twig->new()->parsefile($metadata_filename);
+        foreach my $changeset ($twig->root->children)
+        {
+            my $id = $changeset->att('id');
+            next if $changesets->{$id};
+
+            my $created_at = $changeset->att('created_at');
+            my $closed_at = $changeset->att('closed_at');
+            next if (str2time($closed_at) < $from_timestamp);
+            next if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
+
+            $changesets->{$id} = {
+                created_at_timestamp => str2time($created_at),
+                created_at => $created_at,
+                closed_at => $closed_at,
+            }
+
+            # TODO read other stuff
+        }
+    }
+    return $changesets;
+}
+
+sub read_changes
+{
+    my ($changes_dirname, $changes_store_dirname, @ids) = @_;
+
+    my $data = blank_data();
+    if (defined($changes_store_dirname)) {
+        foreach my $changes_store_filename (glob qq{"$changes_store_dirname/*"})
+        {
+            print STDERR "reading changes store file $changes_store_filename\n" if $OsmApi::prefs->{'debug'};
+            my $data_chunk = retrieve $changes_store_filename;
+            merge_data($data, $data_chunk);
+        }
+    }
+
+    my @ids_to_parse = ();
+    my $bytes_to_parse = 0;
+    foreach my $id (@ids)
+    {
+        my $changes_filename = "$changes_dirname/$id.osc";
+        next unless -f $changes_filename;
+        my $timestamp = (stat $changes_filename)[9];
+        next if exists $data->{changeset}->{$id} && $data->{changeset}->{$id}->{timestamp} <= $timestamp;
+        $bytes_to_parse += (stat $changes_filename)[7];
+        push @ids_to_parse, $id;
+    }
+    return $data if scalar(@ids_to_parse) == 0;
+    
+    print STDERR "going to parse ".scalar(@ids_to_parse)." files, $bytes_to_parse bytes\n";
+    my $new_data_chunk = blank_data();
+    my $have_changes_to_store = 0;
+    my $quit = 0;
+    local $SIG{INT} = sub {
+        print STDERR "will interrupt after parsing and storing the current changes file";
+        $quit = 1;
+    };
+    foreach my $id (@ids_to_parse)
+    {
+        last if $quit;
+        my $changes_filename = "$changes_dirname/$id.osc";
+        print STDERR "reading changes file $changes_filename\n" if $OsmApi::prefs->{'debug'};
+        my $timestamp = (stat $changes_filename)[9];
+        parse_changes_file($new_data_chunk, $id, $changes_filename, $timestamp);
+        $have_changes_to_store = 1;
+    }
+    if (defined($changes_store_dirname) && $have_changes_to_store) {
+        make_path($changes_store_dirname);
+        my $fn = "00000000";
+        $fn++ while -e "$changes_store_dirname/$fn";
+        my $new_changes_store_filename = "$changes_store_dirname/$fn";
+        print STDERR "writing changes store file $new_changes_store_filename\n" if $OsmApi::prefs->{'debug'};
+        store $new_data_chunk, $new_changes_store_filename;
+    }
+    die "interrupting" if $quit;
+    merge_data($data, $new_data_chunk);
+    return $data;
+}
+
+sub blank_data
+{
+    return {
+        changeset => {},
+        node => {},
+        way => {},
+        relation => {},
+    };
+}
+
+sub merge_data
+{
+    my ($data1, $data2) = @_;
+    foreach my $id (keys %{$data2->{changeset}})
+    {
+        $data1->{changeset}->{$id} = $data2->{changeset}->{$id};
+    }
+    foreach my $type ("node", "way", "relation")
+    {
+        foreach my $id (keys %{$data2->{$type}})
+        {
+            if (exists $data1->{$type}->{$id})
+            {
+                $data1->{$type}->{$id} = {};
+                foreach my $version (keys %{$data2->{$type}->{$id}})
+                {
+                    $data1->{$type}->{$id}->{$version} = $data2->{$type}->{$id}->{$version};
+                }
+            }
+            else
+            {
+                $data1->{$type}->{$id} = $data2->{$type}->{$id};
+            }
+        }
+    }
+}
+
+sub parse_changes_file
+{
+    my ($data, $id, $filename, $timestamp) = @_;
+
+    my @changes = ();
+    my $save_change = sub {
+        my ($element) = @_;
+        push @changes, [
+            $element->gi,
+            int $element->att('id'),
+            int $element->att('version'),
+        ]
+    };
+
+    XML::Twig->new(
+        twig_handlers => {
+            node => sub {
+                my($twig, $element) = @_;
+                $save_change->($element);
+            },
+            way => sub {
+                my($twig, $element) = @_;
+                $save_change->($element);
+            },
+            relation => sub {
+                my($twig, $element) = @_;
+                $save_change->($element);
+            },
+        },
+    )->parsefile($filename);
+    $data->{changeset}->{$id} = {
+        timestamp => $timestamp,
+        changes => \@changes,
+    };
+}
+
+### TODO remove old read subs below
+
+# TODO delete
+sub list_old
+{
+    my (
         $metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp,
-        $output_filename, $with_operation_counts, $with_element_counts
+        $output_filename, $with_operation_counts, $with_element_counts, $target_delete_tag
     ) = @_;
     my %changeset_items = ();
     my %changeset_dates = ();
@@ -239,7 +426,8 @@ sub list
             update_max_length(\$max_change_counts_length{"aa"}, $change_counts{"aa"});
 
             my $changes_filename = "$changes_dirname/$id.osc";
-            if (($with_operation_counts || $with_element_counts) && -e $changes_filename)
+            my $target_delete_tag_count;
+            if (($with_operation_counts || $with_element_counts || $target_delete_tag) && -e $changes_filename)
             {
                 print STDERR "reading changeset changes file $changes_filename\n" if $OsmApi::prefs->{'debug'};
                 parse_changes($changes_filename, \%change_counts, \%max_change_counts_length);
@@ -326,9 +514,11 @@ sub list
     close $fh;
 }
 
+# TODO delete
 sub parse_changes
 {
     my ($filename, $counts, $max_counts_length) = @_;
+    my $target_delete_tag_count = 0;
     foreach my $o ("a", "c", "m", "d")
     {
         foreach my $e ("a", "n", "w", "r")
@@ -376,6 +566,7 @@ sub parse_changes
             update_max_length(\$max_counts_length->{"${o}${e}"}, $counts->{"${o}${e}"}) unless "${o}${e}" eq "aa";
         }
     }
+    return $target_delete_tag_count;
 }
 
 sub get_changes_widget
