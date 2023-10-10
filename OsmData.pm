@@ -98,7 +98,7 @@ sub parse_changes_file
                 push @changes, [$type, $id, $version];
                 $data->{elements}[$type]{$id}{$version} = [
                     @edata,
-                    # TODO nds
+                    [ map { int $_->att('ref') } $element->children('nd') ]
                 ];
             },
             relation => sub {
@@ -107,7 +107,11 @@ sub parse_changes_file
                 push @changes, [$type, $id, $version];
                 $data->{elements}[$type]{$id}{$version} = [
                     @edata,
-                    # TODO members
+                    [ map { [
+                        element_type($_->att('type')),
+                        int $_->att('ref'),
+                        $_->att('role'),
+                    ] } $element->children('member') ],
                 ];
             },
         },
@@ -130,7 +134,7 @@ sub parse_common_element_data
         str2time($element->att('timestamp')),
         int $element->att('uid'),
         $element->att('visible') eq 'true',
-        {}, # TODO tags
+        { map { $_->att('k'), $_->att('v') } $element->children('tag') },
     );
 };
 
