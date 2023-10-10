@@ -7,35 +7,14 @@ use strict;
 use warnings;
 use POSIX qw(floor);
 use Math::Trig qw(deg2rad);
-use Math::Round qw(round);
 use File::Path qw(make_path);
 use URI::Escape;
 use HTTP::Date qw(str2time time2isoz);
 use HTML::Entities qw(encode_entities);
 use XML::Twig;
 use OsmApi;
+use OsmData;
 use Changeset;
-
-use constant {
-    NODE => 0,
-    WAY => 1,
-    RELATION => 2,
-};
-use constant {
-    CHANGES => 0,
-    DOWNLOAD_TIMESTAMP => 1,
-};
-use constant {
-    CHANGESET => 0,
-    TIMESTAMP => 1,
-    UID => 2,
-    VISIBLE => 3,
-    TAGS => 4,
-    LAT => 5, LON => 6,
-    NDS => 5,
-    MEMBERS => 5,
-};
-use constant SCALE => 10000000;
 
 our $max_int_log_area = 11;
 
@@ -274,13 +253,13 @@ sub read_changes
 {
     my ($changes_dirname, $changes_store_dirname, @ids) = @_;
 
-    my $data = blank_data();
+    my $data = OsmData::blank_data();
     if (defined($changes_store_dirname)) {
         foreach my $changes_store_filename (glob qq{"$changes_store_dirname/*"})
         {
             print STDERR "reading changes store file $changes_store_filename\n" if $OsmApi::prefs->{'debug'};
             my $data_chunk = retrieve $changes_store_filename;
-            merge_data($data, $data_chunk);
+            OsmData::merge_data($data, $data_chunk);
         }
     }
 
@@ -291,14 +270,14 @@ sub read_changes
         my $changes_filename = "$changes_dirname/$id.osc";
         next unless -f $changes_filename;
         my $timestamp = (stat $changes_filename)[9];
-        next if exists $data->{changesets}{$id} && $data->{changesets}{$id}[DOWNLOAD_TIMESTAMP] <= $timestamp;
+        next if exists $data->{changesets}{$id} && $data->{changesets}{$id}[OsmData::DOWNLOAD_TIMESTAMP] <= $timestamp;
         $bytes_to_parse += (stat $changes_filename)[7];
         push @ids_to_parse, $id;
     }
     return $data if scalar(@ids_to_parse) == 0;
     
     print STDERR "going to parse ".scalar(@ids_to_parse)." files, $bytes_to_parse bytes\n";
-    my $new_data_chunk = blank_data();
+    my $new_data_chunk = OsmData::blank_data();
     my $have_changes_to_store = 0;
     my $quit = 0;
     local $SIG{INT} = sub {
@@ -311,7 +290,7 @@ sub read_changes
         my $changes_filename = "$changes_dirname/$id.osc";
         print STDERR "reading changes file $changes_filename\n" if $OsmApi::prefs->{'debug'};
         my $timestamp = (stat $changes_filename)[9];
-        parse_changes_file($new_data_chunk, $id, $changes_filename, $timestamp);
+        OsmData::parse_changes_file($new_data_chunk, $id, $changes_filename, $timestamp);
         $have_changes_to_store = 1;
     }
     if (defined($changes_store_dirname) && $have_changes_to_store) {
@@ -323,115 +302,9 @@ sub read_changes
         store $new_data_chunk, $new_changes_store_filename;
     }
     die "interrupting" if $quit;
-    merge_data($data, $new_data_chunk);
+    OsmData::merge_data($data, $new_data_chunk);
     return $data;
 }
-
-sub blank_data
-{
-    return {
-        changesets => {},
-        elements => [{}, {}, {}],
-    };
-}
-
-sub element_type
-{
-    my ($type_string) = @_;
-    return NODE if $type_string eq "node";
-    return WAY if $type_string eq "way";
-    return RELATION if $type_string eq "relation";
-    die "unknown element type $type_string";
-}
-
-sub merge_data
-{
-    my ($data1, $data2) = @_;
-    foreach my $id (keys %{$data2->{changesets}})
-    {
-        $data1->{changesets}{$id} = $data2->{changesets}{$id};
-    }
-    my $elements1 = $data1->{elements};
-    my $elements2 = $data2->{elements};
-    foreach my $type (NODE, WAY, RELATION)
-    {
-        foreach my $id (keys %{$elements2->[$type]})
-        {
-            if (exists $elements1->[$type]{$id})
-            {
-                foreach my $version (keys %{$elements2->[$type]{$id}})
-                {
-                    $elements1->[$type]{$id}{$version} = $elements2->[$type]{$id}{$version};
-                }
-            }
-            else
-            {
-                $elements1->[$type]{$id} = $elements2->[$type]{$id};
-            }
-        }
-    }
-}
-
-sub parse_changes_file
-{
-    my ($data, $id, $filename, $timestamp) = @_;
-
-    my @changes = ();
-
-    XML::Twig->new(
-        twig_handlers => {
-            node => sub {
-                my($twig, $element) = @_;
-                my ($type, $id, $version, @edata) = parse_common_element_data($element);
-                push @changes, [$type, $id, $version];
-                if ($edata[VISIBLE])
-                {
-                    push @edata,
-                        round(SCALE * $element->att('lat')),
-                        round(SCALE * $element->att('lon'));
-                }
-                $data->{elements}[$type]{$id}{$version} = \@edata;
-            },
-            way => sub {
-                my($twig, $element) = @_;
-                my ($type, $id, $version, @edata) = parse_common_element_data($element);
-                push @changes, [$type, $id, $version];
-                $data->{elements}[$type]{$id}{$version} = [
-                    @edata,
-                    # TODO nds
-                ];
-            },
-            relation => sub {
-                my($twig, $element) = @_;
-                my ($type, $id, $version, @edata) = parse_common_element_data($element);
-                push @changes, [$type, $id, $version];
-                $data->{elements}[$type]{$id}{$version} = [
-                    @edata,
-                    # TODO members
-                ];
-            },
-        },
-    )->parsefile($filename);
-    $data->{changesets}{$id} = [
-        \@changes,
-        $timestamp,
-    ];
-}
-
-sub parse_common_element_data
-{
-    my ($element) = @_;
-    return (
-        element_type($element->gi),
-        int $element->att('id'),
-        int $element->att('version'),
-        int $element->att('changeset'),
-        str2time($element->att('timestamp')),
-        int $element->att('uid'),
-        $element->att('visible') eq 'true',
-        {}, # TODO tags
-    );
-};
 
 ### TODO remove old read subs below
 
