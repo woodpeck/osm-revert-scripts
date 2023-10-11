@@ -294,6 +294,15 @@ sub list
                 ["", "number of delete changes", $change_counts{"da"}, "od ea"],
             ) . "</span>";
         }
+        if ($with_element_counts)
+        {
+            $item .= " <span class='changes changes-element'>" . get_changes_widget_parts(
+                ["📝", "number of changes by element type"],
+                ["n:", "number of node changes"    , $change_counts{"an"}, "oa en"],
+                ["w:", "number of way changes"     , $change_counts{"aw"}, "oa ew"],
+                ["r:", "number of relation changes", $change_counts{"ar"}, "oa er"],
+            ) . "</span>";
+        }
         $item .=
             " " . get_area_widget(
                 $changeset->{min_lat}, $changeset->{max_lat},
