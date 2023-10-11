@@ -1,11 +1,22 @@
+const $items = document.getElementById('items');
+
+const changesWidgetData = [];
+if ($items.querySelector('.changes-operation')) {
+    changesWidgetData.push(['.changes-operation', `create/modify/delete changes`, `📝(c/m/d)`]);
+}
+if ($items.querySelector('.changes-element')) {
+    changesWidgetData.push(['.changes-element', `node/way/relation changes`, `📝(n/w/r)`]);
+}
+if ($items.querySelector('.changes-operation-x-element')) {
+    changesWidgetData.push(['.changes-operation-x-element', `create/modify/delete × node/way/relation changes`, `📝(c/m/d × n/w/r)`]);
+}
 const widgetData = [
     ['time', `time`, `📅`],
-    ['.changes', `changes`, `📝`],
+    ['.changes-total', `changes`, `📝` + (changesWidgetData.length ? `(*)` : ``)],
+    ...changesWidgetData,
     ['.area', `area`, `📐`],
     ['.comment', `comment`, `💬`],
 ];
-
-const $items = document.getElementById('items');
 
 const $widgetVisibilityControls = [false, true].map(isCompact => widgetData.map(([selector]) => {
     const $checkbox = document.createElement('input');

@@ -85,6 +85,7 @@ if ($correct_options && ($ARGV[0] eq "list"))
     die "parameters required: one of (display_name, uid, directory) or both (metadata-directory, output-filename)" unless defined($metadata_dirname) && defined($output_filename);
     die "operation-counts require one of: (display_name, uid, directory, changes-directory)" if $operation_counts && !defined($changes_dirname);
     die "element-counts require one of: (display_name, uid, directory, changes-directory)" if $element_counts && !defined($changes_dirname);
+    die "operation-x-element-counts require one of: (display_name, uid, directory, changes-directory)" if $operation_x_element_counts && !defined($changes_dirname);
     die "target-delete-tag require one of: (display_name, uid, directory, changes-directory)" if defined($target_delete_tag) && !defined($changes_dirname);
     UserChangesets::list(
         $metadata_dirname, $changes_dirname, $changes_store_dirname, $from_timestamp, $to_timestamp, $output_filename,

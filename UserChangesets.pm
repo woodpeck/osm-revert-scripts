@@ -274,11 +274,24 @@ sub list
             " <time datetime='".html_escape($changeset->{created_at})."'>".html_escape($time)."</time>";
         if ($need_changes)
         {
-            $item .= " <span class=changes>" . get_changes_widget_parts(["📝", $changeset->{changes_count}], ["⬇", $change_counts{"aa"}]) . "</span>";
+            $item .= " <span class='changes changes-total'>" . get_changes_widget_parts(
+                ["📝", "total number of changes", $changeset->{changes_count}],
+                ["⬇", "number of downloaded changes", $change_counts{"aa"}, "oa ea"]
+            ) . "</span>";
         }
         else
         {
-            $item .= " <span class=changes>" . get_changes_widget_parts(["📝", $changeset->{changes_count}]) . "</span>";
+            $item .= " <span class='changes changes-total'>" . get_changes_widget_parts(
+                ["📝", "total number of changes", $changeset->{changes_count}]
+            ) . "</span>";
+        }
+        if ($with_operation_counts)
+        {
+            $item .= " <span class='changes changes-operation'>" . get_changes_widget_parts(
+                ["", "number of create changes", $change_counts{"ca"}, "oc ea"],
+                ["", "number of modify changes", $change_counts{"ma"}, "om ea"],
+                ["", "number of delete changes", $change_counts{"da"}, "od ea"],
+            ) . "</span>";
         }
         $item .=
             " " . get_area_widget(
@@ -315,14 +328,14 @@ sub list
                 my $width = sprintf "%.2f", 6.5 - $_ / 2;
                 print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
             }
-            print $fh "#items li.changeset .changes .number { min-width: ".$max_total_change_counts_length."ch; }\n";
+            print $fh "#items li.changeset .changes > .part > span { min-width: ".$max_total_change_counts_length."ch; }\n";
             if ($with_operation_counts || $with_element_counts)
             {
                 foreach my $o ("a", "c", "m", "d")
                 {
                     foreach my $e ("a", "n", "w", "r")
                     {
-                        print $fh "#items li.changeset .changes .number.o${o}.e${e} { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n";
+                        print $fh "#items li.changeset .changes > .part.o${o}.e${e} > span { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n";
                     }
                 }
             }
@@ -478,8 +491,10 @@ sub read_changes
 sub get_changes_widget_parts
 {
     return join "", (map {
-        my ($text, $number) = @$_;
-        "<span class=part>" . html_escape($text) . "<span class=number>" . html_escape($number) . "</span></span>";
+        my ($text, $title, $number, $extra_classes) = @$_;
+        my $class = "part";
+        $class = "'$class $extra_classes'" if defined($extra_classes);
+        "<span class=$class title='".html_escape($title)."'>".html_escape($text)."<span>".html_escape($number)."</span></span>";
     } @_);
 }
 

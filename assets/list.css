@@ -113,7 +113,7 @@ header, footer {
     font-family: monospace;
     white-space: nowrap;
 }
-#items li.changeset :where(:not([hidden])):is(a, .changes .number, .area) {
+#items li.changeset :where(:not([hidden])):is(a, .changes > .part > span, .area) {
     display: inline-block;
     text-align: right;
 }
@@ -124,30 +124,27 @@ header, footer {
     user-select: none;
     opacity: .25;
 }
-#items li.changeset .changes .number {
-    margin-inline: .0625rem;
-    padding-inline: .0625rem;
-}
-#items li.changeset .changes .oc { background: #39dbc040; } /* colors from OSMCha */
-#items li.changeset .changes .om { background: #db950a40; }
-#items li.changeset .changes .od { background: #cc2c4740; }
-#items li.changeset .changes :is(.oc .oc, .om .om, .od .od) {
-    background: unset;
-}
-#items li.changeset .changes .part {
+#items li.changeset .changes > .part.oc { background: #39dbc040; } /* colors from OSMCha */
+#items li.changeset .changes > .part.om { background: #db950a40; }
+#items li.changeset .changes > .part.od { background: #cc2c4740; }
+#items li.changeset .changes > .part {
     background: #8884;
     padding-inline: .25rem;
 }
-#items li.changeset .changes .part:first-child {
+#items li.changeset .changes > .part:first-child {
     border-top-left-radius: .25rem;
     border-bottom-left-radius: .25rem;
 }
-#items li.changeset .changes .part:not(:first-child) {
+#items li.changeset .changes > .part:not(:first-child) {
     margin-left: .125rem;
 }
-#items li.changeset .changes .part:last-child {
+#items li.changeset .changes > .part:last-child {
     border-top-right-radius: .25rem;
     border-bottom-right-radius: .25rem;
+}
+#items li.changeset .changes > .part > span {
+    margin-inline: .0625rem;
+    padding-inline: .0625rem;
 }
 #items li.changeset .area {
     width: 6ch;
