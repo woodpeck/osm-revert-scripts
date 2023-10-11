@@ -211,7 +211,7 @@ sub list
 
     my $changesets = read_metadata($metadata_dirname, $from_timestamp, $to_timestamp);
     my @ids = sort {$changesets->{$b}{created_at_timestamp} <=> $changesets->{$a}{created_at_timestamp}} keys %$changesets;
-    my $need_changes = $with_operation_counts || $with_element_counts || $with_operation_x_element_counts || $target_delete_tag;
+    my $need_changes = $with_operation_counts || $with_element_counts || $with_operation_x_element_counts || defined($target_delete_tag);
     my $data;
     if ($need_changes)
     {
@@ -219,7 +219,7 @@ sub list
     }
 
     my $max_id_length = 1;
-    my $max_total_change_counts_length = 1;
+    my $max_total_change_count_length = 1;
     my %max_change_counts_length = ();
     foreach my $o ("a", "c", "m", "d")
     {
@@ -228,6 +228,8 @@ sub list
             $max_change_counts_length{"${o}${e}"} = 1;
         }
     }
+    my $max_target_exact_count_length = 1;
+    my $max_target_upper_count_length = 1;
 
     my @changeset_items = ();
     foreach my $id (@ids)
@@ -237,8 +239,9 @@ sub list
         my $time = time2isoz($changeset->{created_at_timestamp});
         chop $time;
 
-        update_max_length(\$max_total_change_counts_length, $changeset->{changes_count});
+        update_max_length(\$max_total_change_count_length, $changeset->{changes_count});
         my %change_counts = ();
+        my ($target_exact_count, $target_upper_count);
         if ($need_changes && exists $data->{changesets}{$id})
         {
             foreach my $o ("a", "c", "m", "d")
@@ -248,7 +251,9 @@ sub list
                     $change_counts{"${o}${e}"} = 0;
                 }
             }
-            foreach my $change (@{$data->{changesets}{$id}[OsmData::CHANGES]})
+            my @changes = @{$data->{changesets}{$id}[OsmData::CHANGES]};
+            $target_upper_count = $changeset->{changes_count} - scalar(@changes);
+            foreach my $change (@changes)
             {
                 my ($t, $i, $v) = @$change;
                 my $element = $data->{elements}[$t]{$i}{$v};
@@ -258,6 +263,16 @@ sub list
                 $change_counts{"${o}a"}++;
                 $change_counts{"a${e}"}++;
                 $change_counts{"${o}${e}"}++;
+                if (defined($target_delete_tag))
+                {
+                    if (
+                        $v > 1 &&
+                        $element->[OsmData::VISIBLE] &&
+                        !exists $element->[OsmData::TAGS]{$target_delete_tag}
+                    ) {
+                        $target_upper_count++;
+                    }
+                }
             }
             foreach my $o ("a", "c", "m", "d")
             {
@@ -266,6 +281,7 @@ sub list
                     update_max_length(\$max_change_counts_length{"${o}${e}"}, $change_counts{"${o}${e}"});
                 }
             }
+            update_max_length(\$max_target_upper_count_length, $target_upper_count);
         }
 
         my $item =
@@ -314,6 +330,13 @@ sub list
             }
             $item .= " <span class='changes changes-operation-x-element'>" . get_changes_widget_parts(@parts) . "</span>";
         }
+        if (defined($target_delete_tag))
+        {
+            $item .= " <span class='changes changes-target'>" . get_changes_widget_parts(
+                ["🎯", "number of target changes", undef],
+                ["≤", "upper bound of number of target changes", $target_upper_count],
+            ) . "</span>";
+        }
         $item .=
             " " . get_area_widget(
                 $changeset->{min_lat}, $changeset->{max_lat},
@@ -349,7 +372,7 @@ sub list
                 my $width = sprintf "%.2f", 6.5 - $_ / 2;
                 print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
             }
-            print $fh "#items li.changeset .changes > .part > span { min-width: ".$max_total_change_counts_length."ch; }\n";
+            print $fh "#items li.changeset .changes > .part > span { min-width: ".$max_total_change_count_length."ch; }\n";
             if ($with_operation_counts || $with_element_counts)
             {
                 foreach my $o ("a", "c", "m", "d")
@@ -359,6 +382,11 @@ sub list
                         print $fh "#items li.changeset .changes > .part.o${o}.e${e} > span { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n";
                     }
                 }
+            }
+            if ($target_delete_tag)
+            {
+                print $fh "#items li.changeset .changes-target > .part > span { min-width: ".$max_target_exact_count_length."ch; }\n";
+                print $fh "#items li.changeset .changes-target > .part > span { min-width: ".$max_target_upper_count_length."ch; }\n";
             }
             print $fh
                 "</style>\n";

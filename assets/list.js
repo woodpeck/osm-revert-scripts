@@ -10,9 +10,14 @@ if ($items.querySelector('.changes-element')) {
 if ($items.querySelector('.changes-operation-x-element')) {
     changesWidgetData.push(['.changes-operation-x-element', `create/modify/delete × node/way/relation changes`, `📝(c/m/d × n/w/r)`]);
 }
+{
+    changesWidgetData.unshift(['.changes-total', `changes`, `📝` + (changesWidgetData.length ? `(*)` : ``)]);
+}
+if ($items.querySelector('.changes-target')) {
+    changesWidgetData.push(['.changes-target', `target changes`, `🎯`]);
+}
 const widgetData = [
     ['time', `time`, `📅`],
-    ['.changes-total', `changes`, `📝` + (changesWidgetData.length ? `(*)` : ``)],
     ...changesWidgetData,
     ['.area', `area`, `📐`],
     ['.comment', `comment`, `💬`],
