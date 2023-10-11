@@ -215,6 +215,152 @@ sub list
     {
         $data = read_changes($changes_dirname, $changes_store_dirname, @ids);
     }
+
+    my $max_id_length = 1;
+    my %max_change_counts_length = ();
+    foreach my $o ("a", "c", "m", "d")
+    {
+        foreach my $e ("a", "n", "w", "r")
+        {
+            $max_change_counts_length{"${o}${e}"} = 1;
+        }
+    }
+
+    my @changeset_items = ();
+    foreach my $id (@ids)
+    {
+        my $changeset = $changesets->{$id};
+        update_max_length(\$max_id_length, $id);
+        my $time = time2isoz($changeset->{created_at_timestamp});
+        chop $time;
+
+        my %change_counts = ();
+        $change_counts{"aa"} = $changeset->{changes_count};
+        update_max_length(\$max_change_counts_length{"aa"}, $change_counts{"aa"});
+
+        if ($need_changes)
+        {
+            foreach my $o ("a", "c", "m", "d")
+            {
+                foreach my $e ("a", "n", "w", "r")
+                {
+                    $change_counts{"${o}${e}"} = 0 unless "${o}${e}" eq "aa";
+                }
+            }
+            foreach my $change (@{$data->{changesets}{$id}[OsmData::CHANGES]})
+            {
+                my ($t, $i, $v) = @$change;
+                my $element = $data->{elements}[$t]{$i}{$v};
+                my $o = operation_letter_from_version_and_element($v, $element);
+                my $e = type_letter_from_type($t);
+                $change_counts{"${o}a"}++;
+                $change_counts{"a${e}"}++;
+                $change_counts{"${o}${e}"}++;
+            }
+            foreach my $o ("a", "c", "m", "d")
+            {
+                foreach my $e ("a", "n", "w", "r")
+                {
+                    update_max_length(\$max_change_counts_length{"${o}${e}"}, $change_counts{"${o}${e}"}) unless "${o}${e}" eq "aa";
+                }
+            }
+        }
+
+        my $item =
+            "<li class=changeset>" .
+            "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
+            " <time datetime='".html_escape($changeset->{created_at})."'>".html_escape($time)."</time>" .
+            " " . get_changes_widget(\%change_counts, $with_operation_counts, $with_element_counts) .
+            " " . get_area_widget(
+                $changeset->{min_lat}, $changeset->{max_lat},
+                $changeset->{min_lon}, $changeset->{max_lon}
+            ) .
+            " <span class=comment>".html_escape($changeset->{comment})."</span>" .
+            "</li>\n";
+        push @changeset_items, $item;
+    }
+
+    my ($fh, $fh_template, $fh_asset);
+    open($fh, '>:utf8', $output_filename) or die "can't open html list file '$output_filename' for writing";
+    open_asset(\$fh_template, "list.html");
+    while (<$fh_template>)
+    {
+        if (!/<\!-- \{embed (.*)\} -->/)
+        {
+            print $fh $_;
+        }
+        elsif ($1 eq "style")
+        {
+            print $fh
+                "<style>\n" .
+                ":root {\n" .
+                "    --changesets-count-width: ".length(scalar @changeset_items)."ch;\n" .
+                "    --id-width: ${max_id_length}ch;\n" .
+                "}\n\n";
+            open_asset(\$fh_asset, "list.css");
+            print $fh $_ while <$fh_asset>;
+            close $fh_asset;
+            for (0 .. $max_int_log_area)
+            {
+                my $width = sprintf "%.2f", 6.5 - $_ / 2;
+                print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
+            }
+            print $fh "#items li.changeset .changes .number.oa.ea { min-width: ".$max_change_counts_length{"aa"}."ch; }\n";
+            if ($with_operation_counts || $with_element_counts)
+            {
+                foreach my $o ("a", "c", "m", "d")
+                {
+                    foreach my $e ("a", "n", "w", "r")
+                    {
+                        print $fh "#items li.changeset .changes .number.o${o}.e${e} { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n" unless "${o}${e}" eq "aa";
+                    }
+                }
+            }
+            print $fh
+                "</style>\n";
+        }
+        elsif ($1 eq "items")
+        {
+            print $fh $_ for @changeset_items;
+        }
+        elsif ($1 eq "script")
+        {
+            print $fh
+                "<script>\n" .
+                "const weburl = '".OsmApi::weburl()."';\n" .
+                "const maxIdLength = $max_id_length;\n\n";
+            open_asset(\$fh_asset, "list.js");
+            print $fh $_ while <$fh_asset>;
+            close $fh_asset;
+            print $fh
+                "</script>";
+        }
+    }
+    close $fh_template;
+    close $fh;
+}
+
+sub operation_letter_from_version_and_element
+{
+    my ($v, $element) = @_;
+    if ($v == 1)
+    {
+        return 'c';
+    }
+    elsif ($element->[OsmData::VISIBLE])
+    {
+        return 'm';
+    }
+    else
+    {
+        return 'd';
+    }
+}
+
+sub type_letter_from_type
+{
+    my ($t) = @_;
+    return ('n', 'w', 'r')[$t];
 }
 
 sub read_metadata
@@ -227,23 +373,31 @@ sub read_metadata
         print STDERR "reading metadata file $metadata_filename\n" if $OsmApi::prefs->{'debug'};
 
         my $twig = XML::Twig->new()->parsefile($metadata_filename);
-        foreach my $changeset ($twig->root->children)
+        foreach my $changeset_element ($twig->root->children)
         {
-            my $id = $changeset->att('id');
+            my $id = $changeset_element->att('id');
             next if $changesets->{$id};
 
-            my $created_at = $changeset->att('created_at');
-            my $closed_at = $changeset->att('closed_at');
+            my $created_at = $changeset_element->att('created_at');
+            my $closed_at = $changeset_element->att('closed_at');
             next if (str2time($closed_at) < $from_timestamp);
             next if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
 
-            $changesets->{$id} = {
+            my $comment_tag = $changeset_element->first_child('tag[@k="comment"]');
+            my $comment = $comment_tag ? $comment_tag->att('v') : "";
+
+            my $changeset = {
                 created_at_timestamp => str2time($created_at),
                 created_at => $created_at,
                 closed_at => $closed_at,
+                comment => $comment,
+            };
+            for my $key ('changes_count', 'min_lat', 'max_lat', 'min_lon', 'max_lon')
+            {
+                $changeset->{$key} = $changeset_element->att($key);
             }
 
-            # TODO read other stuff
+            $changesets->{$id} = $changeset;
         }
     }
     return $changesets;
@@ -309,197 +463,6 @@ sub read_changes
     die "interrupting" if $quit;
     OsmData::merge_data($data, $new_data_chunk);
     return $data;
-}
-
-### TODO remove old read subs below
-
-# TODO delete
-sub list_old
-{
-    my (
-        $metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp,
-        $output_filename, $with_operation_counts, $with_element_counts, $target_delete_tag
-    ) = @_;
-    my %changeset_items = ();
-    my %changeset_dates = ();
-    my $max_id_length = 1;
-    my %max_change_counts_length = ();
-    foreach my $o ("a", "c", "m", "d")
-    {
-        foreach my $e ("a", "c", "m", "d")
-        {
-            $max_change_counts_length{"${o}${e}"} = 1;
-        }
-    }
-
-    foreach my $metadata_filename (list_osm_filenames($metadata_dirname))
-    {
-        print STDERR "reading changeset metadata file $metadata_filename\n" if $OsmApi::prefs->{'debug'};
-
-        my $twig = XML::Twig->new()->parsefile($metadata_filename);
-        foreach my $changeset ($twig->root->children)
-        {
-            my $id = $changeset->att('id');
-            next if $changeset_items{$id};
-
-            my $created_at = $changeset->att('created_at');
-            my $closed_at = $changeset->att('closed_at');
-            next if (str2time($closed_at) < $from_timestamp);
-            next if (defined($to_timestamp) && str2time($created_at) >= $to_timestamp);
-
-            update_max_length(\$max_id_length, $id);
-
-            my $timestamp = str2time($created_at);
-            $changeset_dates{$id} = $timestamp;
-            my $time = time2isoz($timestamp);
-            chop $time;
-
-            my %change_counts = ();
-            $change_counts{"aa"} = $changeset->att('changes_count');
-            update_max_length(\$max_change_counts_length{"aa"}, $change_counts{"aa"});
-
-            my $changes_filename = "$changes_dirname/$id.osc";
-            my $target_delete_tag_count;
-            if (($with_operation_counts || $with_element_counts || $target_delete_tag) && -e $changes_filename)
-            {
-                print STDERR "reading changeset changes file $changes_filename\n" if $OsmApi::prefs->{'debug'};
-                parse_changes($changes_filename, \%change_counts, \%max_change_counts_length);
-            }
-
-            my $comment_tag = $changeset->first_child('tag[@k="comment"]');
-            my $comment = $comment_tag ? $comment_tag->att('v') : "";
-
-            my $item =
-                "<li class=changeset>" .
-                "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
-                " <time datetime='".html_escape($created_at)."'>".html_escape($time)."</time>" .
-                " " . get_changes_widget(\%change_counts, $with_operation_counts, $with_element_counts) .
-                " " . get_area_widget(
-                    $changeset->att('min_lat'), $changeset->att('max_lat'),
-                    $changeset->att('min_lon'), $changeset->att('max_lon')
-                ) .
-                " <span class=comment>".html_escape($comment)."</span>" .
-                "</li>\n";
-            $changeset_items{$id} = $item;
-        }
-    }
-
-    my ($fh, $fh_template, $fh_asset);
-    open($fh, '>:utf8', $output_filename) or die "can't open html list file '$output_filename' for writing";
-    open_asset(\$fh_template, "list.html");
-    while (<$fh_template>)
-    {
-        if (!/<\!-- \{embed (.*)\} -->/)
-        {
-            print $fh $_;
-        }
-        elsif ($1 eq "style")
-        {
-            print $fh
-                "<style>\n" .
-                ":root {\n" .
-                "    --changesets-count-width: ".length(keys %changeset_items)."ch;\n" .
-                "    --id-width: ${max_id_length}ch;\n" .
-                "}\n\n";
-            open_asset(\$fh_asset, "list.css");
-            print $fh $_ while <$fh_asset>;
-            close $fh_asset;
-            for (0 .. $max_int_log_area)
-            {
-                my $width = sprintf "%.2f", 6.5 - $_ / 2;
-                print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
-            }
-            print $fh "#items li.changeset .changes .number.oa.ea { min-width: ".$max_change_counts_length{"aa"}."ch; }\n";
-            if ($with_operation_counts || $with_element_counts)
-            {
-                foreach my $o ("a", "c", "m", "d")
-                {
-                    foreach my $e ("a", "n", "w", "r")
-                    {
-                        print $fh "#items li.changeset .changes .number.o${o}.e${e} { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n" unless "${o}${e}" eq "aa";
-                    }
-                }
-            }
-            print $fh
-                "</style>\n";
-        }
-        elsif ($1 eq "items")
-        {
-            foreach my $id (sort {$changeset_dates{$b} <=> $changeset_dates{$a}} keys %changeset_dates)
-            {
-                print $fh $changeset_items{$id};
-            }
-        }
-        elsif ($1 eq "script")
-        {
-            print $fh
-                "<script>\n" .
-                "const weburl = '".OsmApi::weburl()."';\n" .
-                "const maxIdLength = $max_id_length;\n\n";
-            open_asset(\$fh_asset, "list.js");
-            print $fh $_ while <$fh_asset>;
-            close $fh_asset;
-            print $fh
-                "</script>";
-        }
-    }
-    close $fh_template;
-    close $fh;
-}
-
-# TODO delete
-sub parse_changes
-{
-    my ($filename, $counts, $max_counts_length) = @_;
-    my $target_delete_tag_count = 0;
-    foreach my $o ("a", "c", "m", "d")
-    {
-        foreach my $e ("a", "n", "w", "r")
-        {
-            $counts->{"${o}${e}"} = 0 unless "${o}${e}" eq "aa";
-        }
-    }
-
-    my $in_o;
-    XML::Twig->new(
-        start_tag_handlers => {
-            create => sub { $in_o = "c" },
-            modify => sub { $in_o = "m" },
-            delete => sub { $in_o = "d" },
-        },
-        twig_handlers => {
-            node => sub {
-                return unless defined($in_o);
-                $counts->{"${in_o}a"}++; 
-                $counts->{"${in_o}n"}++;
-                $counts->{"an"}++;
-            },
-            way => sub {
-                return unless defined($in_o);
-                $counts->{"${in_o}a"}++; 
-                $counts->{"${in_o}w"}++;
-                $counts->{"aw"}++;
-            },
-            relation => sub {
-                return unless defined($in_o);
-                $counts->{"${in_o}a"}++; 
-                $counts->{"${in_o}r"}++;
-                $counts->{"ar"}++;
-            },
-            create => sub { $in_o = undef },
-            modify => sub { $in_o = undef },
-            delete => sub { $in_o = undef },
-        },
-    )->parsefile($filename);
-
-    foreach my $o ("a", "c", "m", "d")
-    {
-        foreach my $e ("a", "n", "w", "r")
-        {
-            update_max_length(\$max_counts_length->{"${o}${e}"}, $counts->{"${o}${e}"}) unless "${o}${e}" eq "aa";
-        }
-    }
-    return $target_delete_tag_count;
 }
 
 sub get_changes_widget

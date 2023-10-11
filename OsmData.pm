@@ -11,10 +11,14 @@ use constant {
     WAY => 1,
     RELATION => 2,
 };
+
+# changeset
 use constant {
     CHANGES => 0,
     DOWNLOAD_TIMESTAMP => 1,
 };
+
+# element
 use constant {
     CHANGESET => 0,
     TIMESTAMP => 1,
@@ -25,6 +29,14 @@ use constant {
     NDS => 5,
     MEMBERS => 5,
 };
+
+# change
+use constant {
+    TYPE => 0,
+    ID => 1,
+    VERSION => 2,
+};
+
 use constant SCALE => 10000000;
 
 sub element_type
