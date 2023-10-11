@@ -204,12 +204,14 @@ sub list
     my (
         $metadata_dirname, $changes_dirname, $changes_store_dirname,
         $from_timestamp, $to_timestamp,
-        $output_filename, $with_operation_counts, $with_element_counts, $target_delete_tag
+        $output_filename,
+        $with_operation_counts, $with_element_counts, $with_operation_x_element_counts,
+        $target_delete_tag
     ) = @_;
 
     my $changesets = read_metadata($metadata_dirname, $from_timestamp, $to_timestamp);
     my @ids = sort {$changesets->{$b}{created_at_timestamp} <=> $changesets->{$a}{created_at_timestamp}} keys %$changesets;
-    my $need_changes = $with_operation_counts || $with_element_counts || $target_delete_tag;
+    my $need_changes = $with_operation_counts || $with_element_counts || $with_operation_x_element_counts || $target_delete_tag;
     my $data;
     if ($need_changes)
     {
@@ -217,6 +219,7 @@ sub list
     }
 
     my $max_id_length = 1;
+    my $max_total_change_counts_length = 1;
     my %max_change_counts_length = ();
     foreach my $o ("a", "c", "m", "d")
     {
@@ -234,17 +237,15 @@ sub list
         my $time = time2isoz($changeset->{created_at_timestamp});
         chop $time;
 
+        update_max_length(\$max_total_change_counts_length, $changeset->{changes_count});
         my %change_counts = ();
-        $change_counts{"aa"} = $changeset->{changes_count};
-        update_max_length(\$max_change_counts_length{"aa"}, $change_counts{"aa"});
-
         if ($need_changes)
         {
             foreach my $o ("a", "c", "m", "d")
             {
                 foreach my $e ("a", "n", "w", "r")
                 {
-                    $change_counts{"${o}${e}"} = 0 unless "${o}${e}" eq "aa";
+                    $change_counts{"${o}${e}"} = 0;
                 }
             }
             foreach my $change (@{$data->{changesets}{$id}[OsmData::CHANGES]})
@@ -253,6 +254,7 @@ sub list
                 my $element = $data->{elements}[$t]{$i}{$v};
                 my $o = operation_letter_from_version_and_element($v, $element);
                 my $e = type_letter_from_type($t);
+                $change_counts{"aa"}++;
                 $change_counts{"${o}a"}++;
                 $change_counts{"a${e}"}++;
                 $change_counts{"${o}${e}"}++;
@@ -261,7 +263,7 @@ sub list
             {
                 foreach my $e ("a", "n", "w", "r")
                 {
-                    update_max_length(\$max_change_counts_length{"${o}${e}"}, $change_counts{"${o}${e}"}) unless "${o}${e}" eq "aa";
+                    update_max_length(\$max_change_counts_length{"${o}${e}"}, $change_counts{"${o}${e}"});
                 }
             }
         }
@@ -269,8 +271,16 @@ sub list
         my $item =
             "<li class=changeset>" .
             "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
-            " <time datetime='".html_escape($changeset->{created_at})."'>".html_escape($time)."</time>" .
-            " " . get_changes_widget(\%change_counts, $with_operation_counts, $with_element_counts) .
+            " <time datetime='".html_escape($changeset->{created_at})."'>".html_escape($time)."</time>";
+        if ($need_changes)
+        {
+            $item .= " <span class=changes>" . get_changes_widget_parts(["📝", $changeset->{changes_count}], ["⬇", $change_counts{"aa"}]) . "</span>";
+        }
+        else
+        {
+            $item .= " <span class=changes>" . get_changes_widget_parts(["📝", $changeset->{changes_count}]) . "</span>";
+        }
+        $item .=
             " " . get_area_widget(
                 $changeset->{min_lat}, $changeset->{max_lat},
                 $changeset->{min_lon}, $changeset->{max_lon}
@@ -305,14 +315,14 @@ sub list
                 my $width = sprintf "%.2f", 6.5 - $_ / 2;
                 print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
             }
-            print $fh "#items li.changeset .changes .number.oa.ea { min-width: ".$max_change_counts_length{"aa"}."ch; }\n";
+            print $fh "#items li.changeset .changes .number { min-width: ".$max_total_change_counts_length."ch; }\n";
             if ($with_operation_counts || $with_element_counts)
             {
                 foreach my $o ("a", "c", "m", "d")
                 {
                     foreach my $e ("a", "n", "w", "r")
                     {
-                        print $fh "#items li.changeset .changes .number.o${o}.e${e} { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n" unless "${o}${e}" eq "aa";
+                        print $fh "#items li.changeset .changes .number.o${o}.e${e} { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n";
                     }
                 }
             }
@@ -465,7 +475,16 @@ sub read_changes
     return $data;
 }
 
-sub get_changes_widget
+sub get_changes_widget_parts
+{
+    return join "", (map {
+        my ($text, $number) = @$_;
+        "<span class=part>" . html_escape($text) . "<span class=number>" . html_escape($number) . "</span></span>";
+    } @_);
+}
+
+# TODO remove
+sub old_get_changes_widget
 {
     my ($counts, $with_operation_counts, $with_element_counts) = @_;
     my $sum_count;

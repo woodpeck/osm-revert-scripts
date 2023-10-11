@@ -14,6 +14,7 @@ my ($dirname, $metadata_dirname, $changes_dirname, $changes_store_dirname);
 my $output_filename;
 my $operation_counts = 0;
 my $element_counts = 0;
+my $operation_x_element_counts = 0;
 my $target_delete_tag;
 
 my $correct_options = GetOptions(
@@ -28,6 +29,7 @@ my $correct_options = GetOptions(
     "output-filename=s" => \$output_filename,
     "operation-counts!" => \$operation_counts,
     "element-counts!" => \$element_counts,
+    "operation-x-element-counts!" => \$operation_x_element_counts,
     "target-delete-tag=s" => \$target_delete_tag,
 );
 
@@ -85,8 +87,9 @@ if ($correct_options && ($ARGV[0] eq "list"))
     die "element-counts require one of: (display_name, uid, directory, changes-directory)" if $element_counts && !defined($changes_dirname);
     die "target-delete-tag require one of: (display_name, uid, directory, changes-directory)" if defined($target_delete_tag) && !defined($changes_dirname);
     UserChangesets::list(
-        $metadata_dirname, $changes_dirname, $changes_store_dirname, $from_timestamp, $to_timestamp,
-        $output_filename, $operation_counts, $element_counts, $target_delete_tag
+        $metadata_dirname, $changes_dirname, $changes_store_dirname, $from_timestamp, $to_timestamp, $output_filename,
+        $operation_counts, $element_counts, $operation_x_element_counts,
+        $target_delete_tag
     );
     exit;
 }
@@ -110,5 +113,6 @@ options:
   --output-filename <filename>           derived from --directory if not provided
   --operation-counts                     for list command: show create/modify/delete counts
   --element-counts                       for list command: show node/way/relation counts
+  --operation-x-element-counts
   --target-delete-tag <tag key>          for list command: show changes matching tag deletion counts
 EOF
