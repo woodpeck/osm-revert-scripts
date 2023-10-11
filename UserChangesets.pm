@@ -242,6 +242,7 @@ sub list
         update_max_length(\$max_total_change_count_length, $changeset->{changes_count});
         my %change_counts = ();
         my ($target_exact_count, $target_upper_count);
+
         if ($need_changes && exists $data->{changesets}{$id})
         {
             foreach my $o ("a", "c", "m", "d")
@@ -281,7 +282,16 @@ sub list
                     update_max_length(\$max_change_counts_length{"${o}${e}"}, $change_counts{"${o}${e}"});
                 }
             }
+        }
+        elsif ($changeset->{changes_count} == 0)
+        {
+            $target_upper_count = 0;
+        }
+
+        if (defined($target_upper_count))
+        {
             update_max_length(\$max_target_upper_count_length, $target_upper_count);
+            $target_exact_count = 0 if ($target_upper_count == 0);
         }
 
         my $item =
@@ -333,7 +343,7 @@ sub list
         if (defined($target_delete_tag))
         {
             $item .= " <span class='changes changes-target'>" . get_changes_widget_parts(
-                ["🎯", "number of target changes", undef],
+                ["🎯", "number of target changes", $target_exact_count],
                 ["≤", "upper bound of number of target changes", $target_upper_count],
             ) . "</span>";
         }
