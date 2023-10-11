@@ -288,6 +288,7 @@ sub list
         if ($with_operation_counts)
         {
             $item .= " <span class='changes changes-operation'>" . get_changes_widget_parts(
+                ["📝", "number of changes by operation"],
                 ["", "number of create changes", $change_counts{"ca"}, "oc ea"],
                 ["", "number of modify changes", $change_counts{"ma"}, "om ea"],
                 ["", "number of delete changes", $change_counts{"da"}, "od ea"],
@@ -494,7 +495,11 @@ sub get_changes_widget_parts
         my ($text, $title, $number, $extra_classes) = @$_;
         my $class = "part";
         $class = "'$class $extra_classes'" if defined($extra_classes);
-        "<span class=$class title='".html_escape($title)."'>".html_escape($text)."<span>".html_escape($number)."</span></span>";
+        "<span class=$class title='".html_escape($title)."'>".html_escape($text).(
+            defined($number)
+            ? "<span>".html_escape($number)."</span>"
+            : ""
+        )."</span>";
     } @_);
 }
 
