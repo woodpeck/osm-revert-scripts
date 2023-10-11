@@ -343,8 +343,8 @@ sub list
         if (defined($target_delete_tag))
         {
             $item .= " <span class='changes changes-target'>" . get_changes_widget_parts(
-                ["🎯", "number of target changes", $target_exact_count],
-                ["≤", "upper bound of number of target changes", $target_upper_count],
+                ["🎯", "number of target changes", $target_exact_count, "exact"],
+                ["≤", "upper bound of number of target changes", $target_upper_count, "upper"],
             ) . "</span>";
         }
         $item .=
@@ -395,8 +395,8 @@ sub list
             }
             if ($target_delete_tag)
             {
-                print $fh "#items li.changeset .changes-target > .part > span { min-width: ".$max_target_exact_count_length."ch; }\n";
-                print $fh "#items li.changeset .changes-target > .part > span { min-width: ".$max_target_upper_count_length."ch; }\n";
+                print $fh "#items li.changeset .changes-target > .part.exact > span { min-width: ".$max_target_exact_count_length."ch; }\n";
+                print $fh "#items li.changeset .changes-target > .part.upper > span { min-width: ".$max_target_upper_count_length."ch; }\n";
             }
             print $fh
                 "</style>\n";
