@@ -364,6 +364,117 @@ sub list
     close $fh;
 }
 
+# -----------------------------------------------------------------------------
+
+sub get_changes_widget_parts
+{
+    return join "", (map {
+        my ($text, $title, $number, $extra_classes) = @$_;
+        my $class = "part";
+        $class = "'$class $extra_classes'" if defined($extra_classes);
+        "<span class=$class title='".html_escape($title)."'>".html_escape($text).(
+            defined($number)
+            ? "<span>".html_escape($number)."</span>"
+            : ""
+        )."</span>";
+    } @_);
+}
+
+# TODO remove
+sub old_get_changes_widget
+{
+    my ($counts, $with_operation_counts, $with_element_counts) = @_;
+    my $sum_count;
+    my $widget = "";
+    $widget .= "<span class=changes title='number of changes'>📝";
+    $widget .= "<span class='number oa ea'>".html_escape($counts->{'aa'})."</span>";
+
+    if (defined($counts->{"ca"}) && defined($counts->{"ma"}) && defined($counts->{"da"}))
+    {
+        $sum_count = $counts->{"ca"} + $counts->{"ma"} + $counts->{"da"};
+    }
+    elsif (defined($counts->{"an"}) && defined($counts->{"aw"}) && defined($counts->{"ar"}))
+    {
+        $sum_count = $counts->{"an"} + $counts->{"aw"} + $counts->{"ar"};
+    }
+
+    if ($with_operation_counts && !$with_element_counts)
+    {
+        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
+        my $i = 0;
+        foreach my $operation ("create", "modify", "delete")
+        {
+            $widget .= "+" if $i++;
+            my $o = substr($operation, 0, 1);
+            $widget .= "<span class='number o$o ea' title='number of $operation changes'>".html_escape($counts->{"${o}a"} // "?")."</span>";
+        }
+    }
+    elsif (!$with_operation_counts && $with_element_counts)
+    {
+        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
+        my $i = 0;
+        foreach my $element ("node", "way", "relation")
+        {
+            $widget .= "+" if $i++;
+            my $e = substr($element, 0, 1);
+            $widget .= "<span class='number oa e$e' title='number of $element changes'>".html_escape($counts->{"a${e}"} // "?")."</span>$e";
+        }
+    }
+    elsif ($with_operation_counts && $with_element_counts)
+    {
+        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
+        my $i = 0;
+        foreach my $operation ("create", "modify", "delete")
+        {
+            my $o = substr($operation, 0, 1);
+            $widget .= "<span class=o$o>";
+            foreach my $element ("node", "way", "relation")
+            {
+                $widget .= "+" if $i++;
+                my $e = substr($element, 0, 1);
+                $widget .= "<span class='number o$o e$e' title='number of $operation $element changes'>".html_escape($counts->{"${o}${e}"} // "?")."</span>$e";
+            }
+            $widget .= "</span>";
+        }
+    }
+
+    $widget .= "</span>";
+    return $widget;
+}
+
+sub get_area_widget
+{
+    my ($min_lat, $max_lat, $min_lon, $max_lon) = @_;
+    my ($area, $log_area, $int_log_area);
+
+    if (
+        defined($min_lat) && defined($max_lat) &&
+        defined($min_lon) && defined($max_lon)
+    )
+    {
+        $area = (sin(deg2rad($max_lat)) - sin(deg2rad($min_lat))) * ($max_lon - $min_lon) / 720; # 1 = entire Earth surface
+        if ($area > 0) {
+            $log_area = sprintf "%.2f", log($area) / log(10);
+            $int_log_area = -int($log_area);
+            $int_log_area = 0 if $int_log_area < 0;
+            $int_log_area = $max_int_log_area if $int_log_area > $max_int_log_area;
+        }
+    }
+
+    if (!defined($area))
+    {
+        return " <span class='area empty' title='no bounding box'>✕</span>";
+    }
+    elsif ($area == 0)
+    {
+        return " <span class='area zero' title='zero-sized bounding box'>·</span>";
+    }
+    else
+    {
+        return " <span class=area title='-log10(bbox area); ".html_escape(earth_area_with_units($area))."' data-log-size=$int_log_area>".html_escape($log_area)."</span>";
+    }
+}
+
 sub operation_letter_from_version_and_element
 {
     my ($v, $element) = @_;
@@ -488,117 +599,6 @@ sub read_changes
     OsmData::merge_data($data, $new_data_chunk);
     return $data;
 }
-
-sub get_changes_widget_parts
-{
-    return join "", (map {
-        my ($text, $title, $number, $extra_classes) = @$_;
-        my $class = "part";
-        $class = "'$class $extra_classes'" if defined($extra_classes);
-        "<span class=$class title='".html_escape($title)."'>".html_escape($text).(
-            defined($number)
-            ? "<span>".html_escape($number)."</span>"
-            : ""
-        )."</span>";
-    } @_);
-}
-
-# TODO remove
-sub old_get_changes_widget
-{
-    my ($counts, $with_operation_counts, $with_element_counts) = @_;
-    my $sum_count;
-    my $widget = "";
-    $widget .= "<span class=changes title='number of changes'>📝";
-    $widget .= "<span class='number oa ea'>".html_escape($counts->{'aa'})."</span>";
-
-    if (defined($counts->{"ca"}) && defined($counts->{"ma"}) && defined($counts->{"da"}))
-    {
-        $sum_count = $counts->{"ca"} + $counts->{"ma"} + $counts->{"da"};
-    }
-    elsif (defined($counts->{"an"}) && defined($counts->{"aw"}) && defined($counts->{"ar"}))
-    {
-        $sum_count = $counts->{"an"} + $counts->{"aw"} + $counts->{"ar"};
-    }
-
-    if ($with_operation_counts && !$with_element_counts)
-    {
-        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
-        my $i = 0;
-        foreach my $operation ("create", "modify", "delete")
-        {
-            $widget .= "+" if $i++;
-            my $o = substr($operation, 0, 1);
-            $widget .= "<span class='number o$o ea' title='number of $operation changes'>".html_escape($counts->{"${o}a"} // "?")."</span>";
-        }
-    }
-    elsif (!$with_operation_counts && $with_element_counts)
-    {
-        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
-        my $i = 0;
-        foreach my $element ("node", "way", "relation")
-        {
-            $widget .= "+" if $i++;
-            my $e = substr($element, 0, 1);
-            $widget .= "<span class='number oa e$e' title='number of $element changes'>".html_escape($counts->{"a${e}"} // "?")."</span>$e";
-        }
-    }
-    elsif ($with_operation_counts && $with_element_counts)
-    {
-        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
-        my $i = 0;
-        foreach my $operation ("create", "modify", "delete")
-        {
-            my $o = substr($operation, 0, 1);
-            $widget .= "<span class=o$o>";
-            foreach my $element ("node", "way", "relation")
-            {
-                $widget .= "+" if $i++;
-                my $e = substr($element, 0, 1);
-                $widget .= "<span class='number o$o e$e' title='number of $operation $element changes'>".html_escape($counts->{"${o}${e}"} // "?")."</span>$e";
-            }
-            $widget .= "</span>";
-        }
-    }
-
-    $widget .= "</span>";
-    return $widget;
-}
-
-sub get_area_widget
-{
-    my ($min_lat, $max_lat, $min_lon, $max_lon) = @_;
-    my ($area, $log_area, $int_log_area);
-
-    if (
-        defined($min_lat) && defined($max_lat) &&
-        defined($min_lon) && defined($max_lon)
-    )
-    {
-        $area = (sin(deg2rad($max_lat)) - sin(deg2rad($min_lat))) * ($max_lon - $min_lon) / 720; # 1 = entire Earth surface
-        if ($area > 0) {
-            $log_area = sprintf "%.2f", log($area) / log(10);
-            $int_log_area = -int($log_area);
-            $int_log_area = 0 if $int_log_area < 0;
-            $int_log_area = $max_int_log_area if $int_log_area > $max_int_log_area;
-        }
-    }
-
-    if (!defined($area))
-    {
-        return " <span class='area empty' title='no bounding box'>✕</span>";
-    }
-    elsif ($area == 0)
-    {
-        return " <span class='area zero' title='zero-sized bounding box'>·</span>";
-    }
-    else
-    {
-        return " <span class=area title='-log10(bbox area); ".html_escape(earth_area_with_units($area))."' data-log-size=$int_log_area>".html_escape($log_area)."</span>";
-    }
-}
-
-# -----------------------------------------------------------------------------
 
 sub list_osm_filenames
 {
