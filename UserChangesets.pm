@@ -287,21 +287,32 @@ sub list
         }
         if ($with_operation_counts)
         {
+            my @parts = map { my $o = substr($_, 0, 1); ["", "number of $_ changes", $change_counts{"${o}a"}, "o${o} ea"] } ("create", "modify", "delete");
             $item .= " <span class='changes changes-operation'>" . get_changes_widget_parts(
-                ["📝", "number of changes by operation"],
-                ["", "number of create changes", $change_counts{"ca"}, "oc ea"],
-                ["", "number of modify changes", $change_counts{"ma"}, "om ea"],
-                ["", "number of delete changes", $change_counts{"da"}, "od ea"],
+                ["📝", "number of changes by operation"], @parts
             ) . "</span>";
         }
         if ($with_element_counts)
         {
+            my @parts = map { my $e = substr($_, 0, 1); ["$e:", "number of $_ changes", $change_counts{"a${e}"}, "oa e${e}"] } ("node", "way", "relation");
             $item .= " <span class='changes changes-element'>" . get_changes_widget_parts(
-                ["📝", "number of changes by element type"],
-                ["n:", "number of node changes"    , $change_counts{"an"}, "oa en"],
-                ["w:", "number of way changes"     , $change_counts{"aw"}, "oa ew"],
-                ["r:", "number of relation changes", $change_counts{"ar"}, "oa er"],
+                ["📝", "number of changes by element type"], @parts
             ) . "</span>";
+        }
+        if ($with_operation_x_element_counts)
+        {
+            my @parts = (["📝", "number of changes by operation and element type"]);
+            foreach my $element ("node", "way", "relation")
+            {
+                my $e = substr($element, 0, 1);
+                push @parts, ["$e:", "number of $element changes"];
+                foreach my $operation ("create", "modify", "delete")
+                {
+                    my $o = substr($operation, 0, 1);
+                    push @parts, ["", "number of $operation $element changes", $change_counts{"${o}${e}"}, "o${o} e${e}"];
+                }
+            }
+            $item .= " <span class='changes changes-operation-x-element'>" . get_changes_widget_parts(@parts) . "</span>";
         }
         $item .=
             " " . get_area_widget(
@@ -379,76 +390,16 @@ sub get_changes_widget_parts
 {
     return join "", (map {
         my ($text, $title, $number, $extra_classes) = @$_;
-        my $class = "part";
-        $class = "'$class $extra_classes'" if defined($extra_classes);
+        my @classes = ("part");
+        push @classes, $extra_classes if defined($extra_classes);
+        push @classes, "empty" if defined($number) && $number == 0;
+        my $class = scalar(@classes) == 1 ? $classes[0] : "'".join(" ", @classes)."'";
         "<span class=$class title='".html_escape($title)."'>".html_escape($text).(
             defined($number)
             ? "<span>".html_escape($number)."</span>"
             : ""
         )."</span>";
     } @_);
-}
-
-# TODO remove
-sub old_get_changes_widget
-{
-    my ($counts, $with_operation_counts, $with_element_counts) = @_;
-    my $sum_count;
-    my $widget = "";
-    $widget .= "<span class=changes title='number of changes'>📝";
-    $widget .= "<span class='number oa ea'>".html_escape($counts->{'aa'})."</span>";
-
-    if (defined($counts->{"ca"}) && defined($counts->{"ma"}) && defined($counts->{"da"}))
-    {
-        $sum_count = $counts->{"ca"} + $counts->{"ma"} + $counts->{"da"};
-    }
-    elsif (defined($counts->{"an"}) && defined($counts->{"aw"}) && defined($counts->{"ar"}))
-    {
-        $sum_count = $counts->{"an"} + $counts->{"aw"} + $counts->{"ar"};
-    }
-
-    if ($with_operation_counts && !$with_element_counts)
-    {
-        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
-        my $i = 0;
-        foreach my $operation ("create", "modify", "delete")
-        {
-            $widget .= "+" if $i++;
-            my $o = substr($operation, 0, 1);
-            $widget .= "<span class='number o$o ea' title='number of $operation changes'>".html_escape($counts->{"${o}a"} // "?")."</span>";
-        }
-    }
-    elsif (!$with_operation_counts && $with_element_counts)
-    {
-        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
-        my $i = 0;
-        foreach my $element ("node", "way", "relation")
-        {
-            $widget .= "+" if $i++;
-            my $e = substr($element, 0, 1);
-            $widget .= "<span class='number oa e$e' title='number of $element changes'>".html_escape($counts->{"a${e}"} // "?")."</span>$e";
-        }
-    }
-    elsif ($with_operation_counts && $with_element_counts)
-    {
-        $widget .= defined($sum_count) && $counts->{"aa"} == $sum_count ? "=" : "≠";
-        my $i = 0;
-        foreach my $operation ("create", "modify", "delete")
-        {
-            my $o = substr($operation, 0, 1);
-            $widget .= "<span class=o$o>";
-            foreach my $element ("node", "way", "relation")
-            {
-                $widget .= "+" if $i++;
-                my $e = substr($element, 0, 1);
-                $widget .= "<span class='number o$o e$e' title='number of $operation $element changes'>".html_escape($counts->{"${o}${e}"} // "?")."</span>$e";
-            }
-            $widget .= "</span>";
-        }
-    }
-
-    $widget .= "</span>";
-    return $widget;
 }
 
 sub get_area_widget

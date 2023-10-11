@@ -142,6 +142,9 @@ header, footer {
     border-top-right-radius: .25rem;
     border-bottom-right-radius: .25rem;
 }
+#items li.changeset .changes > .part.empty {
+    color: #888;
+}
 #items li.changeset .changes > .part > span {
     margin-inline: .0625rem;
     padding-inline: .0625rem;
