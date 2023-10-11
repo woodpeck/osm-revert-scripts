@@ -239,7 +239,7 @@ sub list
 
         update_max_length(\$max_total_change_counts_length, $changeset->{changes_count});
         my %change_counts = ();
-        if ($need_changes)
+        if ($need_changes && exists $data->{changesets}{$id})
         {
             foreach my $o ("a", "c", "m", "d")
             {
@@ -276,7 +276,7 @@ sub list
         {
             $item .= " <span class='changes changes-total'>" . get_changes_widget_parts(
                 ["📝", "total number of changes", $changeset->{changes_count}],
-                ["⬇", "number of downloaded changes", $change_counts{"aa"}, "oa ea"]
+                ["⬇", "number of downloaded changes", $change_counts{"aa"} // 0, "oa ea"]
             ) . "</span>";
         }
         else
@@ -392,11 +392,11 @@ sub get_changes_widget_parts
         my ($text, $title, $number, $extra_classes) = @$_;
         my @classes = ("part");
         push @classes, $extra_classes if defined($extra_classes);
-        push @classes, "empty" if defined($number) && $number == 0;
+        push @classes, "empty" if !defined($number) || $number == 0;
         my $class = scalar(@classes) == 1 ? $classes[0] : "'".join(" ", @classes)."'";
         "<span class=$class title='".html_escape($title)."'>".html_escape($text).(
-            defined($number)
-            ? "<span>".html_escape($number)."</span>"
+            scalar(@$_) > 2
+            ? "<span>".html_escape($number // "?")."</span>"
             : ""
         )."</span>";
     } @_);

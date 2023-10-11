@@ -113,7 +113,7 @@ header, footer {
     font-family: monospace;
     white-space: nowrap;
 }
-#items li.changeset :where(:not([hidden])):is(a, .changes > .part > span, .area) {
+#items li.changeset :where(:not([hidden])):where(a, .changes > .part > span, .area) {
     display: inline-block;
     text-align: right;
 }
