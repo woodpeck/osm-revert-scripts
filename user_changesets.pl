@@ -10,7 +10,7 @@ use UserChangesets;
 my ($username, $uid);
 my $from_date = "2001-01-01";
 my $to_date;
-my ($dirname, $metadata_dirname, $changes_dirname, $changes_store_dirname);
+my ($dirname, $metadata_dirname, $changes_dirname, $store_dirname);
 my $output_filename;
 my $operation_counts = 0;
 my $element_counts = 0;
@@ -25,7 +25,7 @@ my $correct_options = GetOptions(
     "directory|dirname|output=s" => \$dirname,
     "metadata-directory|metadata-dirname=s" => \$metadata_dirname,
     "changes-directory|changes-dirname=s" => \$changes_dirname,
-    "changes-store-directory|changes-store-dirname=s" => \$changes_store_dirname,
+    "store-directory|store-dirname=s" => \$store_dirname,
     "output-filename=s" => \$output_filename,
     "operation-counts!" => \$operation_counts,
     "element-counts!" => \$element_counts,
@@ -58,7 +58,7 @@ if (defined($dirname))
 {
     $metadata_dirname //= "$dirname/metadata";
     $changes_dirname //= "$dirname/changes";
-    $changes_store_dirname //= "$dirname/changes-store";
+    $store_dirname //= "$dirname/.store";
     $output_filename //= "$dirname/index.html";
 }
 
@@ -88,7 +88,7 @@ if ($correct_options && ($ARGV[0] eq "list"))
     die "operation-x-element-counts require one of: (display_name, uid, directory, changes-directory)" if $operation_x_element_counts && !defined($changes_dirname);
     die "target-delete-tag require one of: (display_name, uid, directory, changes-directory)" if defined($target_delete_tag) && !defined($changes_dirname);
     UserChangesets::list(
-        $metadata_dirname, $changes_dirname, $changes_store_dirname, $from_timestamp, $to_timestamp, $output_filename,
+        $metadata_dirname, $changes_dirname, $store_dirname, $from_timestamp, $to_timestamp, $output_filename,
         $operation_counts, $element_counts, $operation_x_element_counts,
         $target_delete_tag
     );
@@ -110,7 +110,7 @@ options:
   --directory <directory>                derived from --username or --uid if not provided
   --metadata-directory <directory>       derived from --directory if not provided
   --changes-directory <directory>        derived from --directory if not provided
-  --changes-store-directory <directory>  derived from --directory if not provided
+  --store-directory <directory>          derived from --directory if not provided
   --output-filename <filename>           derived from --directory if not provided
   --operation-counts                     for list command: show create/modify/delete counts
   --element-counts                       for list command: show node/way/relation counts

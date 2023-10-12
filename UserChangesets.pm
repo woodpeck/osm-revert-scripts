@@ -200,7 +200,7 @@ sub list
     use Storable;
 
     my (
-        $metadata_dirname, $changes_dirname, $changes_store_dirname,
+        $metadata_dirname, $changes_dirname, $store_dirname,
         $from_timestamp, $to_timestamp,
         $output_filename,
         $with_operation_counts, $with_element_counts, $with_operation_x_element_counts,
@@ -213,7 +213,7 @@ sub list
     my $data;
     if ($need_changes)
     {
-        $data = read_changes($changes_dirname, $changes_store_dirname, @ids);
+        $data = read_changes($changes_dirname, $store_dirname, @ids);
     }
 
     my @changeset_items = ();
@@ -486,11 +486,11 @@ sub read_metadata
 
 sub read_changes
 {
-    my ($changes_dirname, $changes_store_dirname, @ids) = @_;
+    my ($changes_dirname, $store_dirname, @ids) = @_;
 
     my $data = OsmData::blank_data();
-    if (defined($changes_store_dirname)) {
-        foreach my $changes_store_filename (glob qq{"$changes_store_dirname/*"})
+    if (defined($store_dirname)) {
+        foreach my $changes_store_filename (glob qq{"$store_dirname/changes/*"})
         {
             print STDERR "reading changes store file $changes_store_filename\n" if $OsmApi::prefs->{'debug'};
             my $data_chunk = retrieve $changes_store_filename;
@@ -533,11 +533,11 @@ sub read_changes
         $bytes_parsed += (stat $changes_filename)[7];
         $files_parsed++;
     }
-    if (defined($changes_store_dirname) && $have_changes_to_store) {
-        make_path($changes_store_dirname);
+    if (defined($store_dirname) && $have_changes_to_store) {
+        make_path("$store_dirname/changes");
         my $fn = "00000000";
-        $fn++ while -e "$changes_store_dirname/$fn";
-        my $new_changes_store_filename = "$changes_store_dirname/$fn";
+        $fn++ while -e "$store_dirname/changes/$fn";
+        my $new_changes_store_filename = "$store_dirname/changes/$fn";
         print STDERR "writing changes store file $new_changes_store_filename\n" if $OsmApi::prefs->{'debug'};
         store $new_data_chunk, $new_changes_store_filename;
     }
