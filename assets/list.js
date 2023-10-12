@@ -263,6 +263,7 @@ const $header = document.createElement('header');
                 const $number = $item.querySelector(numberSelector);
                 if (!$number) continue;
                 sortKey = Number($number.textContent);
+                if (isNaN(sortKey)) sortKey = -1;
             }
             $itemsToSort.push([sortKey, $item]);
         }
