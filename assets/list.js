@@ -178,7 +178,7 @@ const $header = document.createElement('header');
     $tool.classList.add('tool');
     const $sortSelect = document.createElement('select');
     $sortSelect.append(
-        ...['date', ...numberGroupWidths.keys()].map(k => new Option(`Sort by ${k}`, k))
+        ...['time', ...numberGroupWidths.keys()].map(k => new Option(`Sort by ${k}`, k))
     );
     $sortSelect.oninput = () => {
         const numberSelector = `[data-number="${$sortSelect.value}"]`;
@@ -189,9 +189,17 @@ const $header = document.createElement('header');
                 $itemsToRemove.push($item);
                 continue;
             }
-            const $number = $item.querySelector(numberSelector);
-            if (!$number) continue;
-            $itemsToSort.push([Number($number.textContent), $item]);
+            let sortKey;
+            if ($sortSelect.value == 'time') {
+                const $time = $item.querySelector('time');
+                if (!$time) continue;
+                sortKey = $time.dateTime;
+            } else {
+                const $number = $item.querySelector(numberSelector);
+                if (!$number) continue;
+                sortKey = Number($number.textContent);
+            }
+            $itemsToSort.push([sortKey, $item]);
         }
         for (const $item of $itemsToRemove) $item.remove();
         $itemsToSort.sort(([a], [b]) => a > b);
