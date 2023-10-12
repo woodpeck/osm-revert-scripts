@@ -1,5 +1,7 @@
 const $items = document.getElementById('items');
 
+const $criticalChangesetControls = [];
+
 const numberGroupWidths = new Map();
 for (const $number of $items.querySelectorAll('[data-number]')) {
     const group = $number.dataset.number;
@@ -49,6 +51,7 @@ const $widgetVisibilityControls = [false, true].map(isCompact => widgetData.map(
             $widget.hidden = !$checkbox.checked;
         }
     };
+    $criticalChangesetControls.push($checkbox);
     return $checkbox;
 }));
 
@@ -57,9 +60,12 @@ const $globalDisclosureButtons = [false, true].map(isCompact => {
     $button.textContent = !isCompact ? `+` : `−`;
     $button.title = !isCompact ? `expand all` : `collapse all`;
     $button.onclick = () => {
-        disableVisibilityControls(true);
+        for (const $control of $criticalChangesetControls) {
+            $control.disabled = true;
+        }
         requestAnimationFrame(time => walker($items.firstElementChild, time));
     };
+    $criticalChangesetControls.push($button);
     return $button;
 
     function walker($item, time) {
@@ -73,7 +79,9 @@ const $globalDisclosureButtons = [false, true].map(isCompact => {
         if ($item) {
             requestAnimationFrame(time => walker($item, time));
         } else {
-            disableVisibilityControls(false);
+            for (const $control of $criticalChangesetControls) {
+                $control.disabled = false;
+            }
         }
     }
 });
@@ -345,17 +353,6 @@ const $footer = document.createElement('footer');
     $footer.append(` `, $tool);
 }
 document.body.append($footer);
-
-function disableVisibilityControls(disabled) {
-    for (const $button of $globalDisclosureButtons) {
-        $button.disabled = disabled;
-    }
-    for (const $modeControls of $widgetVisibilityControls) {
-        for (const $checkbox of $modeControls) {
-            $checkbox.disabled = disabled;
-        }
-    }
-}
 
 function updateItemDisclosure($item) {
     const isCompact = $item.classList.contains('compact');
