@@ -7,7 +7,11 @@ for (const $number of $items.querySelectorAll('[data-number]')) {
 }
 {
     const $style = document.createElement('style');
-    $style.textContent = [...numberGroupWidths].map(([group, width]) => `[data-number="${group}"] { min-width: ${width}ch }\n`).join('');
+    const changesetsCount = $items.querySelectorAll('li.changeset').length;
+    $style.textContent = (
+        `:root { --changesets-count-width: ${String(changesetsCount).length}ch }` +
+        [...numberGroupWidths].map(([group, width]) => `[data-number="${group}"] { min-width: ${width}ch }\n`).join('')
+    );
     document.head.append($style);
 }
 

@@ -349,11 +349,7 @@ sub list
         }
         elsif ($1 eq "style")
         {
-            print $fh
-                "<style>\n" .
-                ":root {\n" .
-                "    --changesets-count-width: ".length(scalar @changeset_items)."ch;\n" .
-                "}\n\n";
+            print $fh "<style>\n";
             open_asset(\$fh_asset, "list.css");
             print $fh $_ while <$fh_asset>;
             close $fh_asset;
@@ -362,8 +358,7 @@ sub list
                 my $width = sprintf "%.2f", 6.5 - $_ / 2;
                 print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
             }
-            print $fh
-                "</style>\n";
+            print $fh "</style>\n";
         }
         elsif ($1 eq "items")
         {
