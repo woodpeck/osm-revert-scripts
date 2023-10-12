@@ -33,7 +33,7 @@ $separatorSelect.append(
 );
 $separatorSelect.oninput = () => {
     for (const $separator of $items.querySelectorAll('li.separator')) {
-        $separator.remove();
+        removeElementWithWhitespaceAround($separator);
     }
     const size = Number($separatorSelect.value);
     if (!size) return;
@@ -66,7 +66,7 @@ $separatorSelect.oninput = () => {
         const $separator = document.createElement('li');
         $separator.classList.add('separator');
         $separator.append($selector,` `,$time);
-        $item.before($separator);
+        $item.before($separator,`\n`);
     }
     addCount();
     updateSelection();
@@ -264,9 +264,9 @@ const $header = document.createElement('header');
             }
             $itemsToSort.push([sortKey, $item]);
         }
-        for (const $item of $itemsToRemove) $item.remove();
+        for (const $item of $itemsToRemove) removeElementWithWhitespaceAround($item);
         $itemsToSort.sort(([a], [b]) => a > b);
-        for (const [,$item] of $itemsToSort) $items.prepend($item);
+        for (const [,$item] of $itemsToSort) $items.prepend($item,`\n`);
     };
     $criticalChangesetControls.push($sortSelect);
     $tool.append($sortSelect);
@@ -532,4 +532,16 @@ async function openRcPath($button, rcPath) {
         $button.classList.remove('error');
         $button.title = '';
     }
+}
+
+function removeElementWithWhitespaceAround($e) {
+    if (isWhitespaceNode($e.previousSibling)) {
+        $e.previousSibling.remove()
+    } else if (isWhitespaceNode($e.nextSibling)) {
+        $e.nextSibling.remove()
+    }
+    $e.remove()
+}
+function isWhitespaceNode($s) {
+    return Boolean($s?.nodeType==document.TEXT_NODE && $s.textContent.match(/^\s+$/));
 }
