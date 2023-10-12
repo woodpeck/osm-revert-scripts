@@ -218,28 +218,13 @@ sub list
         $data = read_changes($changes_dirname, $changes_store_dirname, @ids);
     }
 
-    my $max_id_length = 1;
-    my $max_total_change_count_length = 1;
-    my %max_change_counts_length = ();
-    foreach my $o ("a", "c", "m", "d")
-    {
-        foreach my $e ("a", "n", "w", "r")
-        {
-            $max_change_counts_length{"${o}${e}"} = 1;
-        }
-    }
-    my $max_target_exact_count_length = 1;
-    my $max_target_upper_count_length = 1;
-
     my @changeset_items = ();
     foreach my $id (@ids)
     {
         my $changeset = $changesets->{$id};
-        update_max_length(\$max_id_length, $id);
         my $time = time2isoz($changeset->{created_at_timestamp});
         chop $time;
 
-        update_max_length(\$max_total_change_count_length, $changeset->{changes_count});
         my %change_counts = ();
         my ($target_exact_count, $target_upper_count);
 
@@ -275,13 +260,6 @@ sub list
                     }
                 }
             }
-            foreach my $o ("a", "c", "m", "d")
-            {
-                foreach my $e ("a", "n", "w", "r")
-                {
-                    update_max_length(\$max_change_counts_length{"${o}${e}"}, $change_counts{"${o}${e}"});
-                }
-            }
         }
         elsif ($changeset->{changes_count} == 0)
         {
@@ -290,37 +268,40 @@ sub list
 
         if (defined($target_upper_count))
         {
-            update_max_length(\$max_target_upper_count_length, $target_upper_count);
             $target_exact_count = 0 if ($target_upper_count == 0);
         }
 
         my $item =
             "<li class=changeset>" .
-            "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."'>".html_escape($id)."</a>" .
+            "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."' data-number=id>".html_escape($id)."</a>" .
             " <time datetime='".html_escape($changeset->{created_at})."'>".html_escape($time)."</time>";
         if ($need_changes)
         {
             $item .= " <span class='changes changes-total'>" . get_changes_widget_parts(
-                ["📝", "total number of changes", $changeset->{changes_count}],
-                ["⬇", "number of downloaded changes", $change_counts{"aa"} // 0, "oa ea"]
+                ["📝", "total number of changes", "changes-total", $changeset->{changes_count}],
+                ["⬇", "number of downloaded changes", "changes-downloaded", $change_counts{"aa"} // 0, "oa ea"]
             ) . "</span>";
         }
         else
         {
             $item .= " <span class='changes changes-total'>" . get_changes_widget_parts(
-                ["📝", "total number of changes", $changeset->{changes_count}]
+                ["📝", "total number of changes", "changes-total", $changeset->{changes_count}]
             ) . "</span>";
         }
         if ($with_operation_counts)
         {
-            my @parts = map { my $o = substr($_, 0, 1); ["", "number of $_ changes", $change_counts{"${o}a"}, "o${o} ea"] } ("create", "modify", "delete");
+            my @parts = map { my $o = substr($_, 0, 1);
+                ["", "number of $_ changes", "changes-o${o}-ea", $change_counts{"${o}a"}, "o${o} ea"]
+            } ("create", "modify", "delete");
             $item .= " <span class='changes changes-operation'>" . get_changes_widget_parts(
                 ["📝", "number of changes by operation"], @parts
             ) . "</span>";
         }
         if ($with_element_counts)
         {
-            my @parts = map { my $e = substr($_, 0, 1); ["$e:", "number of $_ changes", $change_counts{"a${e}"}, "oa e${e}"] } ("node", "way", "relation");
+            my @parts = map { my $e = substr($_, 0, 1);
+                ["$e:", "number of $_ changes", "changes-oa-e${e}", $change_counts{"a${e}"}, "oa e${e}"]
+            } ("node", "way", "relation");
             $item .= " <span class='changes changes-element'>" . get_changes_widget_parts(
                 ["📝", "number of changes by element type"], @parts
             ) . "</span>";
@@ -335,7 +316,7 @@ sub list
                 foreach my $operation ("create", "modify", "delete")
                 {
                     my $o = substr($operation, 0, 1);
-                    push @parts, ["", "number of $operation $element changes", $change_counts{"${o}${e}"}, "o${o} e${e}"];
+                    push @parts, ["", "number of $operation $element changes", "changes-o${o}-e${e}", $change_counts{"${o}${e}"}, "o${o} e${e}"];
                 }
             }
             $item .= " <span class='changes changes-operation-x-element'>" . get_changes_widget_parts(@parts) . "</span>";
@@ -343,8 +324,8 @@ sub list
         if (defined($target_delete_tag))
         {
             $item .= " <span class='changes changes-target'>" . get_changes_widget_parts(
-                ["🎯", "number of target changes", $target_exact_count, "exact"],
-                ["≤", "upper bound of number of target changes", $target_upper_count, "upper"],
+                ["🎯", "number of target changes", "changes-target-exact", $target_exact_count, "exact"],
+                ["≤", "upper bound of number of target changes", "changes-target-upper", $target_upper_count, "upper"],
             ) . "</span>";
         }
         $item .=
@@ -372,31 +353,14 @@ sub list
                 "<style>\n" .
                 ":root {\n" .
                 "    --changesets-count-width: ".length(scalar @changeset_items)."ch;\n" .
-                "    --id-width: ${max_id_length}ch;\n" .
                 "}\n\n";
             open_asset(\$fh_asset, "list.css");
             print $fh $_ while <$fh_asset>;
             close $fh_asset;
-            for (0 .. $max_int_log_area)
+            for (0 .. $max_int_log_area) # TODO move to js
             {
                 my $width = sprintf "%.2f", 6.5 - $_ / 2;
                 print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
-            }
-            print $fh "#items li.changeset .changes > .part > span { min-width: ".$max_total_change_count_length."ch; }\n";
-            if ($with_operation_counts || $with_element_counts)
-            {
-                foreach my $o ("a", "c", "m", "d")
-                {
-                    foreach my $e ("a", "n", "w", "r")
-                    {
-                        print $fh "#items li.changeset .changes > .part.o${o}.e${e} > span { min-width: ".$max_change_counts_length{"${o}${e}"}."ch; }\n";
-                    }
-                }
-            }
-            if ($target_delete_tag)
-            {
-                print $fh "#items li.changeset .changes-target > .part.exact > span { min-width: ".$max_target_exact_count_length."ch; }\n";
-                print $fh "#items li.changeset .changes-target > .part.upper > span { min-width: ".$max_target_upper_count_length."ch; }\n";
             }
             print $fh
                 "</style>\n";
@@ -409,8 +373,7 @@ sub list
         {
             print $fh
                 "<script>\n" .
-                "const weburl = '".OsmApi::weburl()."';\n" .
-                "const maxIdLength = $max_id_length;\n\n";
+                "const weburl = '".OsmApi::weburl()."';\n\n";
             open_asset(\$fh_asset, "list.js");
             print $fh $_ while <$fh_asset>;
             close $fh_asset;
@@ -427,14 +390,14 @@ sub list
 sub get_changes_widget_parts
 {
     return join "", (map {
-        my ($text, $title, $number, $extra_classes) = @$_;
+        my ($text, $title, $number_group, $number, $extra_classes) = @$_;
         my @classes = ("part");
         push @classes, $extra_classes if defined($extra_classes);
         push @classes, "empty" if !defined($number) || $number == 0;
         my $class = scalar(@classes) == 1 ? $classes[0] : "'".join(" ", @classes)."'";
         "<span class=$class title='".html_escape($title)."'>".html_escape($text).(
-            scalar(@$_) > 2
-            ? "<span>".html_escape($number // "?")."</span>"
+            defined($number_group)
+            ? "<span data-number=$number_group>".html_escape($number // "?")."</span>"
             : ""
         )."</span>";
     } @_);
@@ -701,12 +664,6 @@ sub format_to_significant_figures
         $s .= "0" x $p if $p >= 0;
         return $s;
     }
-}
-
-sub update_max_length
-{
-    my ($max_length_ref, $value) = @_;
-    $$max_length_ref = length($value) if length($value) > $$max_length_ref;
 }
 
 1;

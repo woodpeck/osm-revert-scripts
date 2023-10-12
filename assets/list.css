@@ -113,12 +113,9 @@ header, footer {
     font-family: monospace;
     white-space: nowrap;
 }
-#items li.changeset :where(:not([hidden])):where(a, .changes > .part > span, .area) {
+#items li.changeset :where(:not([hidden])):where(a, .changes > .part > [data-number], .area) {
     display: inline-block;
     text-align: right;
-}
-#items li.changeset a {
-    min-width: var(--id-width);
 }
 #items li.changeset a .pad {
     user-select: none;
@@ -145,7 +142,7 @@ header, footer {
 #items li.changeset .changes > .part.empty {
     color: #888;
 }
-#items li.changeset .changes > .part > span {
+#items li.changeset .changes > .part > [data-number] {
     margin-inline: .0625rem;
     padding-inline: .0625rem;
 }

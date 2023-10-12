@@ -1,5 +1,16 @@
 const $items = document.getElementById('items');
 
+const numberGroupWidths = new Map();
+for (const $number of $items.querySelectorAll('[data-number]')) {
+    const group = $number.dataset.number;
+    numberGroupWidths.set(group, Math.max(numberGroupWidths.get(group) ?? 0, $number.textContent.length));
+}
+{
+    const $style = document.createElement('style');
+    $style.textContent = [...numberGroupWidths].map(([group, width]) => `[data-number="${group}"] { min-width: ${width}ch }\n`).join('');
+    document.head.append($style);
+}
+
 const changesWidgetData = [];
 if ($items.querySelector('.changes-operation')) {
     changesWidgetData.push(['.changes-operation', `create/modify/delete changes`, `📝(c/m/d)`]);
@@ -82,6 +93,7 @@ $selectedCountOutput.textContent = 0;
 for (const $item of $items.querySelectorAll('li.changeset')) {
     const $a = $item.querySelector('a');
     if ($a) {
+        const maxIdLength = numberGroupWidths.get('id');
         const id = $a.textContent;
         $item.dataset.id = id;
         $item.id = `changeset-` + id;
