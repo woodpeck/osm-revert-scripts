@@ -268,8 +268,16 @@ const $header = document.createElement('header');
             $itemsToSort.push([sortKey, $item]);
         }
         for (const $item of $itemsToRemove) removeElementWithWhitespaceAround($item);
-        $itemsToSort.sort(([a], [b]) => a > b);
-        for (const [,$item] of $itemsToSort) $items.prepend($item,`\n`);
+        $itemsToSort.sort(([a], [b]) => a < b);
+        let $previousItem;
+        for (const [,$item] of $itemsToSort) {
+            if ($previousItem) {
+                $previousItem.after(`\n`, $item);
+            } else {
+                $items.prepend($item, `\n`);
+            }
+            $previousItem = $item;
+        }
     };
     $criticalChangesetControls.push($sortSelect);
     $tool.append($sortSelect);
