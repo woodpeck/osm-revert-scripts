@@ -176,6 +176,34 @@ const $header = document.createElement('header');
 {
     const $tool = document.createElement('span');
     $tool.classList.add('tool');
+    const $sortSelect = document.createElement('select');
+    $sortSelect.append(
+        ...['date', ...numberGroupWidths.keys()].map(k => new Option(`Sort by ${k}`, k))
+    );
+    $sortSelect.oninput = () => {
+        const numberSelector = `[data-number="${$sortSelect.value}"]`;
+        const $itemsToRemove = [];
+        const $itemsToSort = [];
+        for (const $item of $items.children) {
+            if (!$item.classList.contains('changeset')) {
+                $itemsToRemove.push($item);
+                continue;
+            }
+            const $number = $item.querySelector(numberSelector);
+            if (!$number) continue;
+            $itemsToSort.push([Number($number.textContent), $item]);
+        }
+        for (const $item of $itemsToRemove) $item.remove();
+        $itemsToSort.sort(([a], [b]) => a > b);
+        for (const [,$item] of $itemsToSort) $items.prepend($item);
+    };
+    $criticalChangesetControls.push($sortSelect);
+    $tool.append($sortSelect);
+    $header.append($tool);
+}
+{
+    const $tool = document.createElement('span');
+    $tool.classList.add('tool');
     const separatorSizes = [
         // 1234567890123456789
         // 2020-01-02T03:04:05Z
