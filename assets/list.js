@@ -1,20 +1,33 @@
-const $items = document.getElementById('items');
+const maxAreaBucket = 11;
 
+const $items = document.getElementById('items');
 const $criticalChangesetControls = [];
 
 const numberGroupWidths = new Map();
-for (const $number of $items.querySelectorAll('[data-number]')) {
-    const group = $number.dataset.number;
-    numberGroupWidths.set(group, Math.max(numberGroupWidths.get(group) ?? 0, $number.textContent.length));
-}
 {
+    for (const $number of $items.querySelectorAll('[data-number]')) {
+        const group = $number.dataset.number;
+        numberGroupWidths.set(group, Math.max(numberGroupWidths.get(group) ?? 0, $number.textContent.length));
+    }
     const $style = document.createElement('style');
     const changesetsCount = $items.querySelectorAll('li.changeset').length;
     $style.textContent = (
         `:root { --changesets-count-width: ${String(changesetsCount).length}ch }` +
         [...numberGroupWidths].map(([group, width]) => `[data-number="${group}"] { min-width: ${width}ch }\n`).join('')
     );
+    for (let i = 0; i <= maxAreaBucket; i++) {
+        const width = (6.5 - i / 2).toFixed(1);
+        $style.textContent += `#items li.changeset .area[data-bucket='${i}']:before { width: ${width}ch; }\n`;
+    }
     document.head.append($style);
+    for (const $area of $items.querySelectorAll('li.changeset .area')) {
+        const logArea = $area.dataset.logValue;
+        if (logArea == null) continue;
+        let bucket = Math.floor(-logArea);
+        if (bucket < 0) bucket = 0;
+        if (bucket > maxAreaBucket) bucket = maxAreaBucket;
+        $area.dataset.bucket = bucket;
+    }
 }
 
 const separatorSizes = [
@@ -239,7 +252,7 @@ const $header = document.createElement('header');
     $tool.classList.add('tool');
     const $sortSelect = document.createElement('select');
     $sortSelect.append(
-        ...['time', ...numberGroupWidths.keys()].map(k => new Option(`Sort by ${k}`, k))
+        ...['time', ...numberGroupWidths.keys(), 'area'].map(k => new Option(`Sort by ${k}`, k))
     );
     $sortSelect.oninput = () => {
         $separatorSelect.value = 0;
@@ -259,11 +272,21 @@ const $header = document.createElement('header');
                 const $time = $item.querySelector('time');
                 if (!$time) continue;
                 sortKey = $time.dateTime;
+            } else if ($sortSelect.value == 'area') {
+                const $area = $item.querySelector('.area');
+                if (!$area) continue;
+                if ($area.classList.contains('empty')) {
+                    sortKey = -1e20;
+                } else if ($area.classList.contains('zero')) {
+                    sortKey = -1e10;
+                } else {
+                    sortKey = Number($area.dataset.logValue);
+                }
             } else {
                 const $number = $item.querySelector(numberSelector);
                 if (!$number) continue;
                 sortKey = Number($number.textContent);
-                if (isNaN(sortKey)) sortKey = -1;
+                if (isNaN(sortKey)) sortKey = -Infinity;
             }
             $itemsToSort.push([sortKey, $item]);
         }

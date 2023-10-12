@@ -16,8 +16,6 @@ use OsmApi;
 use OsmData;
 use Changeset;
 
-our $max_int_log_area = 11;
-
 # -----------------------------------------------------------------------------
 # Converts date string from script arguments to timestamp
 # Returns undefined if date format is not recognized
@@ -353,11 +351,6 @@ sub list
             open_asset(\$fh_asset, "list.css");
             print $fh $_ while <$fh_asset>;
             close $fh_asset;
-            for (0 .. $max_int_log_area) # TODO move to js
-            {
-                my $width = sprintf "%.2f", 6.5 - $_ / 2;
-                print $fh "#items li.changeset .area[data-log-size='$_']:before { width: ${width}ch; }\n";
-            }
             print $fh "</style>\n";
         }
         elsif ($1 eq "items")
@@ -401,7 +394,7 @@ sub get_changes_widget_parts
 sub get_area_widget
 {
     my ($min_lat, $max_lat, $min_lon, $max_lon) = @_;
-    my ($area, $log_area, $int_log_area);
+    my ($area, $log_area);
 
     if (
         defined($min_lat) && defined($max_lat) &&
@@ -410,10 +403,7 @@ sub get_area_widget
     {
         $area = (sin(deg2rad($max_lat)) - sin(deg2rad($min_lat))) * ($max_lon - $min_lon) / 720; # 1 = entire Earth surface
         if ($area > 0) {
-            $log_area = sprintf "%.2f", log($area) / log(10);
-            $int_log_area = -int($log_area);
-            $int_log_area = 0 if $int_log_area < 0;
-            $int_log_area = $max_int_log_area if $int_log_area > $max_int_log_area;
+            $log_area = log($area) / log(10);
         }
     }
 
@@ -427,7 +417,7 @@ sub get_area_widget
     }
     else
     {
-        return " <span class=area title='-log10(bbox area); ".html_escape(earth_area_with_units($area))."' data-log-size=$int_log_area>".html_escape($log_area)."</span>";
+        return " <span class=area title='-log10(bbox area); ".html_escape(earth_area_with_units($area))."' data-log-value='".html_escape($log_area)."'>".html_escape(sprintf "%.2f", $log_area)."</span>";
     }
 }
 
