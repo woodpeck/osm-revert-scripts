@@ -253,7 +253,9 @@ const $header = document.createElement('header');
                 continue;
             }
             let sortKey;
-            if ($sortSelect.value == 'time') {
+            if ($sortSelect.value == 'id') {
+                sortKey = Number($item.dataset.id);
+            } else if ($sortSelect.value == 'time') {
                 const $time = $item.querySelector('time');
                 if (!$time) continue;
                 sortKey = $time.dateTime;
