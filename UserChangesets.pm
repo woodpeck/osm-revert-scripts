@@ -291,7 +291,7 @@ sub list
         if ($with_operation_counts)
         {
             my @parts = map { my $o = substr($_, 0, 1);
-                ["", "number of $_ changes", "changes-o${o}-ea", $change_counts{"${o}a"}, "o${o} ea"]
+                ["", "number of $_ changes", "changes-$_", $change_counts{"${o}a"}, "o${o} ea"]
             } ("create", "modify", "delete");
             $item .= " <span class='changes changes-operation'>" . get_changes_widget_parts(
                 ["📝", "number of changes by operation"], @parts
@@ -300,7 +300,7 @@ sub list
         if ($with_element_counts)
         {
             my @parts = map { my $e = substr($_, 0, 1);
-                ["$e:", "number of $_ changes", "changes-oa-e${e}", $change_counts{"a${e}"}, "oa e${e}"]
+                ["$e:", "number of $_ changes", "changes-$_", $change_counts{"a${e}"}, "oa e${e}"]
             } ("node", "way", "relation");
             $item .= " <span class='changes changes-element'>" . get_changes_widget_parts(
                 ["📝", "number of changes by element type"], @parts
@@ -316,7 +316,7 @@ sub list
                 foreach my $operation ("create", "modify", "delete")
                 {
                     my $o = substr($operation, 0, 1);
-                    push @parts, ["", "number of $operation $element changes", "changes-o${o}-e${e}", $change_counts{"${o}${e}"}, "o${o} e${e}"];
+                    push @parts, ["", "number of $operation $element changes", "changes-$operation-$element", $change_counts{"${o}${e}"}, "o${o} e${e}"];
                 }
             }
             $item .= " <span class='changes changes-operation-x-element'>" . get_changes_widget_parts(@parts) . "</span>";
