@@ -523,7 +523,7 @@ sub read_changes
     my $bytes_parsed = 0;
     my $quit = 0;
     local $SIG{INT} = sub {
-        print STDERR "will interrupt after parsing and storing the current changes file";
+        print STDERR "will interrupt after parsing and storing the current changes file\n";
         $quit = 1;
     };
     foreach my $id (@ids_to_parse)
@@ -590,9 +590,14 @@ sub write_previous
     make_path $previous_dirname;
     my $new_data = OsmData::blank_data();
     my $have_changes_to_store = 0;
+    my $quit = 0;
+    local $SIG{INT} = sub {
+        print STDERR "will interrupt after downloading, parsing and storing the current batch of elements\n";
+        $quit = 1;
+    };
     while (1)
     {
-        # TODO interrupt w/ partial write
+        last if $quit;
         my $selected_queue_number = 0;
         my $selected_queue_remaining_count = $changeset_remaining_in_queue_counts[0];
         for my $e (1..2)
