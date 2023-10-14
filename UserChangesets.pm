@@ -167,7 +167,13 @@ sub download_previous
     my ($metadata_dirname, $changes_dirname, $previous_dirname, $store_dirname, $from_timestamp, $to_timestamp) = @_;
 
     my $changesets = read_metadata($metadata_dirname, $from_timestamp, $to_timestamp);
-    my @ids = sort {$changesets->{$b}{created_at_timestamp} <=> $changesets->{$a}{created_at_timestamp}} keys %$changesets;
+    my @ids_of_missing = grep { !-f "$previous_dirname/$_.osm" } keys %$changesets;
+    if (scalar @ids_of_missing == 0)
+    {
+        print "all previous osm files already present\n";
+        return;
+    }
+    my @ids = sort {$changesets->{$b}{created_at_timestamp} <=> $changesets->{$a}{created_at_timestamp}} @ids_of_missing;
     my $data = read_changes($changes_dirname, $store_dirname, @ids);
     write_previous($previous_dirname, $store_dirname, $data, @ids);
 }
@@ -545,7 +551,7 @@ sub write_previous
 
     OsmData::read_store_files("$store_dirname/previous", $data) if defined($store_dirname);
     my %data_to_write = ();
-    foreach my $id (@ids) # TODO skip already written files
+    foreach my $id (@ids)
     {
         my @changes = @{$data->{changesets}{$id}[OsmData::CHANGES]};
         my $eivs_in_changeset = [];
