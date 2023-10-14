@@ -22,6 +22,7 @@ use Digest::SHA qw(sha256);
 our $prefs;
 our $prefs_eol = 1;
 our $ua;
+our $agent;
 our $dummy;
 our $noversion;
 our $cookie_jar;
@@ -79,7 +80,8 @@ INIT
     my $revision = '$Revision: 30253 $';
     my $revno = 0;
     $revno = $1 if ($revision =~ /:\s*(\d+)/);
-    $ua->agent("osmtools/$revno ($^O, ".$prefs->{instance}.")");
+    $agent = "osmtools/$revno ($^O, ".$prefs->{instance}.")";
+    $ua->agent($agent);
     $ua->timeout(600);
     push @{$ua->requests_redirectable}, 'POST';
     push @{$ua->requests_redirectable}, 'PUT';

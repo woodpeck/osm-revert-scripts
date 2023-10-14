@@ -213,7 +213,7 @@ sub write_osm_file
 
     open my $fh, '>:utf8', $filename or die $!;
     print $fh '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-    print $fh '<osm version="0.6" generator="osm-habat">'."\n";
+    print $fh '<osm version="0.6" generator="'.xml_escape($OsmApi::agent).'">'."\n";
     foreach (@elements)
     {
         my ($e, $i, $v, $v2) = @$_;
