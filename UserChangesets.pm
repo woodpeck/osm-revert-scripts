@@ -618,15 +618,18 @@ sub write_previous
                 last;
             }
         }
-        my $element = OsmData::element_string($selected_queue_number);
-        $query = $element."s?".$element."s=".$query;
-        my $resp = OsmApi::get("$query&show_redactions=true", "", 1);
-        if (!$resp->is_success)
+        if (length($query) > 0)
         {
-            die "previous element versions cannot be retrieved: ".$resp->status_line."\n"; # TODO bisection fallback, esp. for redacted elements w/o moderator role
+            my $element = OsmData::element_string($selected_queue_number);
+            $query = $element."s?".$element."s=".$query;
+            my $resp = OsmApi::get("$query&show_redactions=true", "", 1);
+            if (!$resp->is_success)
+            {
+                die "previous element versions cannot be retrieved: ".$resp->status_line."\n"; # TODO bisection fallback, esp. for redacted elements w/o moderator role
+            }
+            OsmData::parse_elements($new_data, $resp->content());
+            # TODO merge chunk into both to-write data and full data
         }
-        OsmData::parse_elements($new_data, $resp->content());
-        # TODO merge chunk into both to-write data and full data
         print "TODO write changesets: " . join(",", @changesets_ready_for_writing) . "\n";
     }
     if (defined($store_dirname))
