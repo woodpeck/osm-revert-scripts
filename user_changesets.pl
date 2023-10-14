@@ -10,7 +10,7 @@ use UserChangesets;
 my ($username, $uid);
 my $from_date = "2001-01-01";
 my $to_date;
-my ($dirname, $metadata_dirname, $changes_dirname, $store_dirname);
+my ($dirname, $metadata_dirname, $changes_dirname, $previous_dirname, $store_dirname);
 my $output_filename;
 my $operation_counts = 0;
 my $element_counts = 0;
@@ -25,6 +25,7 @@ my $correct_options = GetOptions(
     "directory|dirname|output=s" => \$dirname,
     "metadata-directory|metadata-dirname=s" => \$metadata_dirname,
     "changes-directory|changes-dirname=s" => \$changes_dirname,
+    "previous-directory|previous-dirname=s" => \$previous_dirname,
     "store-directory|store-dirname=s" => \$store_dirname,
     "output-filename=s" => \$output_filename,
     "operation-counts!" => \$operation_counts,
@@ -58,17 +59,22 @@ if (defined($dirname))
 {
     $metadata_dirname //= "$dirname/metadata";
     $changes_dirname //= "$dirname/changes";
+    $previous_dirname //= "$dirname/previous";
     $store_dirname //= "$dirname/.store";
     $output_filename //= "$dirname/index.html";
 }
 
-if ($correct_options && ($ARGV[0] eq "download") && ($ARGV[1] eq "metadata") || ($ARGV[1] eq "changes"))
+if ($correct_options && ($ARGV[0] eq "download") && ($ARGV[1] eq "metadata") || ($ARGV[1] eq "changes") || ($ARGV[1] eq "previous"))
 {
     die "parameters required: one of (display_name, uid)" unless defined($user_arg) && defined($dirname);
     UserChangesets::download_metadata($metadata_dirname, $user_arg, $from_timestamp, $to_timestamp);
-    if ($ARGV[1] eq "changes")
+    if (($ARGV[1] eq "changes") || ($ARGV[1] eq "previous"))
     {
         UserChangesets::download_changes($metadata_dirname, $changes_dirname, $from_timestamp, $to_timestamp);
+        if ($ARGV[1] eq "previous")
+        {
+            UserChangesets::download_previous($metadata_dirname, $changes_dirname, $previous_dirname, $store_dirname, $from_timestamp, $to_timestamp);
+        }
     }
     exit;
 }
@@ -97,8 +103,9 @@ if ($correct_options && ($ARGV[0] eq "list"))
 
 print <<EOF;
 Usage:
-  $0 download metadata <options>
-  $0 download changes <options>
+  $0 download metadata <options>         download changeset metadata like dates, tags, bboxes
+  $0 download changes <options>          download modified elements in .osc format
+  $0 download previous <options>         download previous versions of modified elements
   $0 count <options>                     report number of downloaded changesets
   $0 list <options>                      generate a html file with a list of changesets
 
@@ -110,6 +117,7 @@ options:
   --directory <directory>                derived from --username or --uid if not provided
   --metadata-directory <directory>       derived from --directory if not provided
   --changes-directory <directory>        derived from --directory if not provided
+  --previous-directory <directory>       derived from --directory if not provided
   --store-directory <directory>          derived from --directory if not provided
   --output-filename <filename>           derived from --directory if not provided
   --operation-counts                     for list command: show create/modify/delete counts
