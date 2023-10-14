@@ -169,97 +169,7 @@ sub download_previous
     my $changesets = read_metadata($metadata_dirname, $from_timestamp, $to_timestamp);
     my @ids = sort {$changesets->{$b}{created_at_timestamp} <=> $changesets->{$a}{created_at_timestamp}} keys %$changesets;
     my $data = read_changes($changes_dirname, $store_dirname, @ids);
-    # TODO read previous data
-
-    my %data_to_write = ();
-    foreach my $id (@ids)
-    {
-        my @changes = @{$data->{changesets}{$id}[OsmData::CHANGES]};
-        my $eivs_in_changeset = [];
-        foreach (@changes)
-        {
-            my ($e, $i, $v) = @$_;
-            $eivs_in_changeset->[$e]{$i}{$v} = 1;
-        }
-        my @eivs_to_write = ();
-        foreach (@changes)
-        {
-            my ($e, $i, $v) = @$_;
-            next if $v <= 1;
-            my $w = $v - 1;
-            next if exists $eivs_in_changeset->[$e]{$i}{$w};
-            push @eivs_to_write, [$e, $i, $w];
-        }
-        $data_to_write{$id} = \@eivs_to_write;
-    }
-
-    my @download_queues = ([], [], []);
-    my @changeset_remaining_in_queue_counts = (scalar @ids) x 3;
-    my %changeset_element_types_remaining = ();
-    foreach my $id (@ids)
-    {
-        $changeset_element_types_remaining{$id} = 0b111;
-        foreach (@{$data_to_write{$id}})
-        {
-            my ($e, $i, $v) = @$_;
-            next if exists $data->{elements}[$e]{$i}{$v};
-            push @{$download_queues[$e]}, [$i, $v];
-        }
-        push @{$download_queues[$_]}, [$id, 0] foreach (0..2);
-    }
-
-    my $new_data = OsmData::blank_data();
-    while (1)
-    {
-        # TODO interrupt w/ partial write
-        my $selected_queue_number = 0;
-        my $selected_queue_remaining_count = $changeset_remaining_in_queue_counts[0];
-        for my $e (1..2)
-        {
-            next if $selected_queue_remaining_count >= $changeset_remaining_in_queue_counts[$e];
-            $selected_queue_number = $e;
-            $selected_queue_remaining_count = $changeset_remaining_in_queue_counts[$e];
-        }
-        last if $selected_queue_remaining_count <= 0;
-        my @changesets_ready_for_writing = ();
-        my $selected_queue = $download_queues[$selected_queue_number];
-        my $query = "";
-        while (my $queue_item = shift @$selected_queue)
-        {
-            my ($i, $v) = @$queue_item;
-            if ($v == 0)
-            {
-                $changeset_remaining_in_queue_counts[$selected_queue_number]--;
-                $changeset_element_types_remaining{$i} &= ~(1 << $selected_queue_number);
-                if ($changeset_element_types_remaining{$i} == 0)
-                {
-                    push @changesets_ready_for_writing, $i;
-                }
-                next;
-            }
-            $query .= "," if length($query) > 0;
-            $query .= $i."v".$v;
-            if (length($query) > 7500)
-            {
-                unshift @$selected_queue, $queue_item;
-                last;
-            }
-        }
-        my $element = OsmData::element_string($selected_queue_number);
-        $query = $element."s?".$element."s=".$query;
-        my $resp = OsmApi::get("$query&show_redactions=true", "", 1);
-        if (!$resp->is_success)
-        {
-            die "previous element versions cannot be retrieved: ".$resp->status_line."\n"; # TODO bisection fallback, esp. for redacted elements w/o moderator role
-        }
-        OsmData::parse_elements($new_data, $resp->content());
-        # TODO merge chunk into both to-write data and full data
-        print "TODO write changesets: " . join(",", @changesets_ready_for_writing) . "\n";
-    }
-    if (defined($store_dirname))
-    {
-        OsmData::write_store_file($store_dirname, "previous", $new_data);
-    }
+    write_previous($previous_dirname, $store_dirname, $data, @ids);
 }
 
 # -----------------------------------------------------------------------------
@@ -626,6 +536,102 @@ sub read_changes
     die "interrupting" if $quit;
     OsmData::merge_data($data, $new_data);
     return $data;
+}
+
+sub write_previous
+{
+    my ($previous_dirname, $store_dirname, $data, @ids) = @_;
+
+    # TODO read previous data
+    my %data_to_write = ();
+    foreach my $id (@ids)
+    {
+        my @changes = @{$data->{changesets}{$id}[OsmData::CHANGES]};
+        my $eivs_in_changeset = [];
+        foreach (@changes)
+        {
+            my ($e, $i, $v) = @$_;
+            $eivs_in_changeset->[$e]{$i}{$v} = 1;
+        }
+        my @eivs_to_write = ();
+        foreach (@changes)
+        {
+            my ($e, $i, $v) = @$_;
+            next if $v <= 1;
+            my $w = $v - 1;
+            next if exists $eivs_in_changeset->[$e]{$i}{$w};
+            push @eivs_to_write, [$e, $i, $w];
+        }
+        $data_to_write{$id} = \@eivs_to_write;
+    }
+
+    my @download_queues = ([], [], []);
+    my @changeset_remaining_in_queue_counts = (scalar @ids) x 3;
+    my %changeset_element_types_remaining = ();
+    foreach my $id (@ids)
+    {
+        $changeset_element_types_remaining{$id} = 0b111;
+        foreach (@{$data_to_write{$id}})
+        {
+            my ($e, $i, $v) = @$_;
+            next if exists $data->{elements}[$e]{$i}{$v};
+            push @{$download_queues[$e]}, [$i, $v];
+        }
+        push @{$download_queues[$_]}, [$id, 0] foreach (0..2);
+    }
+
+    my $new_data = OsmData::blank_data();
+    while (1)
+    {
+        # TODO interrupt w/ partial write
+        my $selected_queue_number = 0;
+        my $selected_queue_remaining_count = $changeset_remaining_in_queue_counts[0];
+        for my $e (1..2)
+        {
+            next if $selected_queue_remaining_count >= $changeset_remaining_in_queue_counts[$e];
+            $selected_queue_number = $e;
+            $selected_queue_remaining_count = $changeset_remaining_in_queue_counts[$e];
+        }
+        last if $selected_queue_remaining_count <= 0;
+        my @changesets_ready_for_writing = ();
+        my $selected_queue = $download_queues[$selected_queue_number];
+        my $query = "";
+        while (my $queue_item = shift @$selected_queue)
+        {
+            my ($i, $v) = @$queue_item;
+            if ($v == 0)
+            {
+                $changeset_remaining_in_queue_counts[$selected_queue_number]--;
+                $changeset_element_types_remaining{$i} &= ~(1 << $selected_queue_number);
+                if ($changeset_element_types_remaining{$i} == 0)
+                {
+                    push @changesets_ready_for_writing, $i;
+                }
+                next;
+            }
+            $query .= "," if length($query) > 0;
+            $query .= $i."v".$v;
+            if (length($query) > 7500)
+            {
+                unshift @$selected_queue, $queue_item;
+                last;
+            }
+        }
+        my $element = OsmData::element_string($selected_queue_number);
+        $query = $element."s?".$element."s=".$query;
+        my $resp = OsmApi::get("$query&show_redactions=true", "", 1);
+        if (!$resp->is_success)
+        {
+            die "previous element versions cannot be retrieved: ".$resp->status_line."\n"; # TODO bisection fallback, esp. for redacted elements w/o moderator role
+        }
+        OsmData::parse_elements($new_data, $resp->content());
+        # TODO merge chunk into both to-write data and full data
+        print "TODO write changesets: " . join(",", @changesets_ready_for_writing) . "\n";
+    }
+    if (defined($store_dirname))
+    {
+        OsmData::write_store_file($store_dirname, "previous", $new_data);
+    }
 }
 
 sub list_osm_filenames
