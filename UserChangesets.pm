@@ -494,7 +494,8 @@ sub read_changes
 {
     my ($changes_dirname, $store_dirname, @ids) = @_;
 
-    my $data = OsmData::read_store_files($store_dirname, "changes");
+    my $data = OsmData::blank_data();
+    OsmData::read_store_files("$store_dirname/changes", $data) if defined($store_dirname);
     my @ids_to_parse = ();
     my $bytes_to_parse = 0;
     foreach my $id (@ids)
@@ -531,7 +532,7 @@ sub read_changes
         $files_parsed++;
     }
     if (defined($store_dirname) && $have_changes_to_store) {
-        OsmData::write_store_file($store_dirname, "changes", $new_data);
+        OsmData::write_store_file("$store_dirname/changes", $new_data);
     }
     die "interrupting" if $quit;
     OsmData::merge_data($data, $new_data);
@@ -542,7 +543,7 @@ sub write_previous
 {
     my ($previous_dirname, $store_dirname, $data, @ids) = @_;
 
-    # TODO read previous data
+    OsmData::read_store_files("$store_dirname/previous", $data) if defined($store_dirname);
     my %data_to_write = ();
     foreach my $id (@ids)
     {
@@ -630,7 +631,7 @@ sub write_previous
     }
     if (defined($store_dirname))
     {
-        OsmData::write_store_file($store_dirname, "previous", $new_data);
+        OsmData::write_store_file("$store_dirname/previous", $new_data);
     }
 }
 

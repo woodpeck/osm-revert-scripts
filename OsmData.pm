@@ -170,31 +170,26 @@ sub parse_common_element_data
 
 sub read_store_files
 {
-    my ($store_dirname, $subdirname) = @_;
+    my ($store_subdirname, $data) = @_;
 
-    my $data = OsmData::blank_data();
-    if (defined($store_dirname)) {
-        foreach my $changes_store_filename (glob qq{"$store_dirname/$subdirname/*"})
-        {
-            print STDERR "reading store file $changes_store_filename\n" if $OsmApi::prefs->{'debug'};
-            my $data_chunk = retrieve $changes_store_filename;
-            OsmData::merge_data($data, $data_chunk);
-        }
+    foreach my $changes_store_filename (glob qq{"$store_subdirname/*"})
+    {
+        print STDERR "reading store file $changes_store_filename\n" if $OsmApi::prefs->{'debug'};
+        my $data_chunk = retrieve $changes_store_filename;
+        OsmData::merge_data($data, $data_chunk);
     }
-
-    return $data;
 }
 
 sub write_store_file
 {
-    my ($store_dirname, $subdirname, $data_chunk) = @_;
+    my ($store_subdirname, $data_chunk) = @_;
 
-    make_path "$store_dirname/$subdirname";
+    make_path $store_subdirname;
     my $fn = "00000000";
-    $fn++ while -e "$store_dirname/$subdirname/$fn";
-    my $new_changes_store_filename = "$store_dirname/$subdirname/$fn";
-    print STDERR "writing store file $new_changes_store_filename\n" if $OsmApi::prefs->{'debug'};
-    store $data_chunk, $new_changes_store_filename;
+    $fn++ while -e "$store_subdirname/$fn";
+    my $changes_store_filename = "$store_subdirname/$fn";
+    print STDERR "writing store file $changes_store_filename\n" if $OsmApi::prefs->{'debug'};
+    store $data_chunk, $changes_store_filename;
 }
 
 1;
