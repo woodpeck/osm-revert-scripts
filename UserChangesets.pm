@@ -545,7 +545,7 @@ sub write_previous
 
     OsmData::read_store_files("$store_dirname/previous", $data) if defined($store_dirname);
     my %data_to_write = ();
-    foreach my $id (@ids)
+    foreach my $id (@ids) # TODO skip already written files
     {
         my @changes = @{$data->{changesets}{$id}[OsmData::CHANGES]};
         my $eivs_in_changeset = [];
@@ -581,6 +581,7 @@ sub write_previous
         push @{$download_queues[$_]}, [$id, 0] foreach (0..2);
     }
 
+    make_path $previous_dirname;
     my $new_data = OsmData::blank_data();
     my $have_changes_to_store = 0;
     while (1)
@@ -628,11 +629,16 @@ sub write_previous
             {
                 die "previous element versions cannot be retrieved: ".$resp->status_line."\n"; # TODO bisection fallback, esp. for redacted elements w/o moderator role
             }
-            my $any_changes = OsmData::parse_elements_string($new_data, $resp->content());
+            my $new_data_chunk = OsmData::blank_data();
+            my $any_changes = OsmData::parse_elements_string($new_data_chunk, $resp->content());
             $have_changes_to_store ||= $any_changes;
-            # TODO merge chunk into both to-write data and full data
+            OsmData::merge_data($new_data, $new_data_chunk);
+            OsmData::merge_data($data, $new_data_chunk);
         }
-        print "TODO write changesets: " . join(",", @changesets_ready_for_writing) . "\n";
+        for my $id (@changesets_ready_for_writing)
+        {
+            OsmData::write_osm_file("$previous_dirname/$id.osm", $data, @{$data_to_write{$id}});
+        }
     }
     if (defined($store_dirname) && $have_changes_to_store)
     {

@@ -4,6 +4,7 @@ package OsmData;
 
 use Math::Round qw(round);
 use HTTP::Date qw(str2time);
+use HTML::Entities qw(encode_entities);
 use File::Path qw(make_path);
 use Storable;
 use XML::Twig;
@@ -195,7 +196,81 @@ sub parse_common_element_data
         $element->att('visible') eq 'true',
         { map { $_->att('k'), $_->att('v') } $element->children('tag') },
     );
-};
+}
+
+# derived from osm-habat/osm-writer.mjs
+#
+# Outputs osm xml for provided elements in provided store.
+# Output format: https://wiki.openstreetmap.org/wiki/OSM_XML
+# Currently doesnt support writing deletes or deleted versions.
+#
+# @elements - Pre-sorted array of one of these:
+#     [etype,eid,ev] - for writing existing version as unmodified
+#     [etype,eid,ev,ev2] - for writing modifications (reverts) from existing version ev to existing version ev2
+sub write_osm_file
+{
+    my ($filename, $data, @elements) = @_;
+
+    open my $fh, '>:utf8', $filename or die $!;
+    print $fh '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+    print $fh '<osm version="0.6" generator="osm-habat">'."\n";
+    foreach (@elements)
+    {
+        my ($e, $i, $v, $v2) = @$_;
+        my $emeta = $data->{elements}[$e]{$i}{$v};
+        my $edata = $emeta;
+        my $is_modified = 0;
+        if (defined($v2))
+        {
+            $edata = $data->{elements}[$e]{$i}{$v2};
+            $is_modified = 1;
+        }
+        my $important_attrs = 'id="'.xml_escape($i).'" version="'.xml_escape($v).'"' .
+            ' changeset="'.xml_escape($emeta->[CHANGESET]).'" uid="'.xml_escape($emeta->[UID]).'"'; # changeset and uid are required by josm to display element history
+        $important_attrs .= ' action="modify"' if $is_modified;
+        my $tags = $edata->[TAGS];
+        if ($e == NODE)
+        {
+            print $fh '  <node '.$important_attrs.' lat="'.xml_escape($edata->[LAT]).'" lon="'.xml_escape($edata->[LON]).'"';
+            if (!%$tags)
+            {
+                print $fh '/>'."\n";
+            }
+            else
+            {
+                print $fh '>'."\n";
+                print_fh_tags($fh, $tags);
+                print $fh '  </node>'."\n";
+            }
+        }
+        elsif ($e == WAY)
+        {
+            print $fh '  <way '.$important_attrs.'>'."\n";
+            print $fh '    <nd ref="'.xml_escape($_).'"/>'."\n" for @{$edata->[NDS]};
+            print_fh_tags($fh, $tags);
+            print $fh '  </way>'."\n";
+        }
+        elsif ($e == RELATION)
+        {
+            print $fh '  <relation '.$important_attrs.'>'."\n";
+            for (@{$edata->[MEMBERS]})
+            {
+                my ($mt, $mi, $mr) = @$_;
+                print $fh '    <member type="'.element_string($mt).'" ref="'.xml_escape($mi).'" role="'.xml_escape($mr).'"/>'."\n";
+            }
+            print_fh_tags($fh, $tags);
+            print $fh '  </relation>'."\n";
+        }
+    }
+    print $fh '</osm>'."\n";
+    close $fh;
+}
+
+sub print_fh_tags
+{
+    my ($fh, $tags) = @_;
+    print $fh '    <tag k="'.xml_escape($_).'" v="'.xml_escape($tags->{$_}).'"/>'."\n" for sort keys %$tags;
+}
 
 sub read_store_files
 {
@@ -219,6 +294,12 @@ sub write_store_file
     my $changes_store_filename = "$store_subdirname/$fn";
     print STDERR "writing store file $changes_store_filename\n" if $OsmApi::prefs->{'debug'};
     store $data_chunk, $changes_store_filename;
+}
+
+sub xml_escape
+{
+    my $s = shift;
+    return encode_entities($s, '<>&"');
 }
 
 1;
