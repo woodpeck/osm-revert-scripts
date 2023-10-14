@@ -4,7 +4,10 @@ package OsmData;
 
 use Math::Round qw(round);
 use HTTP::Date qw(str2time);
+use File::Path qw(make_path);
+use Storable;
 use XML::Twig;
+use OsmApi;
 
 use constant {
     NODE => 0,
@@ -47,6 +50,11 @@ sub element_type
     return RELATION if $type_string eq "relation";
     die "unknown element type $type_string";
 }
+sub element_string
+{
+    my ($type) = @_;
+    return ("node", "way", "relation")[$type];
+}
 
 sub blank_data
 {
@@ -88,51 +96,61 @@ sub parse_changes_file
 {
     my ($data, $id, $filename, $timestamp) = @_;
 
-    my @changes = ();
+    open my $fh, '<:utf8', $filename;
+    my @changes = parse_elements($data, $fh);
+    close $fn;
+
+    $data->{changesets}{$id} = [
+        \@changes,
+        $timestamp,
+    ];
+}
+
+sub parse_elements
+{
+    my ($data, $xml) = @_;
+    my @elements = ();
 
     XML::Twig->new(
         twig_handlers => {
             node => sub {
-                my($twig, $element) = @_;
-                my ($type, $id, $version, @edata) = parse_common_element_data($element);
-                push @changes, [$type, $id, $version];
+                my($twig, $element_twig) = @_;
+                my ($type, $id, $version, @edata) = parse_common_element_data($element_twig);
+                push @elements, [$type, $id, $version];
                 if ($edata[VISIBLE])
                 {
                     push @edata,
-                        round(SCALE * $element->att('lat')),
-                        round(SCALE * $element->att('lon'));
+                        round(SCALE * $element_twig->att('lat')),
+                        round(SCALE * $element_twig->att('lon'));
                 }
                 $data->{elements}[$type]{$id}{$version} = \@edata;
             },
             way => sub {
-                my($twig, $element) = @_;
-                my ($type, $id, $version, @edata) = parse_common_element_data($element);
-                push @changes, [$type, $id, $version];
+                my($twig, $element_twig) = @_;
+                my ($type, $id, $version, @edata) = parse_common_element_data($element_twig);
+                push @elements, [$type, $id, $version];
                 $data->{elements}[$type]{$id}{$version} = [
                     @edata,
-                    [ map { int $_->att('ref') } $element->children('nd') ]
+                    [ map { int $_->att('ref') } $element_twig->children('nd') ]
                 ];
             },
             relation => sub {
-                my($twig, $element) = @_;
-                my ($type, $id, $version, @edata) = parse_common_element_data($element);
-                push @changes, [$type, $id, $version];
+                my($twig, $element_twig) = @_;
+                my ($type, $id, $version, @edata) = parse_common_element_data($element_twig);
+                push @elements, [$type, $id, $version];
                 $data->{elements}[$type]{$id}{$version} = [
                     @edata,
                     [ map { [
                         element_type($_->att('type')),
                         int $_->att('ref'),
                         $_->att('role'),
-                    ] } $element->children('member') ],
+                    ] } $element_twig->children('member') ],
                 ];
             },
         },
-    )->parsefile($filename);
+    )->parse($xml);
 
-    $data->{changesets}{$id} = [
-        \@changes,
-        $timestamp,
-    ];
+    return @elements;
 }
 
 sub parse_common_element_data
@@ -149,5 +167,34 @@ sub parse_common_element_data
         { map { $_->att('k'), $_->att('v') } $element->children('tag') },
     );
 };
+
+sub read_store_files
+{
+    my ($store_dirname, $subdirname) = @_;
+
+    my $data = OsmData::blank_data();
+    if (defined($store_dirname)) {
+        foreach my $changes_store_filename (glob qq{"$store_dirname/$subdirname/*"})
+        {
+            print STDERR "reading store file $changes_store_filename\n" if $OsmApi::prefs->{'debug'};
+            my $data_chunk = retrieve $changes_store_filename;
+            OsmData::merge_data($data, $data_chunk);
+        }
+    }
+
+    return $data;
+}
+
+sub write_store_file
+{
+    my ($store_dirname, $subdirname, $data_chunk) = @_;
+
+    make_path "$store_dirname/$subdirname";
+    my $fn = "00000000";
+    $fn++ while -e "$store_dirname/$subdirname/$fn";
+    my $new_changes_store_filename = "$store_dirname/$subdirname/$fn";
+    print STDERR "writing store file $new_changes_store_filename\n" if $OsmApi::prefs->{'debug'};
+    store $data_chunk, $new_changes_store_filename;
+}
 
 1;

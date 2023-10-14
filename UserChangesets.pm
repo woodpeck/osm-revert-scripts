@@ -169,6 +169,7 @@ sub download_previous
     my $changesets = read_metadata($metadata_dirname, $from_timestamp, $to_timestamp);
     my @ids = sort {$changesets->{$b}{created_at_timestamp} <=> $changesets->{$a}{created_at_timestamp}} keys %$changesets;
     my $data = read_changes($changes_dirname, $store_dirname, @ids);
+    # TODO read previous data
 
     my %data_to_write = ();
     foreach my $id (@ids)
@@ -207,8 +208,10 @@ sub download_previous
         push @{$download_queues[$_]}, [$id, 0] foreach (0..2);
     }
 
+    my $new_data = OsmData::blank_data();
     while (1)
     {
+        # TODO interrupt w/ partial write
         my $selected_queue_number = 0;
         my $selected_queue_remaining_count = $changeset_remaining_in_queue_counts[0];
         for my $e (1..2)
@@ -242,8 +245,20 @@ sub download_previous
                 last;
             }
         }
-        print "query: [$selected_queue_number] $query\n";
-        print "write: " . join(",", @changesets_ready_for_writing) . "\n";
+        my $element = OsmData::element_string($selected_queue_number);
+        $query = $element."s?".$element."s=".$query;
+        my $resp = OsmApi::get("$query&show_redactions=true", "", 1);
+        if (!$resp->is_success)
+        {
+            die "previous element versions cannot be retrieved: ".$resp->status_line."\n"; # TODO bisection fallback, esp. for redacted elements w/o moderator role
+        }
+        OsmData::parse_elements($new_data, $resp->content());
+        # TODO merge chunk into both to-write data and full data
+        print "TODO write changesets: " . join(",", @changesets_ready_for_writing) . "\n";
+    }
+    if (defined($store_dirname))
+    {
+        OsmData::write_store_file($store_dirname, "previous", $new_data);
     }
 }
 
@@ -280,8 +295,6 @@ sub count
 
 sub list
 {
-    use Storable;
-
     my (
         $metadata_dirname, $changes_dirname, $store_dirname,
         $from_timestamp, $to_timestamp,
@@ -571,16 +584,7 @@ sub read_changes
 {
     my ($changes_dirname, $store_dirname, @ids) = @_;
 
-    my $data = OsmData::blank_data();
-    if (defined($store_dirname)) {
-        foreach my $changes_store_filename (glob qq{"$store_dirname/changes/*"})
-        {
-            print STDERR "reading changes store file $changes_store_filename\n" if $OsmApi::prefs->{'debug'};
-            my $data_chunk = retrieve $changes_store_filename;
-            OsmData::merge_data($data, $data_chunk);
-        }
-    }
-
+    my $data = OsmData::read_store_files($store_dirname, "changes");
     my @ids_to_parse = ();
     my $bytes_to_parse = 0;
     foreach my $id (@ids)
@@ -596,7 +600,7 @@ sub read_changes
     return $data if $files_to_parse == 0;
     
     print STDERR "going to parse $files_to_parse files, $bytes_to_parse bytes\n";
-    my $new_data_chunk = OsmData::blank_data();
+    my $new_data = OsmData::blank_data();
     my $have_changes_to_store = 0;
     my $files_parsed = 0;
     my $bytes_parsed = 0;
@@ -611,21 +615,16 @@ sub read_changes
         my $changes_filename = "$changes_dirname/$id.osc";
         print STDERR "reading changes file $changes_filename ($files_parsed/$files_to_parse files) ($bytes_parsed/$bytes_to_parse bytes)\n" if $OsmApi::prefs->{'debug'};
         my $timestamp = (stat $changes_filename)[9];
-        OsmData::parse_changes_file($new_data_chunk, $id, $changes_filename, $timestamp);
+        OsmData::parse_changes_file($new_data, $id, $changes_filename, $timestamp);
         $have_changes_to_store = 1;
         $bytes_parsed += (stat $changes_filename)[7];
         $files_parsed++;
     }
     if (defined($store_dirname) && $have_changes_to_store) {
-        make_path("$store_dirname/changes");
-        my $fn = "00000000";
-        $fn++ while -e "$store_dirname/changes/$fn";
-        my $new_changes_store_filename = "$store_dirname/changes/$fn";
-        print STDERR "writing changes store file $new_changes_store_filename\n" if $OsmApi::prefs->{'debug'};
-        store $new_data_chunk, $new_changes_store_filename;
+        OsmData::write_store_file($store_dirname, "changes", $new_data);
     }
     die "interrupting" if $quit;
-    OsmData::merge_data($data, $new_data_chunk);
+    OsmData::merge_data($data, $new_data);
     return $data;
 }
 
