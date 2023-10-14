@@ -526,8 +526,8 @@ sub read_changes
         my $changes_filename = "$changes_dirname/$id.osc";
         print STDERR "reading changes file $changes_filename ($files_parsed/$files_to_parse files) ($bytes_parsed/$bytes_to_parse bytes)\n" if $OsmApi::prefs->{'debug'};
         my $timestamp = (stat $changes_filename)[9];
-        OsmData::parse_changes_file($new_data, $id, $changes_filename, $timestamp);
-        $have_changes_to_store = 1;
+        my $any_changes = OsmData::parse_changes_file($new_data, $id, $changes_filename, $timestamp);
+        $have_changes_to_store ||= $any_changes;
         $bytes_parsed += (stat $changes_filename)[7];
         $files_parsed++;
     }
@@ -582,6 +582,7 @@ sub write_previous
     }
 
     my $new_data = OsmData::blank_data();
+    my $have_changes_to_store = 0;
     while (1)
     {
         # TODO interrupt w/ partial write
@@ -627,12 +628,13 @@ sub write_previous
             {
                 die "previous element versions cannot be retrieved: ".$resp->status_line."\n"; # TODO bisection fallback, esp. for redacted elements w/o moderator role
             }
-            OsmData::parse_elements($new_data, $resp->content());
+            my $any_changes = OsmData::parse_elements_string($new_data, $resp->content());
+            $have_changes_to_store ||= $any_changes;
             # TODO merge chunk into both to-write data and full data
         }
         print "TODO write changesets: " . join(",", @changesets_ready_for_writing) . "\n";
     }
-    if (defined($store_dirname))
+    if (defined($store_dirname) && $have_changes_to_store)
     {
         OsmData::write_store_file("$store_dirname/previous", $new_data);
     }

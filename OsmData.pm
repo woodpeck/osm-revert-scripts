@@ -92,6 +92,24 @@ sub merge_data
     }
 }
 
+sub print_data_items
+{
+    my ($data) = @_;
+    foreach my $id (keys %{$data->{changesets}})
+    {
+        print "changeset/$id\n";
+    }
+    my $elements = $data->{elements};
+    foreach my $type (NODE, WAY, RELATION)
+    {
+        my $element = element_string($type);
+        foreach my $id (keys %{$elements->[$type]})
+        {
+            print "$element/${id}v" . join(",", keys %{$elements->[$type]{$id}}) . "\n";
+        }
+    }
+}
+
 sub parse_changes_file
 {
     my ($data, $id, $filename, $timestamp) = @_;
@@ -104,6 +122,17 @@ sub parse_changes_file
         \@changes,
         $timestamp,
     ];
+
+    return !!@changes;
+}
+
+sub parse_elements_string
+{
+    my ($data, $xml) = @_;
+
+    my @elements = parse_elements($data, $xml);
+
+    return !!@elements;
 }
 
 sub parse_elements
