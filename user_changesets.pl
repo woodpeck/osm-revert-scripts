@@ -14,6 +14,7 @@ my %show_options_data = (
     operation_counts => "show create/modify/delete counts",
     element_counts => "show node/way/relation counts",
     operation_x_element_counts => "show operation per element type counts",
+    target_upper_bound => "show upper bound of target matches",
 );
 
 my ($username, $uid);

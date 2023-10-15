@@ -174,10 +174,13 @@ sub list
                     push @classes, "changes-match-full";
                 }
             }
-            $item .= " <span class='".join(" ", @classes)."'>" . get_changes_widget_parts(
-                ["🎯", "number of target changes", "changes-target-exact", $target_exact_count, "exact"],
-                ["≤", "upper bound of number of target changes", "changes-target-upper", $target_upper_count, "upper"],
-            ) . "</span>";
+            my @parts = (
+                ["🎯", "number of target changes", "changes-target-exact", $target_exact_count, "exact"]
+            );
+            push @parts, (
+                ["≤", "upper bound of number of target changes", "changes-target-upper", $target_upper_count, "upper"]
+            ) if $show_options->{target_upper_bound};
+            $item .= " <span class='".join(" ", @classes)."'>" . get_changes_widget_parts(@parts) . "</span>";
         }
         $item .=
             " " . get_area_widget(
