@@ -307,6 +307,13 @@ sub read_changes
     return $data;
 }
 
+sub merge_previous
+{
+    my ($store_dirname, $data) = @_;
+    # unlike changes, previous versions are always parsed
+    OsmData::read_store_files("$store_dirname/previous", $data) if defined($store_dirname);
+}
+
 sub write_previous
 {
     my ($previous_dirname, $store_dirname, $data, @ids) = @_;

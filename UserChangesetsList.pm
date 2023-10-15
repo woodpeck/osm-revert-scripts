@@ -24,10 +24,12 @@ sub list
     my $changesets = UserChangesets::read_metadata($metadata_dirname, $from_timestamp, $to_timestamp);
     my @ids = sort {$changesets->{$b}{created_at_timestamp} <=> $changesets->{$a}{created_at_timestamp}} keys %$changesets;
     my $need_changes = $show_options->{operation_counts} || $show_options->{element_counts} || $show_options->{operation_x_element_counts} || defined($target_delete_tag);
+    my $need_previoud = defined($target_delete_tag);
     my $data;
     if ($need_changes)
     {
         $data = UserChangesets::read_changes($changes_dirname, $store_dirname, @ids);
+        UserChangesets::merge_previous($store_dirname, $data) if $need_previoud;
     }
 
     my @changeset_items = ();
