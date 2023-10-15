@@ -9,17 +9,19 @@ use URI::Escape;
 use UserChangesets;
 use UserChangesetsList;
 
+my %show_options_data = (
+    close_time => "show changeset close time",
+    operation_counts => "show create/modify/delete counts",
+    element_counts => "show node/way/relation counts",
+    operation_x_element_counts => "show operation per element type counts",
+);
+
 my ($username, $uid);
 my $from_date = "2001-01-01";
 my $to_date;
 my ($dirname, $metadata_dirname, $changes_dirname, $previous_dirname, $store_dirname);
 my $output_filename;
-my %show_options = (
-    close_time => 0,
-    operation_counts => 0,
-    element_counts => 0,
-    operation_x_element_counts => 0,
-);
+my %show_options = pairmap { $a => 0 } %show_options_data;
 my $target_delete_tag;
 
 my $correct_options = GetOptions(
@@ -123,9 +125,12 @@ options:
   --previous-directory <directory>       derived from --directory if not provided
   --store-directory <directory>          derived from --directory if not provided
   --output-filename <filename>           derived from --directory if not provided
-  --show-close-time                      show changeset close time
-  --show-operation-counts                show create/modify/delete counts
-  --show-element-counts                  show node/way/relation counts
-  --show-operation-x-element-counts
+EOF
+for (sort keys %show_options_data)
+{
+    my $o = $_; $o =~ tr/_/-/;
+    printf "  %-38s %s\n", "--show-$o", $show_options_data{$_};
+}
+print <<EOF;
   --target-delete-tag <tag key>          for list command: show changes matching tag deletion counts
 EOF
