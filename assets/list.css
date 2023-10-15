@@ -124,6 +124,9 @@ header, footer {
 #items li.changeset .changes > .part.oc { background: #39dbc040; } /* colors from OSMCha */
 #items li.changeset .changes > .part.om { background: #db950a40; }
 #items li.changeset .changes > .part.od { background: #cc2c4740; }
+#items li.changeset .changes.changes-target-match > .part {
+    background: #00F4;
+}
 #items li.changeset .changes > .part {
     background: #8884;
     padding-inline: .25rem;
