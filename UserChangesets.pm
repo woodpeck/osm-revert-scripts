@@ -30,6 +30,18 @@ sub parse_date
 }
 
 # -----------------------------------------------------------------------------
+
+sub print_date_range
+{
+    my ($from_timestamp, $to_timestamp) = @_;
+    print "limiting results to time range ";
+    print time2isoz($from_timestamp);
+    print " .. ";
+    print defined($to_timestamp) ? time2isoz($to_timestamp) : "now";
+    print "\n";
+}
+
+# -----------------------------------------------------------------------------
 # Downloads given user's changeset metadata (open/close dates, bboxes, tags, ...)
 # Parameters: metadata directory for output, user argument, from timestamp, to timestamp
 # user argument is either display_name=... or user=... with urlencoded display name or id
@@ -215,13 +227,12 @@ sub list
         $metadata_dirname, $changes_dirname, $store_dirname,
         $from_timestamp, $to_timestamp,
         $output_filename,
-        $with_operation_counts, $with_element_counts, $with_operation_x_element_counts,
-        $target_delete_tag
+        $show_options, $target_delete_tag
     ) = @_;
 
     my $changesets = read_metadata($metadata_dirname, $from_timestamp, $to_timestamp);
     my @ids = sort {$changesets->{$b}{created_at_timestamp} <=> $changesets->{$a}{created_at_timestamp}} keys %$changesets;
-    my $need_changes = $with_operation_counts || $with_element_counts || $with_operation_x_element_counts || defined($target_delete_tag);
+    my $need_changes = $show_options->{operation_counts} || $show_options->{element_counts} || $show_options->{operation_x_element_counts} || defined($target_delete_tag);
     my $data;
     if ($need_changes)
     {
@@ -236,8 +247,8 @@ sub list
         chop $time;
 
         my %change_counts = ();
-        my ($target_exact_count, $target_upper_count);
-
+        my $target_lower_count = 0;
+        my $target_upper_count = $changeset->{changes_count};
         if ($need_changes && exists $data->{changesets}{$id})
         {
             foreach my $o ("a", "c", "m", "d")
@@ -248,7 +259,6 @@ sub list
                 }
             }
             my @changes = @{$data->{changesets}{$id}[OsmData::CHANGES]};
-            $target_upper_count = $changeset->{changes_count} - scalar(@changes);
             foreach my $change (@changes)
             {
                 my ($t, $i, $v) = @$change;
@@ -265,8 +275,27 @@ sub list
                         $v > 1 &&
                         $element->[OsmData::VISIBLE] &&
                         !exists $element->[OsmData::TAGS]{$target_delete_tag}
-                    ) {
-                        $target_upper_count++;
+                    )
+                    {
+                        my $previous_element = $data->{elements}[$t]{$i}{$v - 1};
+                        if (defined($previous_element))
+                        {
+                            if (
+                                $previous_element->[OsmData::VISIBLE] &&
+                                exists $previous_element->[OsmData::TAGS]{$target_delete_tag}
+                            )
+                            {
+                                $target_lower_count++;
+                            }
+                            else
+                            {
+                                $target_upper_count--;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        $target_upper_count--;
                     }
                 }
             }
@@ -276,15 +305,22 @@ sub list
             $target_upper_count = 0;
         }
 
+        my $target_exact_count;
         if (defined($target_upper_count))
         {
-            $target_exact_count = 0 if ($target_upper_count == 0);
+            $target_exact_count = $target_upper_count if ($target_upper_count == $target_lower_count);
         }
 
         my $item =
             "<li class=changeset>" .
             "<a href='".html_escape(OsmApi::weburl("changeset/$id"))."' data-number=id>".html_escape($id)."</a>" .
-            " <time datetime='".html_escape($changeset->{created_at})."'>".html_escape($time)."</time>";
+            " <time datetime='".html_escape($changeset->{created_at})."'>".html_escape($time);
+        if ($show_options->{close_time})
+        {
+            $item .= " .. ".html_escape($changeset->{closed_at});
+        }
+        $item .=
+            "</time>";
         if ($need_changes)
         {
             $item .= " <span class='changes changes-total'>" . get_changes_widget_parts(
@@ -298,7 +334,7 @@ sub list
                 ["📝", "total number of changes", "changes-total", $changeset->{changes_count}]
             ) . "</span>";
         }
-        if ($with_operation_counts)
+        if ($show_options->{operation_counts})
         {
             my @parts = map { my $o = substr($_, 0, 1);
                 ["", "number of $_ changes", "changes-$_", $change_counts{"${o}a"}, "o${o} ea"]
@@ -307,7 +343,7 @@ sub list
                 ["📝", "number of changes by operation"], @parts
             ) . "</span>";
         }
-        if ($with_element_counts)
+        if ($show_options->{element_counts})
         {
             my @parts = map { my $e = substr($_, 0, 1);
                 ["$e:", "number of $_ changes", "changes-$_", $change_counts{"a${e}"}, "oa e${e}"]
@@ -316,7 +352,7 @@ sub list
                 ["📝", "number of changes by element type"], @parts
             ) . "</span>";
         }
-        if ($with_operation_x_element_counts)
+        if ($show_options->{operation_x_element_counts})
         {
             my @parts = (["📝", "number of changes by operation and element type"]);
             foreach my $element ("node", "way", "relation")

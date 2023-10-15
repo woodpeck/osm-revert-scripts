@@ -4,6 +4,7 @@ use strict;
 use FindBin;
 use lib $FindBin::Bin;
 use Getopt::Long;
+use List::Util qw(pairmap);
 use URI::Escape;
 use UserChangesets;
 
@@ -12,9 +13,12 @@ my $from_date = "2001-01-01";
 my $to_date;
 my ($dirname, $metadata_dirname, $changes_dirname, $previous_dirname, $store_dirname);
 my $output_filename;
-my $operation_counts = 0;
-my $element_counts = 0;
-my $operation_x_element_counts = 0;
+my %show_options = (
+    close_time => 0,
+    operation_counts => 0,
+    element_counts => 0,
+    operation_x_element_counts => 0,
+);
 my $target_delete_tag;
 
 my $correct_options = GetOptions(
@@ -28,9 +32,7 @@ my $correct_options = GetOptions(
     "previous-directory|previous-dirname=s" => \$previous_dirname,
     "store-directory|store-dirname=s" => \$store_dirname,
     "output-filename=s" => \$output_filename,
-    "operation-counts!" => \$operation_counts,
-    "element-counts!" => \$element_counts,
-    "operation-x-element-counts!" => \$operation_x_element_counts,
+    (pairmap { $a =~ tr/_/-/; "show-$a!" => \$b } %show_options),
     "target-delete-tag=s" => \$target_delete_tag,
 );
 
@@ -38,6 +40,7 @@ my $from_timestamp = UserChangesets::parse_date($from_date);
 die "unrecognized 'from' date format" unless defined($from_timestamp);
 my $to_timestamp = UserChangesets::parse_date($to_date);
 die "unrecognized 'to' date format" if defined($to_date) && !defined($to_timestamp);
+UserChangesets::print_date_range($from_timestamp, $to_timestamp);
 
 if (defined($username) && defined($uid))
 {
@@ -89,14 +92,13 @@ if ($correct_options && ($ARGV[0] eq "count"))
 if ($correct_options && ($ARGV[0] eq "list"))
 {
     die "parameters required: one of (display_name, uid, directory) or both (metadata-directory, output-filename)" unless defined($metadata_dirname) && defined($output_filename);
-    die "operation-counts require one of: (display_name, uid, directory, changes-directory)" if $operation_counts && !defined($changes_dirname);
-    die "element-counts require one of: (display_name, uid, directory, changes-directory)" if $element_counts && !defined($changes_dirname);
-    die "operation-x-element-counts require one of: (display_name, uid, directory, changes-directory)" if $operation_x_element_counts && !defined($changes_dirname);
+    die "show-operation-counts require one of: (display_name, uid, directory, changes-directory)" if $show_options{operation_counts} && !defined($changes_dirname);
+    die "show-element-counts require one of: (display_name, uid, directory, changes-directory)" if $show_options{element_counts} && !defined($changes_dirname);
+    die "show-operation-x-element-counts require one of: (display_name, uid, directory, changes-directory)" if $show_options{operation_x_element_counts} && !defined($changes_dirname);
     die "target-delete-tag require one of: (display_name, uid, directory, changes-directory)" if defined($target_delete_tag) && !defined($changes_dirname);
     UserChangesets::list(
         $metadata_dirname, $changes_dirname, $store_dirname, $from_timestamp, $to_timestamp, $output_filename,
-        $operation_counts, $element_counts, $operation_x_element_counts,
-        $target_delete_tag
+        \%show_options, $target_delete_tag
     );
     exit;
 }
@@ -120,8 +122,9 @@ options:
   --previous-directory <directory>       derived from --directory if not provided
   --store-directory <directory>          derived from --directory if not provided
   --output-filename <filename>           derived from --directory if not provided
-  --operation-counts                     for list command: show create/modify/delete counts
-  --element-counts                       for list command: show node/way/relation counts
-  --operation-x-element-counts
+  --show-close-time                      show changeset close time
+  --show-operation-counts                show create/modify/delete counts
+  --show-element-counts                  show node/way/relation counts
+  --show-operation-x-element-counts
   --target-delete-tag <tag key>          for list command: show changes matching tag deletion counts
 EOF
