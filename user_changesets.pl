@@ -7,6 +7,7 @@ use Getopt::Long;
 use List::Util qw(pairmap);
 use URI::Escape;
 use UserChangesets;
+use UserChangesetsList;
 
 my ($username, $uid);
 my $from_date = "2001-01-01";
@@ -96,7 +97,7 @@ if ($correct_options && ($ARGV[0] eq "list"))
     die "show-element-counts require one of: (display_name, uid, directory, changes-directory)" if $show_options{element_counts} && !defined($changes_dirname);
     die "show-operation-x-element-counts require one of: (display_name, uid, directory, changes-directory)" if $show_options{operation_x_element_counts} && !defined($changes_dirname);
     die "target-delete-tag require one of: (display_name, uid, directory, changes-directory)" if defined($target_delete_tag) && !defined($changes_dirname);
-    UserChangesets::list(
+    UserChangesetsList::list(
         $metadata_dirname, $changes_dirname, $store_dirname, $from_timestamp, $to_timestamp, $output_filename,
         \%show_options, $target_delete_tag
     );
