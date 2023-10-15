@@ -163,7 +163,17 @@ sub list
         if (defined($target_delete_tag))
         {
             my @classes = qw(changes changes-target);
-            push @classes, "changes-target-match" if $target_exact_count == $changeset->{changes_count};
+            if (defined($target_exact_count))
+            {
+                if ($changeset->{changes_count} == 0 || (0 < $target_exact_count && $target_exact_count < $changeset->{changes_count}))
+                {
+                    push @classes, "changes-match-partial";
+                }
+                elsif ($target_exact_count == $changeset->{changes_count})
+                {
+                    push @classes, "changes-match-full";
+                }
+            }
             $item .= " <span class='".join(" ", @classes)."'>" . get_changes_widget_parts(
                 ["🎯", "number of target changes", "changes-target-exact", $target_exact_count, "exact"],
                 ["≤", "upper bound of number of target changes", "changes-target-upper", $target_upper_count, "upper"],
