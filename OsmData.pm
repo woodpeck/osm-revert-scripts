@@ -202,7 +202,6 @@ sub parse_common_element_data
 #
 # Outputs osm xml for provided elements in provided store.
 # Output format: https://wiki.openstreetmap.org/wiki/OSM_XML
-# Currently doesnt support writing deletes or deleted versions.
 #
 # @elements - Pre-sorted array of one of these:
 #     [etype,eid,ev] - for writing existing version as unmodified
@@ -225,13 +224,14 @@ sub write_osm_file
             $edata = $data->{elements}[$e]{$i}{$v2};
             $is_modified = 1;
         }
-        my $important_attrs = 'id="'.xml_escape($i).'" version="'.xml_escape($v).'"' .
+        my $important_attrs = 'id="'.xml_escape($i).'" visible="'.($edata->[VISIBLE] ? 'true' : 'false').'" version="'.xml_escape($v).'"' .
             ' changeset="'.xml_escape($emeta->[CHANGESET]).'" uid="'.xml_escape($emeta->[UID]).'"'; # changeset and uid are required by josm to display element history
-        $important_attrs .= ' action="modify"' if $is_modified;
+        $important_attrs .= ' action="'.($edata->[VISIBLE] ? "modify" : "delete").'"' if $is_modified;
         my $tags = $edata->[TAGS];
         if ($e == NODE)
         {
-            print $fh '  <node '.$important_attrs.' lat="'.xml_escape($edata->[LAT]).'" lon="'.xml_escape($edata->[LON]).'"';
+            print $fh '  <node '.$important_attrs;
+            print $fh ' lat="'.xml_escape($edata->[LAT]).'" lon="'.xml_escape($edata->[LON]).'"' if $edata->[VISIBLE];
             if (!%$tags)
             {
                 print $fh '/>'."\n";
