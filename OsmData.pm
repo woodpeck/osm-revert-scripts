@@ -231,7 +231,7 @@ sub write_osm_file
         if ($e == NODE)
         {
             print $fh '  <node '.$important_attrs;
-            print $fh ' lat="'.xml_escape($edata->[LAT]).'" lon="'.xml_escape($edata->[LON]).'"' if $edata->[VISIBLE];
+            print $fh ' lat="'.xml_escape($edata->[LAT] / SCALE).'" lon="'.xml_escape($edata->[LON] / SCALE).'"' if $edata->[VISIBLE];
             if (!%$tags)
             {
                 print $fh '/>'."\n";
