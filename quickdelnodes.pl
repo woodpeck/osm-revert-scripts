@@ -30,6 +30,8 @@ EOF
     exit;
 }
 
+my $full_cs=1;
+
 my ($comment) = @ARGV;
 
 my $nodes=[];
@@ -50,11 +52,52 @@ else
     $current_cs = Changeset::create($comment);
 }
 
-if (defined($current_cs))
-{
-    my $nodehash = {};
-    foreach my $n(@$nodes) { $nodehash->{$n} = 1 };
+die unless defined($current_cs);
 
+my %nodever;
+foreach my $n(@$nodes)
+{
+    $nodever{$n}=1;
+}
+
+if ($full_cs)
+{
+    while(1) 
+    {
+    my $c="<osmChange version=\"0.6\">\n<delete if-unused=\"1\">\n";
+    foreach my $n(keys %nodever)
+    {
+        $c .= "<node id=\"$n\" changeset=\"$current_cs\" version=\"" . $nodever{$n} . "\" />\n";
+    }
+    $c .= "</delete>\n</osmChange>\n";
+    OsmApi::set_timeout(7200);
+    my $resp = OsmApi::post("changeset/$current_cs/upload", $c);
+
+    if (!$resp->is_success)
+    {
+        my $c = $resp->content;
+        if ($c =~ /Version mismatch: Provided 1, server had: (\d+) of Node (\d+)/)
+        {
+            $nodever{$2}=$1;
+            print STDERR "adjusted node $2 version to $1\n";
+            next;
+        }
+        else
+        {
+            print STDERR "cannot upload changeset: ".$resp->status_line."\n";
+            print STDERR $resp->content."\n";
+            last;
+        }
+    }
+    else
+    {
+        print STDERR $resp->content."\n";
+        last;
+    }
+    }
+}
+else
+{
     foreach my $n(@$nodes)
     {
         my $resp = OsmApi::delete("node/$n", "<osm version='0.6'>\n<node id='$n' lat='0' lon='0' version='1' changeset='$current_cs' /></osm>");
