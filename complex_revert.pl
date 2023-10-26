@@ -31,15 +31,40 @@ use FindBin;
 use lib $FindBin::Bin;
 use Changeset;
 use OsmApi;
+use Getopt::Long;
+use Progress;
+
+my $override = 0;
+my $show_conflict_details = 0;
+my $revert_type = "top_down";
+my $progress = 0;
+
+usage() unless GetOptions("override" => \$override, 
+           "conflict-details" => \$show_conflict_details,
+           "progress" => \$progress,
+           "type" => \$revert_type);
+
+usage() unless ($revert_type eq "top_down" || $revert_type eq "bottom_up");
 
 my $comment = $ARGV[0];
-shift @ARGV;
 
-my $revert_type = "top_down"; # or bottom_up - see comments in code below
-
-my $override = 0; # whether to override subsequent other changes
+usage() if ($comment eq "");
 
 # no user servicable parts below
+
+sub usage()
+{
+    print STDERR <<EOF;
+Usage: $0 [flags] comment
+(expects full changesets to be reverted on stdin)
+flags:
+   --conflict-details   when revert fails due to version conflict, show other user
+   --override           override subsequent changes in case of version conflict
+   --progress           report on completion percentage
+   --type=t             select revert type (default is top_down, otherwise bottom_up)
+EOF
+    exit 0;
+}
 
 my $mode;
 my $operation;
@@ -65,7 +90,7 @@ while(<LOG>)
 }
 close(LOG);
 
-print STDERR "$done_count object IDs read from complex_revert.log - will not touch these again\n";
+Progress::log("$done_count object IDs read from complex_revert.log - will not touch these again");
 
 open(LOG, ">> complex_revert.log");
 
@@ -74,7 +99,7 @@ open(LOG, ">> complex_revert.log");
 # "we've seen a delete for version 3 of node #123 and a modify for version
 # 2 of the same node; we've seen a create for version 1 of way #234", etc.
 #
-# Results are record in the hash $operation, which for the above example
+# Results are recorded in the hash $operation, which for the above example
 # would result in
 #
 # $operation = {
@@ -91,7 +116,7 @@ open(LOG, ">> complex_revert.log");
 #    }
 # }
 
-while(<>)
+while(<STDIN>)
 {
     if (/<(create|modify|delete)>/)
     {
@@ -141,14 +166,14 @@ foreach my $objecttype(qw/node way relation/)
             {
                 # object was deleted in the end, so revert to whatever it
                 # was before first touched ($firstv is at least 2 else we'd
-                # have been in the "firstop==create" branch).
+                # have been in the "firstop==create" branch above).
                 $firstv--;
                 $restore->{$objecttype}->{$id} =  "$firstv/$lastv";
             }
         }
         elsif ($firstop eq "create")
         {
-            # object was created, but not deleted later (else we'd habe been
+            # object was created, but not deleted later (else we'd have been
             # in the branch above) - delete it.
             $delete->{$objecttype}->{$id} =  "$lastv";
         }
@@ -162,6 +187,20 @@ foreach my $objecttype(qw/node way relation/)
             $restore->{$objecttype}->{$id} =  "$firstv/$lastv";
         }
     }
+}
+
+# count stuff for progress bar
+my $total_ops_done = 0;
+if ($progress)
+{
+    my $total_ops_needed = 0;
+    foreach my $objecttype(qw/node way relation/)
+    {  
+        $total_ops_needed += scalar keys %{$restore->{$objecttype}};
+        # deletions are faster, hence don't count them as full
+        $total_ops_needed += 0.1*scalar keys %{$delete->{$objecttype}};
+    }
+    Progress::init($total_ops_needed)
 }
 
 # once we know what we want to do, we first handle all object modifications
@@ -180,6 +219,12 @@ else
 handle_delete_soft();
 
 Changeset::close($current_cs);
+
+if ($progress)
+{
+    Progress::update(-1);
+    print "\n";
+}
 
 # We're done! Now just add comments to all the affected changesets.
 #exit(0);
@@ -225,11 +270,12 @@ sub revert_bottom_up
     {
         foreach my $id(keys %{$restore->{$object}})
         {
+            Progress::update($total_ops_done++) if ($progress);
             my ($firstv, $lastv) = split("/", $restore->{$object}->{$id});
             my $resp = OsmApi::get("$object/$id/$firstv");
             if (!$resp->is_success)
             {
-                print STDERR "cannot load version $firstv of $object $id (get): ".$resp->status_line."\n";
+                Progress::log("cannot load version $firstv of $object $id (get): ".$resp->status_line);
                 print LOG "$object $id ERR GET1 ".$resp->code." ".$resp->status_line."\n";
                 next;
             }
@@ -240,7 +286,7 @@ sub revert_bottom_up
             my $resp = OsmApi::get("$object/$id/$lastv");
             if (!$resp->is_success)
             {
-                print STDERR "cannot load version $lastv of $object $id (get): ".$resp->status_line."\n";
+                Progress::log("cannot load version $lastv of $object $id (get): ".$resp->status_line);
                 print LOG "$object $id ERR GET2 ".$resp->code." ".$resp->status_line."\n";
                 next;
             }
@@ -263,10 +309,29 @@ sub revert_bottom_up
             $resp = OsmApi::put("$object/$id", $xml);
             if (!$resp->is_success)
             {
-                print STDERR "cannot restore $object $id to version $firstv (put): ".$resp->status_line."\n";
                 my $b = $resp->content;
                 $b =~ s/\s+/ /g;
                 print LOG "$object $id ERR PUT ".$resp->status_line." $b\n";
+
+                my $message = "cannot restore $object $id to version $firstv (put): ".$resp->status_line;
+                if ($show_conflict_details)
+                {
+                    if ($b =~ /server had: (\d+)/)
+                    {
+                        my $resp = OsmApi::get("$object/$id/$1");
+                        if ($resp->is_success)
+                        {
+                            my $cur_xml = $resp->content;
+                            my $user; 
+                            $user = $1 if ($cur_xml =~ / user="([^"]*)"/);
+                            $message .= " [interim ";
+                            $message .= (object_equal($xml, $cur_xml) ? "revert" : "modification");
+                            $message .= " by $user]";
+                            # fixme record this case as ok in complex_revert if interim revert
+                        }
+                    }
+                }
+                Progress::log($message);
                 next;
             }
             print LOG "$object $id OK revert to v$firstv\n";
@@ -306,10 +371,11 @@ sub revert_top_down_recursive
 {
     my ($object, $id, $firstv, $lastv) = @_;
 
+    Progress::update($total_ops_done++) if ($progress);
     my $resp = OsmApi::get("$object/$id/$firstv");
     if (!$resp->is_success)
     {
-        print STDERR "cannot load version $firstv of $object $id (get): ".$resp->status_line."\n";
+        Progress::log("cannot load version $firstv of $object $id (get): ".$resp->status_line);
         print LOG "$object $id ERR GET1 ".$resp->status_line."\n";
         return;
     }
@@ -340,7 +406,7 @@ sub revert_top_down_recursive
     my $resp = OsmApi::get("$object/$id/$lastv");
     if (!$resp->is_success)
     {
-        print STDERR "cannot load version $lastv of $object $id (get): ".$resp->status_line."\n";
+        Progress::log("cannot load version $lastv of $object $id (get): ".$resp->status_line);
         print LOG "$object $id ERR GET2 ".$resp->code." ".$resp->status_line."\n";
         return;
     }
@@ -370,7 +436,7 @@ sub revert_top_down_recursive
             $resp = OsmApi::put("$object/$id", $xml);
             if (!$resp->is_success)
             {
-                print STDERR "cannot restore $object $id to version $firstv (despite override): ".$resp->status_line."\n";
+                Progress::log("cannot restore $object $id to version $firstv (despite override): ".$resp->status_line);
             }
             else
             {
@@ -379,7 +445,26 @@ sub revert_top_down_recursive
         }
         else
         {
-            print STDERR "cannot restore $object $id to version $firstv (put): ".$resp->status_line."\n";
+            my $message = "cannot restore $object $id to version $firstv (put): ".$resp->status_line;
+            if ($show_conflict_details)
+            {
+                my $b = $resp->content;
+                if ($b =~ /server had: (\d+)/)
+                {
+                    my $resp = OsmApi::get("$object/$id/$1");
+                    if ($resp->is_success)
+                    {
+                        my $cur_xml = $resp->content;
+                        my $user; 
+                        $user = $1 if ($cur_xml =~ / user="([^"]*)"/);
+                        $message .= " [interim ";
+                        $message .= (object_equal($xml, $cur_xml) ? "revert" : "modification");
+                        $message .= " by $user]";
+                        # fixme record this case as ok in complex_revert if interim revert
+                    }
+                }
+            }
+            Progress::log($message);
         }
         if (!$resp->is_success)
         {
@@ -443,7 +528,8 @@ sub handle_delete_soft
                 $num_to_delete = $chunk_size;
             }
             my @to_process = splice(@idlist, 0, $num_to_delete);
-            printf STDERR "deleting a chunk of %d %ss\n", scalar(@to_process), $object;
+            Progress::log(sprintf("deleting a chunk of %d %s", scalar(@to_process), $object));
+            Progress::update($total_ops_done+=0.1*scalar(@to_process)) if($progress);
 
             while(1)
             {
@@ -466,20 +552,20 @@ sub handle_delete_soft
                         if ($override)
                         {
                             $delete->{$object}->{$2}=$1;
-                            print STDERR "adjusted $object $2 version to $1\n";
+                            Progress::log("adjusted $object $2 version to $1");
                             next; # this repeats the action in the "while(1)" loop
                             # fixme - if this happens a lot then maybe the chunk should be split
                         } else {
                             delete $delete->{$object}->{$2}; # do not delete this object
-                            print STDERR "excluded $object $2 from deletion\n";
+                            Progress::log("excluded $object $2 from deletion");
                             next; # this repeats the action in the "while(1)" loop
                             # fixme - if this happens a lot then maybe the chunk should be split
                         }
                     }
                     else
                     {
-                        print STDERR "cannot upload changeset: ".$resp->status_line."\n";
-                        print STDERR $resp->content."\n";
+                        Progress::log("cannot upload changeset: ".$resp->status_line);
+                        Progress::log($resp->content);
                         die;
                         # fixme should react to "precondition failed" or "gone" events by
                         # excluding object from batch rather than stopping
@@ -552,5 +638,21 @@ sub canonicalize
     return join("::", @ordered) . "::" . join("::", sort(@unordered));
 }
 
-
+sub get_user_for_object_version($)
+{
+    my $what = shift;
+    my $resp = OsmApi::get($what);
+    if ($resp->is_success)
+    {
+        my $xml = $resp->content;
+        foreach (split(/\n/, $xml))
+        {
+            next unless(/<(node|way|relation)/);
+            next unless(/user="([^"]*)"/);
+            return $1;
+            last;
+        }
+    }
+    return undef;
+}
 
