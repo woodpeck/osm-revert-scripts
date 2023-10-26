@@ -43,16 +43,16 @@ use OsmApi;
 
 sub undo
 {
-    my ($what, $id, $undo_user, $undo_changeset, $changeset) = @_;
+    my ($what, $id, $undo_user, $undo_changeset, $undo_version, $changeset) = @_;
 
     my ($action, $xml) = 
-        determine_undo_action($what, $id, $undo_user, $undo_changeset, $changeset);
+        determine_undo_action($what, $id, $undo_user, $undo_changeset, $undo_version, $changeset);
 
     return 0 unless defined ($action);
 
     # set this to 1 if you want the undo script to trim ways or relations by
     # removing members that are unavailable
-    my $use_available_members = 1;
+    my $use_available_members = 0;
 
     if ($action eq "modify")
     {
@@ -109,7 +109,7 @@ sub undo
 
 sub determine_undo_action
 {
-    my ($what, $id, $undo_users, $undo_changesets, $changeset) = @_;
+    my ($what, $id, $undo_users, $undo_changesets, $undo_versions, $changeset) = @_;
 
     # backwards compatibility
     if (ref($undo_users) ne "HASH" && defined($undo_users))
@@ -120,6 +120,11 @@ sub determine_undo_action
     if (ref($undo_changesets) ne "HASH" && defined($undo_changesets))
     {
         $undo_changesets = { $undo_changesets => 1 };
+    }
+
+    if (ref($undo_versions) ne "HASH" && defined($undo_versions))
+    {
+        $undo_versions = { $undo_versions => 1 };
     }
 
     my $undo=0; 
@@ -152,7 +157,7 @@ sub determine_undo_action
             my $user=$1;
             /changeset="(\d+)/;
             my $cs=$1;
-            if ((!defined($undo_users) || defined($undo_users->{$user})) && (!defined($undo_changesets) || defined($undo_changesets->{$cs})))
+            if ((!defined($undo_users) || defined($undo_users->{$user})) && (!defined($undo_changesets) || defined($undo_changesets->{$cs})) && (!defined($undo_versions) || defined($undo_versions->{$version})))
             { 
                 $undo=1;
                 $copy=0; 
@@ -160,6 +165,7 @@ sub determine_undo_action
             } 
             else 
             {
+                print "user=$user not in undo_users\ncs=$cs not in undo_cs\nver=$version not in undo_ver\n";
                 if ($undo && $force)
                 {
                     $override = 1;
@@ -195,6 +201,7 @@ sub determine_undo_action
             print STDERR "$what $id last edited as v$undo_version; restoring previous version $restore_version by '$lastedit'\n";
             $out =~ s/version="$restore_version"/version="$undo_version"/;
             $out =~ s/changeset="\d+"/changeset="$changeset"/;
+            print STDERR $out;
             return ( "modify", $out );
         }
         else

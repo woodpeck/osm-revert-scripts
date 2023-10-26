@@ -134,7 +134,7 @@ sub revert
                 }
                 else
                 {
-                    if (Undo::undo($objtype, $object, undef, $undo_changeset, $changeset))
+                    if (Undo::undo($objtype, $object, undef, $undo_changeset, undef, $changeset))
                     {
                         push(@$success, "$operation $object");
                     }
@@ -165,6 +165,8 @@ sub revert
             return undef;
         }
     }
+
+return 1;
 
     my $msg = "This changeset has been reverted fully or in part by changeset $changeset";
     if (defined($comment))

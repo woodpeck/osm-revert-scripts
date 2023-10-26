@@ -43,6 +43,6 @@ else
     } 
 }
 
-exit 1 if (!defined(Undo::undo($what, $id, $undo_user, $undo_changeset, $changeset)));
+exit 1 if (!defined(Undo::undo($what, $id, $undo_user, $undo_changeset, undef, $changeset)));
 exit 0
 
