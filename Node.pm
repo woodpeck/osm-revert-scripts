@@ -67,4 +67,26 @@ sub create
     return $resp->content;
 }
 
+sub overwrite
+{
+    my ($cid, $id, $version, $tags, $lat, $lon) = @_;
+
+    my $body;
+    open my $fh, '>', \$body;
+    OsmData::print_fh_xml_header($fh);
+    OsmData::print_fh_element($fh, OsmData::NODE, $id, $version, [
+        $cid, undef, undef, undef, $tags, $lat * OsmData::SCALE, $lon * OsmData::SCALE
+    ]);
+    OsmData::print_fh_xml_footer($fh);
+    close $fh;
+
+    my $resp = OsmApi::put("node/".uri_escape($id), $body);
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot overwrite node: ".$resp->status_line."\n";
+        return undef;
+    }
+    return $resp->content;
+}
+
 1;
