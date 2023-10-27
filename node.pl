@@ -9,9 +9,9 @@ use OsmData;
 my $cid;
 my ($lat, $lon);
 my $correct_options = GetOptions(
-    "changeset|cid=s" => \$cid,
-    "lat=s" => \$lat,
-    "lon=s" => \$lon,
+    "changeset|cid=i" => \$cid,
+    "lat=f" => \$lat,
+    "lon=f" => \$lon,
 );
 
 if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
