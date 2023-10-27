@@ -6,12 +6,14 @@ use lib $FindBin::Bin;
 use Getopt::Long;
 use Node;
 
+my $latest_changeset = 0;
 my $cid;
 my ($lat, $lon);
 my @keys;
 my @values;
 my $correct_options = GetOptions(
     "changeset|cid=i" => \$cid,
+    "latest-changeset!" => \$latest_changeset,
     "lat=f" => \$lat,
     "lon=f" => \$lon,
     "key=s" => \@keys,
@@ -20,6 +22,14 @@ my $correct_options = GetOptions(
 
 if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
 {
+    die "need one of: (--latest-changeset, --changeset=<id>)" unless $latest_changeset || defined($cid);
+    die "need only one of: (--latest-changeset, --changeset=<id>)" if $latest_changeset && defined($cid);
+    if ($latest_changeset)
+    {
+        $cid = Node::get_latest_changeset();
+        die unless defined($cid);
+    }
+
     die "lat is missing" unless defined($lat);
     die "lon is missing" unless defined($lon);
     die "different number of keys/values" unless @keys == @values;
@@ -43,9 +53,10 @@ Usage:
   $0 modify <id> <options>  modify node
 
 options:
-  --changeset
-  --lat
-  --lon
-  --key
-  --value
+  --changeset=<id>          \\
+  --latest-changeset        - need one
+  --lat=<number>
+  --lon=<number>
+  --key=<string>            \\
+  --value=<string>          - can have multiple
 EOF

@@ -6,6 +6,44 @@ use strict;
 use warnings;
 use OsmApi;
 use OsmData;
+use URI::Escape;
+use XML::Twig;
+
+sub get_latest_changeset
+{
+    my ($resp, $twig);
+
+    $resp = OsmApi::get("user/details");
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot get current user details: ".$resp->status_line."\n";
+        return undef;
+    }
+
+    $twig = XML::Twig->new()->parse($resp->content);
+    my $uid = $twig->root->first_child('user')->att('id');
+    if (!defined($uid))
+    {
+        print STDERR "cannot get current user id\n";
+        return undef;
+    }
+
+    $resp = OsmApi::get("changesets?limit=1&user=".uri_escape($uid));
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot get current user's latest changeset: ".$resp->status_line."\n";
+        return undef;
+    }
+
+    $twig = XML::Twig->new()->parse($resp->content);
+    my $cid = $twig->root->first_child('changeset')->att('id');
+    if (!defined($cid))
+    {
+        print STDERR "cannot get current user's latest changeset id\n";
+        return undef;
+    }
+    return $cid;
+}
 
 sub create
 {
