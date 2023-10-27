@@ -11,7 +11,7 @@ use XML::Twig;
 
 sub get_latest_changeset
 {
-    my ($resp, $twig);
+    my $resp;
 
     $resp = OsmApi::get("user/details");
     if (!$resp->is_success)
@@ -20,8 +20,7 @@ sub get_latest_changeset
         return undef;
     }
 
-    $twig = XML::Twig->new()->parse($resp->content);
-    my $uid = $twig->root->first_child('user')->att('id');
+    my $uid = get_att_from_xml('user', 'id', $resp->content);
     if (!defined($uid))
     {
         print STDERR "cannot get current user id\n";
@@ -35,14 +34,34 @@ sub get_latest_changeset
         return undef;
     }
 
-    $twig = XML::Twig->new()->parse($resp->content);
-    my $cid = $twig->root->first_child('changeset')->att('id');
+    my $cid = get_att_from_xml('changeset', 'id', $resp->content);
     if (!defined($cid))
     {
         print STDERR "cannot get current user's latest changeset id\n";
         return undef;
     }
     return $cid;
+}
+
+sub get_latest_version
+{
+    my ($id) = @_;
+    my ($resp, $twig);
+
+    $resp = OsmApi::get("node/".uri_escape($id));
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot get node: ".$resp->status_line."\n";
+        return undef;
+    }
+
+    my $version = get_att_from_xml('node', 'version', $resp->content);
+    if (!defined($version))
+    {
+        print STDERR "cannot get node version\n";
+        return undef;
+    }
+    return $version;
 }
 
 sub create
@@ -87,6 +106,16 @@ sub overwrite
         return undef;
     }
     return $resp->content;
+}
+
+# -----
+
+sub get_att_from_xml
+{
+    my ($elt_name, $att_name, $content) = @_;
+
+    my $twig = XML::Twig->new()->parse($content);
+    return $twig->root->first_child($elt_name)->att($att_name);
 }
 
 1;
