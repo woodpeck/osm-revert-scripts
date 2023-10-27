@@ -4,7 +4,7 @@ use strict;
 use FindBin;
 use lib $FindBin::Bin;
 use Getopt::Long;
-use OsmData;
+use Node;
 
 my $cid;
 my ($lat, $lon);
@@ -26,23 +26,26 @@ if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
 
     my %tags;
     @tags{@keys} = @values;
+    my $id = Node::create($cid, \%tags, $lat, $lon);
 
-    my $body;
-    open my $fh, '>', \$body;
-    OsmData::print_fh_xml_header($fh);
-    OsmData::print_fh_element($fh, OsmData::NODE, undef, undef, [
-        $cid, undef, undef, undef, \%tags, $lat * OsmData::SCALE, $lon * OsmData::SCALE
-    ]);
-    OsmData::print_fh_xml_footer($fh);
-    close $fh;
-
-    my $resp = OsmApi::put("node/create", $body);
-    if (!$resp->is_success)
-    {
-        die "cannot create node: ".$resp->status_line."\n";
-    }
-    print "node created: ".$resp->content."\n";
+    print "node created: $id\n" if defined($id);
     exit;
 }
 
-print "TODO commandline help\n";
+if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 2) && $correct_options)
+{
+    my $id = $ARGV[1];
+}
+
+print <<EOF;
+Usage: 
+  $0 create <options>       create node
+  $0 modify <id> <options>  modify node
+
+options:
+  --changeset
+  --lat
+  --lon
+  --key
+  --value
+EOF
