@@ -211,59 +211,92 @@ sub write_osm_file
     my ($filename, $data, @elements) = @_;
 
     open my $fh, '>:utf8', $filename or die $!;
-    print $fh '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-    print $fh '<osm version="0.6" generator="'.xml_escape($OsmApi::agent).'">'."\n";
+    print_fh_xml_header($fh);
     foreach (@elements)
     {
         my ($e, $i, $v, $v2) = @$_;
         my $emeta = $data->{elements}[$e]{$i}{$v};
-        my $edata = $emeta;
-        my $is_modified = 0;
+        my $edata;
         if (defined($v2))
         {
             $edata = $data->{elements}[$e]{$i}{$v2};
-            $is_modified = 1;
         }
-        my $important_attrs = 'id="'.xml_escape($i).'" visible="'.($edata->[VISIBLE] ? 'true' : 'false').'" version="'.xml_escape($v).'"' .
-            ' changeset="'.xml_escape($emeta->[CHANGESET]).'" uid="'.xml_escape($emeta->[UID]).'"'; # changeset and uid are required by josm to display element history
-        $important_attrs .= ' action="'.($edata->[VISIBLE] ? "modify" : "delete").'"' if $is_modified;
-        my $tags = $edata->[TAGS];
-        if ($e == NODE)
+        print_fh_element($fh, $e, $i, $v, $emeta, $edata);
+    }
+    print_fh_xml_footer($fh);
+    close $fh;
+}
+
+sub print_fh_xml_header
+{
+    my ($fh) = @_;
+    print $fh '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+    print $fh '<osm version="0.6" generator="'.xml_escape($OsmApi::agent).'">'."\n";
+}
+
+sub print_fh_xml_footer
+{
+    my ($fh) = @_;
+    print $fh '</osm>'."\n";
+}
+
+sub print_fh_element
+{
+    my ($fh, $e, $i, $v, $emeta, $edata) = @_;
+    my $is_modified = 0;
+
+    if (defined($edata))
+    {
+        $is_modified = 1;
+    }
+    else
+    {
+        $edata = $emeta;
+    }
+
+    my @attrs = ();
+    push @attrs, 'id="'.xml_escape($i).'"' if defined($i);
+    push @attrs, 'visible="'.($edata->[VISIBLE] ? 'true' : 'false').'"' if defined($edata->[VISIBLE]);
+    push @attrs, 'version="'.xml_escape($v).'"' if defined($v);
+    push @attrs, 'changeset="'.xml_escape($emeta->[CHANGESET]).'"' if defined($emeta->[CHANGESET]); # changeset and uid are required by josm to display element history
+    push @attrs, 'uid="'.xml_escape($emeta->[UID]).'"' if defined($emeta->[UID]);
+    push @attrs, 'action="'.($edata->[VISIBLE] ? "modify" : "delete").'"' if $is_modified;
+
+    my $tags = $edata->[TAGS];
+    if ($e == NODE)
+    {
+        push @attrs, 'lat="'.xml_escape($edata->[LAT] / SCALE).'"' if defined($edata->[LAT]) && ($edata->[VISIBLE] // 1);
+        push @attrs, 'lon="'.xml_escape($edata->[LON] / SCALE).'"' if defined($edata->[LON]) && ($edata->[VISIBLE] // 1);
+        print $fh '  <node '.join(' ', @attrs);
+        if (!%$tags)
         {
-            print $fh '  <node '.$important_attrs;
-            print $fh ' lat="'.xml_escape($edata->[LAT] / SCALE).'" lon="'.xml_escape($edata->[LON] / SCALE).'"' if $edata->[VISIBLE];
-            if (!%$tags)
-            {
-                print $fh '/>'."\n";
-            }
-            else
-            {
-                print $fh '>'."\n";
-                print_fh_tags($fh, $tags);
-                print $fh '  </node>'."\n";
-            }
+            print $fh '/>'."\n";
         }
-        elsif ($e == WAY)
+        else
         {
-            print $fh '  <way '.$important_attrs.'>'."\n";
-            print $fh '    <nd ref="'.xml_escape($_).'"/>'."\n" for @{$edata->[NDS]};
+            print $fh '>'."\n";
             print_fh_tags($fh, $tags);
-            print $fh '  </way>'."\n";
-        }
-        elsif ($e == RELATION)
-        {
-            print $fh '  <relation '.$important_attrs.'>'."\n";
-            for (@{$edata->[MEMBERS]})
-            {
-                my ($mt, $mi, $mr) = @$_;
-                print $fh '    <member type="'.element_string($mt).'" ref="'.xml_escape($mi).'" role="'.xml_escape($mr).'"/>'."\n";
-            }
-            print_fh_tags($fh, $tags);
-            print $fh '  </relation>'."\n";
+            print $fh '  </node>'."\n";
         }
     }
-    print $fh '</osm>'."\n";
-    close $fh;
+    elsif ($e == WAY)
+    {
+        print $fh '  <way '.join(' ', @attrs).'>'."\n";
+        print $fh '    <nd ref="'.xml_escape($_).'"/>'."\n" for @{$edata->[NDS]};
+        print_fh_tags($fh, $tags);
+        print $fh '  </way>'."\n";
+    }
+    elsif ($e == RELATION)
+    {
+        print $fh '  <relation '.join(' ', @attrs).'>'."\n";
+        for (@{$edata->[MEMBERS]})
+        {
+            my ($mt, $mi, $mr) = @$_;
+            print $fh '    <member type="'.element_string($mt).'" ref="'.xml_escape($mi).'" role="'.xml_escape($mr).'"/>'."\n";
+        }
+        print_fh_tags($fh, $tags);
+        print $fh '  </relation>'."\n";
+    }
 }
 
 sub print_fh_tags
