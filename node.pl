@@ -16,6 +16,9 @@ my $correct_options = GetOptions(
 
 if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
 {
+    die "lat is missing" unless defined($lat);
+    die "lon is missing" unless defined($lon);
+
     my $body;
     open my $fh, '>', \$body;
     OsmData::print_fh_xml_header($fh);
@@ -24,7 +27,12 @@ if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
     ]);
     OsmData::print_fh_xml_footer($fh);
     close $fh;
-    print $body;
+
+    my $resp = OsmApi::put("node/create", $body);
+    if (!$resp->is_success)
+    {
+        die "cannot create node: ".$resp->status_line."\n";
+    }
     # TODO print node id / full xml response
     exit;
 }
