@@ -33,7 +33,7 @@ if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
     {
         die "cannot create node: ".$resp->status_line."\n";
     }
-    # TODO print node id / full xml response
+    print "node created: ".$resp->content."\n";
     exit;
 }
 
