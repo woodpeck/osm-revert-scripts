@@ -93,5 +93,16 @@ sub log($)
     update($current);
 }
 
+# -----------------------------------------------------------------------------
+# outputs a log message without breaking the progress bar, then ends the program
+# Parameters: message
+
+sub die($)
+{
+    my $msg = shift;
+    print STDERR "\n" if (defined($current));
+    die($msg);
+}
+
 1;
 
