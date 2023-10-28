@@ -9,7 +9,6 @@ use Element;
 
 my $new_changeset = 0;
 my $cid;
-my $latest_version = 0;
 my $reset = 0;
 my ($version, $to_version);
 my $to_previous_version = 0;
@@ -24,7 +23,6 @@ my $correct_options = GetOptions(
     "new-changeset!" => \$new_changeset,
     "version=i" => \$version,
     "to-version=i" => \$to_version,
-    "latest-version!" => \$latest_version,
     "to-previous-version!" => \$to_previous_version,
     "reset!" => \$reset,
     "lat=f" => \$lat,
@@ -90,11 +88,11 @@ options:
   --changeset=<id>                 use specified changeset
   --new-changeset                  open new changeset
                                    else use latest changeset
-  --version=<number>               \\
-  --latest-version                 - need one for updating
+  --version=<number>               update this verion or fail with edit conflict
+                                   else update the latest version
   --to-version=<number>
   --to-previous-version
-  --reset                          delete everything from node prior to modification
+  --reset                          delete everything from the element prior to modification
   --lat=<number>
   --lon=<number>
   --ll=<number,number>             shortcut for --lat=<number> --lon=<number>
@@ -102,11 +100,11 @@ options:
 options that can be passed repeatedly:
   --key=<string>
   --value=<string>
-  --tag=<key>[=<value>]         shortcut for --key=<key> --value=<value>
+  --tag=<key>[=<value>]            shortcut for --key=<key> --value=<value>
   --tags=<key>=[<value>][,<key>=[<value>]...]
   --delete-key=<string>
   --delete-value=<string>
-  --delete-tag=<key>[=<value>]  if value is specified, delete tag if both key and value match
+  --delete-tag=<key>[=<value>]      if value is specified, delete tag if both key and value match
   --delete-tags=<key>=[<value>][,<key>=[<value>]...]
 EOF
 
@@ -154,7 +152,6 @@ sub require_latlon
 
 sub require_version
 {
-    die "need exactly one of: (--latest-version, --version=<n>)" unless $latest_version + defined($version) == 1;
-    $version = Element::get_latest_version($id) if $latest_version;
+    $version = Element::get_latest_version($id) unless defined($version);
     die unless defined($version);
 }
