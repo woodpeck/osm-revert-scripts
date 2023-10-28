@@ -48,7 +48,7 @@ sub get_latest_version
     my ($id) = @_;
     my ($resp, $twig);
 
-    $resp = OsmApi::get("node/".uri_escape($id));
+    $resp = OsmApi::get("nodes?nodes=".uri_escape($id)); # avoid 410 Gone on deleted elements
     if (!$resp->is_success)
     {
         print STDERR "cannot get node: ".$resp->status_line."\n";
