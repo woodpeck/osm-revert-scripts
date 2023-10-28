@@ -15,11 +15,8 @@ my $reset = 0;
 my ($version, $to_version);
 my ($lat, $lon);
 my $latlon;
-my @keys;
-my @values;
-my @tags;
-my @delete_keys;
-my @delete_tags;
+my (@keys, @values, @tags);
+my (@delete_keys, @delete_values, @delete_tags);
 my %tags;
 my %delete_tags;
 my $correct_options = GetOptions(
@@ -37,6 +34,7 @@ my $correct_options = GetOptions(
     "value=s" => \@values,
     "tag=s" => \@tags,
     "delete-key=s" => \@delete_keys,
+    "delete-values=s" => \@delete_values,
     "delete-tag=s" => \@delete_tags,
 );
 
@@ -73,28 +71,29 @@ if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 2) && $correct_options)
 
 print <<EOF;
 Usage: 
-  $0 create <options>          create node
-  $0 delete <id> <options>     delete node
-  $0 modify <id> <options>     modify the existing node version
+  $0 create <options>           create node
+  $0 delete <id> <options>      delete node
+  $0 modify <id> <options>      modify the existing node version
 
 options:
-  --changeset=<id>             \\
-  --latest-changeset           - need one
-  --new-changeset              /
-  --version=<number>           \\
-  --latest-version             - need one for updating
+  --changeset=<id>              \\
+  --latest-changeset            - need one
+  --new-changeset               /
+  --version=<number>            \\
+  --latest-version              - need one for updating
   --to-version=<number>
-  --reset                      delete everything from node prior to modification
+  --reset                       delete everything from node prior to modification
   --lat=<number>
   --lon=<number>
-  --ll=<number,number>         shortcut for --lat=<number> --lon=<number>
+  --ll=<number,number>          shortcut for --lat=<number> --lon=<number>
 
 options that can be passed repeatedly:
   --key=<string>
   --value=<string>
-  --tag=<key>=<value>          shortcut for --key=<key> --value=<value>
-  --delete-key=<string>        delete tag if key matches
-  --delete-tag=<key>=<value>   delete tag only if both key and value match
+  --tag=<key>=<value>           shortcut for --key=<key> --value=<value>
+  --delete-key=<string>
+  --delete-value=<string>
+  --delete-tag=<key>[=<value>]  if value is specified, delete tag if both key and value match
 EOF
 
 sub process_arguments
@@ -114,8 +113,10 @@ sub process_arguments
     die "different number of keys/values" unless @keys == @values;
     %tags = map { split /=/, $_, 2 } @tags;
     @tags{@keys} = @values;
+
+    die "different number of delete-keys/values" unless @delete_keys == @delete_values;
     %delete_tags = map { split /=/, $_, 2 } @delete_tags;
-    @delete_tags{@delete_keys} = (undef) x @delete_keys;
+    @delete_tags{@delete_keys} = @delete_values;
 }
 
 sub require_latlon
