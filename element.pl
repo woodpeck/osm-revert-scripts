@@ -4,8 +4,8 @@ use strict;
 use FindBin;
 use lib $FindBin::Bin;
 use Getopt::Long;
-use Node;
 use Changeset;
+use Element;
 
 my $latest_changeset = 0;
 my $new_changeset = 0;
@@ -42,30 +42,32 @@ my $correct_options = GetOptions(
     "delete-tags=s" => \@delete_tag_strings,
 );
 
-if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
+my $type = $ARGV[1];
+my $id = $ARGV[2];
+die "only nodes are currently supported" unless $type eq "node";
+
+if (($ARGV[0] eq "create") && (scalar(@ARGV) == 2) && $correct_options)
 {
     process_arguments();
     require_latlon();
-    my $id = Node::create($cid, \%tags, $lat, $lon);
+    $id = Element::create($cid, \%tags, $lat, $lon);
     print "node created: $id\n" if defined($id);
     exit;
 }
 
-if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 2) && $correct_options)
+if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 3) && $correct_options)
 {
-    my $id = $ARGV[1];
     process_arguments();
-    require_version($id);
-    my $new_version = Node::delete($cid, $id, $version);
+    require_version();
+    my $new_version = Element::delete($cid, $id, $version);
     print "node deleted with version: $new_version\n" if defined($new_version);
     exit;
 }
 
-if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 2) && $correct_options)
+if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 3) && $correct_options)
 {
-    my $id = $ARGV[1];
     process_arguments();
-    require_version($id);
+    require_version();
     if ($to_previous_version)
     {
         die "can't go to previous version from version $version" if $version <= 1;
@@ -73,29 +75,29 @@ if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 2) && $correct_options)
     }
     die "can't have both to-version and reset" if defined($to_version) && $reset;
     require_latlon() if $reset;
-    my $new_version = Node::modify($cid, $id, $version, $to_version, $reset, \%tags, \%delete_tags, $lat, $lon);
+    my $new_version = Element::modify($cid, $id, $version, $to_version, $reset, \%tags, \%delete_tags, $lat, $lon);
     print "node overwritten with version: $new_version\n" if defined($new_version);
     exit;
 }
 
 print <<EOF;
 Usage: 
-  $0 create <options>           create node
-  $0 delete <id> <options>      delete node
-  $0 modify <id> <options>      modify the existing node version
+  $0 create node <options>         create node
+  $0 delete node <id> <options>    delete node
+  $0 modify node <id> <options>    modify the existing node version
 
 options:
-  --changeset=<id>              \\
-  --latest-changeset            - need one
-  --new-changeset               /
-  --version=<number>            \\
-  --latest-version              - need one for updating
+  --changeset=<id>                 \\
+  --latest-changeset               - need one
+  --new-changeset                  /
+  --version=<number>               \\
+  --latest-version                 - need one for updating
   --to-version=<number>
   --to-previous-version
-  --reset                       delete everything from node prior to modification
+  --reset                          delete everything from node prior to modification
   --lat=<number>
   --lon=<number>
-  --ll=<number,number>          shortcut for --lat=<number> --lon=<number>
+  --ll=<number,number>             shortcut for --lat=<number> --lon=<number>
 
 options that can be passed repeatedly:
   --key=<string>
@@ -111,7 +113,7 @@ EOF
 sub process_arguments
 {
     die "need exactly one of: (--latest-changeset, --new-changeset, --changeset=<id>)" unless $latest_changeset + $new_changeset + defined($cid) == 1;
-    $cid = Node::get_latest_changeset() if $latest_changeset;
+    $cid = Element::get_latest_changeset() if $latest_changeset;
     $cid = Changeset::create() if $new_changeset;
     die unless defined($cid);
 
@@ -143,8 +145,7 @@ sub require_latlon
 
 sub require_version
 {
-    my ($id) = @_;
     die "need exactly one of: (--latest-version, --version=<n>)" unless $latest_version + defined($version) == 1;
-    $version = Node::get_latest_version($id) if $latest_version;
+    $version = Element::get_latest_version($id) if $latest_version;
     die unless defined($version);
 }

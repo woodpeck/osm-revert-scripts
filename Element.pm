@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-package Node;
+package Element;
 
 use strict;
 use warnings;
