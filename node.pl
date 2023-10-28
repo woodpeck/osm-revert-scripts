@@ -11,7 +11,7 @@ my $latest_changeset = 0;
 my $new_changeset = 0;
 my $cid;
 my $latest_version = 0;
-my $version;
+my ($version, $to_version);
 my ($lat, $lon);
 my @keys;
 my @values;
@@ -21,6 +21,7 @@ my $correct_options = GetOptions(
     "latest-changeset!" => \$latest_changeset,
     "new-changeset!" => \$new_changeset,
     "version=i" => \$version,
+    "to-version=i" => \$to_version,
     "latest-version!" => \$latest_version,
     "lat=f" => \$lat,
     "lon=f" => \$lon,
@@ -37,32 +38,32 @@ if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
     exit;
 }
 
-if (($ARGV[0] eq "overwrite") && (scalar(@ARGV) == 2) && $correct_options)
-{
-    my $id = $ARGV[1];
-    process_arguments();
-    require_latlon();
-    require_value_or_latest("version", \$latest_version, \$version, sub { Node::get_latest_version($id) });
-    my $new_version = Node::overwrite($cid, $id, $version, \%tags, $lat, $lon);
-    print "node overwritten with version: $new_version\n" if defined($new_version);
-    exit;
-}
-
 if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 2) && $correct_options)
 {
     my $id = $ARGV[1];
     process_arguments();
-    require_value_or_latest("version", \$latest_version, \$version, sub { Node::get_latest_version($id) });
+    require_version($id);
     my $new_version = Node::delete($cid, $id, $version);
     print "node deleted with version: $new_version\n" if defined($new_version);
+    exit;
+}
+
+if (($ARGV[0] eq "overwrite") && (scalar(@ARGV) == 2) && $correct_options)
+{
+    my $id = $ARGV[1];
+    process_arguments();
+    require_latlon() unless defined($to_version);
+    require_version($id);
+    my $new_version = Node::overwrite($cid, $id, $version, $to_version, \%tags, $lat, $lon);
+    print "node overwritten with version: $new_version\n" if defined($new_version);
     exit;
 }
 
 print <<EOF;
 Usage: 
   $0 create <options>          create node
-  $0 overwrite <id> <options>  create new node version discarding all previous data
   $0 delete <id> <options>     delete node
+  $0 overwrite <id> <options>  create new node version discarding all previous data
 
 options:
   --changeset=<id>             \\
@@ -70,6 +71,7 @@ options:
   --new-changeset              /
   --version=<number>           \\
   --latest-version             - need one for updating
+  --to-version=<number>
   --lat=<number>
   --lon=<number>
   --key=<string>               \\
@@ -93,15 +95,10 @@ sub require_latlon
     die "lon is missing" unless defined($lon);
 }
 
-sub require_value_or_latest
+sub require_version
 {
-    my ($name, $latest_ref, $value_ref, $getter) = @_;
-
-    die "need one of: (--latest-$name, --$name=<n>)" unless $$latest_ref || defined($$value_ref);
-    die "need only one of: (--latest-$name, --$name=<n>)" if $$latest_ref && defined($$value_ref);
-    if ($$latest_ref)
-    {
-        $$value_ref = $getter->();
-        die unless defined($$value_ref);
-    }
+    my ($id) = @_;
+    die "need exactly one of: (--latest-version, --version=<n>)" unless $latest_version + defined($version) == 1;
+    $version = Node::get_latest_version($id) if $latest_version;
+    die unless defined($version);
 }

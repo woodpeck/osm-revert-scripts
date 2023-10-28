@@ -68,15 +68,9 @@ sub create
 {
     my ($cid, $tags, $lat, $lon) = @_;
 
-    my $body;
-    open my $fh, '>', \$body;
-    OsmData::print_fh_xml_header($fh);
-    OsmData::print_fh_element($fh, OsmData::NODE, undef, undef, [
+    my $body = get_request_body(undef, undef, [
         $cid, undef, undef, undef, $tags, $lat * OsmData::SCALE, $lon * OsmData::SCALE
     ]);
-    OsmData::print_fh_xml_footer($fh);
-    close $fh;
-
     my $resp = OsmApi::put("node/create", $body);
     if (!$resp->is_success)
     {
@@ -88,18 +82,35 @@ sub create
 
 sub overwrite
 {
-    my ($cid, $id, $version, $tags, $lat, $lon) = @_;
+    my ($cid, $id, $version, $to_version, $tags, $lat, $lon) = @_;
+    my $resp;
 
-    my $body;
-    open my $fh, '>', \$body;
-    OsmData::print_fh_xml_header($fh);
-    OsmData::print_fh_element($fh, OsmData::NODE, $id, $version, [
-        $cid, undef, undef, undef, $tags, $lat * OsmData::SCALE, $lon * OsmData::SCALE
-    ]);
-    OsmData::print_fh_xml_footer($fh);
-    close $fh;
+    my $edata;
+    if (defined($to_version))
+    {
+        $resp = OsmApi::get("node/".uri_escape($id)."/".uri_escape($to_version));
+        if (!$resp->is_success)
+        {
+            print STDERR "cannot get node version $to_version: ".$resp->status_line."\n";
+            return undef;
+        }
+        my $data = OsmData::blank_data();
+        OsmData::parse_elements_string($data, $resp->content);
+        my $stored_edata = $data->{elements}[OsmData::NODE]{$id}{$to_version};
+        my (undef, undef, undef, undef, @tll) = @$stored_edata;
+        $edata = [
+            $cid, undef, undef, undef, @tll
+        ];
+    }
+    else
+    {
+        $edata = [
+            $cid, undef, undef, undef, $tags, $lat * OsmData::SCALE, $lon * OsmData::SCALE
+        ];
+    }
 
-    my $resp = OsmApi::put("node/".uri_escape($id), $body);
+    my $body = get_request_body($id, $version, $edata);
+    $resp = OsmApi::put("node/".uri_escape($id), $body);
     if (!$resp->is_success)
     {
         print STDERR "cannot overwrite node: ".$resp->status_line."\n";
@@ -112,15 +123,9 @@ sub delete
 {
     my ($cid, $id, $version) = @_;
 
-    my $body;
-    open my $fh, '>', \$body;
-    OsmData::print_fh_xml_header($fh);
-    OsmData::print_fh_element($fh, OsmData::NODE, $id, $version, [
+    my $body = get_request_body($id, $version, [
         $cid, undef, undef, undef, undef, 0, 0
     ]);
-    OsmData::print_fh_xml_footer($fh);
-    close $fh;
-
     my $resp = OsmApi::delete("node/".uri_escape($id), $body);
     if (!$resp->is_success)
     {
@@ -131,6 +136,18 @@ sub delete
 }
 
 # -----
+
+sub get_request_body
+{
+    my ($id, $version, $edata) = @_;
+    my $body;
+    open my $fh, '>', \$body;
+    OsmData::print_fh_xml_header($fh);
+    OsmData::print_fh_element($fh, OsmData::NODE, $id, $version, $edata);
+    OsmData::print_fh_xml_footer($fh);
+    close $fh;
+    return $body;
+}
 
 sub get_att_from_xml
 {
