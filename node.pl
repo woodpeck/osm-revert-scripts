@@ -14,6 +14,7 @@ my $latest_version = 0;
 my $reset = 0;
 my ($version, $to_version);
 my ($lat, $lon);
+my $latlon;
 my @keys;
 my @values;
 my @delete_keys;
@@ -29,6 +30,7 @@ my $correct_options = GetOptions(
     "reset!" => \$reset,
     "lat=f" => \$lat,
     "lon=f" => \$lon,
+    "latlon|ll=s" => \$latlon,
     "key=s" => \@keys,
     "value=s" => \@values,
     "delete-key=s" => \@delete_keys,
@@ -81,6 +83,7 @@ options:
   --reset                      delete everything from node prior to modification
   --lat=<number>
   --lon=<number>
+  --ll=<number,number>         shortcut for --lat=<number> --lon=<number>
   --key=<string>               \\
   --value=<string>             - can have multiple
   --delete-key=<string>        /
@@ -92,6 +95,13 @@ sub process_arguments
     $cid = Node::get_latest_changeset() if $latest_changeset;
     $cid = Changeset::create() if $new_changeset;
     die unless defined($cid);
+
+    if (defined($latlon))
+    {
+        die "can't have both --lat and --latlon" if defined($lat);
+        die "can't have both --lon and --latlon" if defined($lat);
+        ($lat, $lon) = split /,/, $latlon, 2;
+    }
 
     die "different number of keys/values" unless @keys == @values;
     @tags{@keys} = @values;
