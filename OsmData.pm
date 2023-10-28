@@ -265,8 +265,8 @@ sub print_fh_element
     my $tags = $edata->[TAGS];
     if ($e == NODE)
     {
-        push @attrs, 'lat="'.xml_escape($edata->[LAT] / SCALE).'"' if defined($edata->[LAT]) && ($edata->[VISIBLE] // 1);
-        push @attrs, 'lon="'.xml_escape($edata->[LON] / SCALE).'"' if defined($edata->[LON]) && ($edata->[VISIBLE] // 1);
+        push @attrs, 'lat="'.xml_escape($edata->[LAT] / SCALE).'"' if defined($edata->[LAT]);
+        push @attrs, 'lon="'.xml_escape($edata->[LON] / SCALE).'"' if defined($edata->[LON]);
         print $fh '  <node '.join(' ', @attrs);
         if (!%$tags)
         {

@@ -80,45 +80,6 @@ sub create
     return $resp->content;
 }
 
-sub overwrite
-{
-    my ($cid, $id, $version, $to_version, $tags, $lat, $lon) = @_;
-    my $resp;
-
-    my $edata;
-    if (defined($to_version))
-    {
-        $resp = OsmApi::get("node/".uri_escape($id)."/".uri_escape($to_version));
-        if (!$resp->is_success)
-        {
-            print STDERR "cannot get node version $to_version: ".$resp->status_line."\n";
-            return undef;
-        }
-        my $data = OsmData::blank_data();
-        OsmData::parse_elements_string($data, $resp->content);
-        my $stored_edata = $data->{elements}[OsmData::NODE]{$id}{$to_version};
-        my (undef, undef, undef, undef, @tll) = @$stored_edata;
-        $edata = [
-            $cid, undef, undef, undef, @tll
-        ];
-    }
-    else
-    {
-        $edata = [
-            $cid, undef, undef, undef, $tags, $lat * OsmData::SCALE, $lon * OsmData::SCALE
-        ];
-    }
-
-    my $body = get_request_body($id, $version, $edata);
-    $resp = OsmApi::put("node/".uri_escape($id), $body);
-    if (!$resp->is_success)
-    {
-        print STDERR "cannot overwrite node: ".$resp->status_line."\n";
-        return undef;
-    }
-    return $resp->content;
-}
-
 sub delete
 {
     my ($cid, $id, $version) = @_;
@@ -130,6 +91,64 @@ sub delete
     if (!$resp->is_success)
     {
         print STDERR "cannot delete node: ".$resp->status_line."\n";
+        return undef;
+    }
+    return $resp->content;
+}
+
+sub overwrite
+{
+    my ($cid, $id, $version, $to_version, $tags, $lat, $lon) = @_;
+    my $resp;
+
+    my ($visible, $edata);
+    if (defined($to_version))
+    {
+        $resp = OsmApi::get("node/".uri_escape($id)."/".uri_escape($to_version));
+        if (!$resp->is_success)
+        {
+            print STDERR "cannot get node version $to_version: ".$resp->status_line."\n";
+            return undef;
+        }
+        my $data = OsmData::blank_data();
+        OsmData::parse_elements_string($data, $resp->content);
+        my $stored_edata = $data->{elements}[OsmData::NODE]{$id}{$to_version};
+        my @tll;
+        (undef, undef, undef, $visible, @tll) = @$stored_edata;
+        if ($visible)
+        {
+            $edata = [
+                $cid, undef, undef, undef, @tll
+            ];
+        }
+        else
+        {
+            print "!($visible)\n";
+            $edata = [
+                $cid, undef, undef, undef, undef, 0, 0
+            ];
+        }
+    }
+    else
+    {
+        $visible = 1;
+        $edata = [
+            $cid, undef, undef, undef, $tags, $lat * OsmData::SCALE, $lon * OsmData::SCALE
+        ];
+    }
+
+    my $body = get_request_body($id, $version, $edata);
+    if ($visible)
+    {
+        $resp = OsmApi::put("node/".uri_escape($id), $body);
+    }
+    else
+    {
+        $resp = OsmApi::delete("node/".uri_escape($id), $body);
+    }
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot overwrite node: ".$resp->status_line."\n";
         return undef;
     }
     return $resp->content;
