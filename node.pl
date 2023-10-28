@@ -110,13 +110,17 @@ sub process_arguments
         ($lat, $lon) = split /,/, $latlon, 2;
     }
 
-    die "different number of keys/values" unless @keys == @values;
-    %tags = map { split /=/, $_, 2 } @tags;
-    @tags{@keys} = @values;
+    %tags = process_tags("keys/values", \@keys, \@values, \@tags);
+    %delete_tags = process_tags("delete-keys/values", \@delete_keys, \@delete_values, \@delete_tags);
+}
 
-    die "different number of delete-keys/values" unless @delete_keys == @delete_values;
-    %delete_tags = map { split /=/, $_, 2 } @delete_tags;
-    @delete_tags{@delete_keys} = @delete_values;
+sub process_tags
+{
+    my ($name, $keys, $values, $tags) = @_;
+    die "different number of $name" unless @$keys == @$values;
+    my %tags = map { split /=/, $_, 2 } @$tags;
+    @tags{@$keys} = @$values;
+    return %tags;
 }
 
 sub require_latlon
