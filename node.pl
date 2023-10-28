@@ -13,6 +13,7 @@ my $cid;
 my $latest_version = 0;
 my $reset = 0;
 my ($version, $to_version);
+my $to_previous_version = 0;
 my ($lat, $lon);
 my $latlon;
 my (@keys, @values, @tags, @tag_strings);
@@ -26,6 +27,7 @@ my $correct_options = GetOptions(
     "version=i" => \$version,
     "to-version=i" => \$to_version,
     "latest-version!" => \$latest_version,
+    "to-previous-version!" => \$to_previous_version,
     "reset!" => \$reset,
     "lat=f" => \$lat,
     "lon=f" => \$lon,
@@ -64,7 +66,12 @@ if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 2) && $correct_options)
     my $id = $ARGV[1];
     process_arguments();
     require_version($id);
-    die "can't have both --to-version and --reset" if defined($to_version) && $reset;
+    if ($to_previous_version)
+    {
+        die "can't go to previous version from version $version" if $version <= 1;
+        $to_version = $version - 1;
+    }
+    die "can't have both to-version and reset" if defined($to_version) && $reset;
     require_latlon() if $reset;
     my $new_version = Node::modify($cid, $id, $version, $to_version, $reset, \%tags, \%delete_tags, $lat, $lon);
     print "node overwritten with version: $new_version\n" if defined($new_version);
@@ -84,6 +91,7 @@ options:
   --version=<number>            \\
   --latest-version              - need one for updating
   --to-version=<number>
+  --to-previous-version
   --reset                       delete everything from node prior to modification
   --lat=<number>
   --lon=<number>
