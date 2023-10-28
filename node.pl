@@ -17,6 +17,7 @@ my ($lat, $lon);
 my $latlon;
 my @keys;
 my @values;
+my @tags;
 my @delete_keys;
 my %tags;
 my %delete_tags;
@@ -33,6 +34,7 @@ my $correct_options = GetOptions(
     "latlon|ll=s" => \$latlon,
     "key=s" => \@keys,
     "value=s" => \@values,
+    "tag=s" => \@tags,
     "delete-key=s" => \@delete_keys,
 );
 
@@ -84,9 +86,12 @@ options:
   --lat=<number>
   --lon=<number>
   --ll=<number,number>         shortcut for --lat=<number> --lon=<number>
-  --key=<string>               \\
-  --value=<string>             - can have multiple
-  --delete-key=<string>        /
+
+options that can be passed repeatedly:
+  --key=<string>
+  --value=<string>
+  --tag=<key>=<value>          shortcut for --key=<key> --value=<value>
+  --delete-key=<string>
 EOF
 
 sub process_arguments
@@ -104,6 +109,7 @@ sub process_arguments
     }
 
     die "different number of keys/values" unless @keys == @values;
+    %tags = map { split /=/, $_, 2 } @tags;
     @tags{@keys} = @values;
     @delete_tags{@delete_keys} = (1) x @delete_keys;
 }
