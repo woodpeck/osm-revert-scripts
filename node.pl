@@ -19,6 +19,7 @@ my @keys;
 my @values;
 my @tags;
 my @delete_keys;
+my @delete_tags;
 my %tags;
 my %delete_tags;
 my $correct_options = GetOptions(
@@ -36,6 +37,7 @@ my $correct_options = GetOptions(
     "value=s" => \@values,
     "tag=s" => \@tags,
     "delete-key=s" => \@delete_keys,
+    "delete-tag=s" => \@delete_tags,
 );
 
 if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
@@ -91,7 +93,8 @@ options that can be passed repeatedly:
   --key=<string>
   --value=<string>
   --tag=<key>=<value>          shortcut for --key=<key> --value=<value>
-  --delete-key=<string>
+  --delete-key=<string>        delete tag if key matches
+  --delete-tag=<key>=<value>   delete tag only if both key and value match
 EOF
 
 sub process_arguments
@@ -111,7 +114,8 @@ sub process_arguments
     die "different number of keys/values" unless @keys == @values;
     %tags = map { split /=/, $_, 2 } @tags;
     @tags{@keys} = @values;
-    @delete_tags{@delete_keys} = (1) x @delete_keys;
+    %delete_tags = map { split /=/, $_, 2 } @delete_tags;
+    @delete_tags{@delete_keys} = (undef) x @delete_keys;
 }
 
 sub require_latlon

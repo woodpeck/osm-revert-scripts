@@ -122,7 +122,11 @@ sub modify
     $edata->[OsmData::LAT] = $lat * OsmData::SCALE if defined($lat);
     $edata->[OsmData::LON] = $lon * OsmData::SCALE if defined($lon);
     $edata->[OsmData::TAGS] = {%{$edata->[OsmData::TAGS]}, %$tags};
-    delete $edata->[OsmData::TAGS]{$_} for keys %$delete_tags;
+    foreach my $k (keys %$delete_tags)
+    {
+        my $v = $delete_tags->{$k};
+        delete $edata->[OsmData::TAGS]{$k} if !defined($v) || $edata->[OsmData::TAGS]{$k} eq $v;
+    }
 
     my $visible = update_and_extract_visible_from_edata($edata, $cid);
     my $body = get_request_body($id, $version, $edata);
