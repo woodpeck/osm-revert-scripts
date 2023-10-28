@@ -7,7 +7,6 @@ use Getopt::Long;
 use Changeset;
 use Element;
 
-my $latest_changeset = 0;
 my $new_changeset = 0;
 my $cid;
 my $latest_version = 0;
@@ -22,7 +21,6 @@ my %tags;
 my %delete_tags;
 my $correct_options = GetOptions(
     "changeset|cid=i" => \$cid,
-    "latest-changeset!" => \$latest_changeset,
     "new-changeset!" => \$new_changeset,
     "version=i" => \$version,
     "to-version=i" => \$to_version,
@@ -44,10 +42,10 @@ my $correct_options = GetOptions(
 
 my $type = $ARGV[1];
 my $id = $ARGV[2];
-die "only nodes are currently supported" unless $type eq "node";
 
 if (($ARGV[0] eq "create") && (scalar(@ARGV) == 2) && $correct_options)
 {
+    die "only nodes are currently supported" unless $type eq "node";
     process_arguments();
     require_latlon();
     $id = Element::create($cid, \%tags, $lat, $lon);
@@ -57,6 +55,7 @@ if (($ARGV[0] eq "create") && (scalar(@ARGV) == 2) && $correct_options)
 
 if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 3) && $correct_options)
 {
+    die "only nodes are currently supported" unless $type eq "node";
     process_arguments();
     require_version();
     my $new_version = Element::delete($cid, $id, $version);
@@ -66,6 +65,7 @@ if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 3) && $correct_options)
 
 if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 3) && $correct_options)
 {
+    die "only nodes are currently supported" unless $type eq "node";
     process_arguments();
     require_version();
     if ($to_previous_version)
@@ -87,9 +87,9 @@ Usage:
   $0 modify node <id> <options>    modify the existing node version
 
 options:
-  --changeset=<id>                 \\
-  --latest-changeset               - need one
-  --new-changeset                  /
+  --changeset=<id>                 use specified changeset
+  --new-changeset                  open new changeset
+                                   else use latest changeset
   --version=<number>               \\
   --latest-version                 - need one for updating
   --to-version=<number>
@@ -112,9 +112,18 @@ EOF
 
 sub process_arguments
 {
-    die "need exactly one of: (--latest-changeset, --new-changeset, --changeset=<id>)" unless $latest_changeset + $new_changeset + defined($cid) == 1;
-    $cid = Element::get_latest_changeset() if $latest_changeset;
-    $cid = Changeset::create() if $new_changeset;
+    if (defined($cid))
+    {
+        die "can't have both specified and new changeset" if $new_changeset;
+    }
+    elsif ($new_changeset)
+    {
+        $cid = Changeset::create();
+    }
+    else
+    {
+        $cid = Element::get_latest_changeset();
+    }
     die unless defined($cid);
 
     if (defined($latlon))
