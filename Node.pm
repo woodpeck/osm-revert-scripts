@@ -101,7 +101,7 @@ sub delete
 
 sub modify
 {
-    my ($cid, $id, $version, $to_version, $reset, $tags, $lat, $lon) = @_;
+    my ($cid, $id, $version, $to_version, $reset, $tags, $delete_tags, $lat, $lon) = @_;
     my $resp;
 
     my $edata;
@@ -111,7 +111,7 @@ sub modify
     }
     elsif ($reset)
     {
-        $edata = [$cid, undef, undef, 1, $tags, undef, undef];
+        $edata = [$cid, undef, undef, 1, {}, undef, undef];
     }
     else
     {
@@ -121,6 +121,8 @@ sub modify
 
     $edata->[OsmData::LAT] = $lat * OsmData::SCALE if defined($lat);
     $edata->[OsmData::LON] = $lon * OsmData::SCALE if defined($lon);
+    $edata->[OsmData::TAGS] = {%{$edata->[OsmData::TAGS]}, %$tags};
+    delete $edata->[OsmData::TAGS]{$_} for keys %$delete_tags;
 
     my $visible = update_and_extract_visible_from_edata($edata, $cid);
     my $body = get_request_body($id, $version, $edata);

@@ -16,7 +16,9 @@ my ($version, $to_version);
 my ($lat, $lon);
 my @keys;
 my @values;
+my @delete_keys;
 my %tags;
+my %delete_tags;
 my $correct_options = GetOptions(
     "changeset|cid=i" => \$cid,
     "latest-changeset!" => \$latest_changeset,
@@ -29,6 +31,7 @@ my $correct_options = GetOptions(
     "lon=f" => \$lon,
     "key=s" => \@keys,
     "value=s" => \@values,
+    "delete-key=s" => \@delete_keys,
 );
 
 if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
@@ -57,7 +60,7 @@ if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 2) && $correct_options)
     require_version($id);
     die "can't have both --to-version and --reset" if defined($to_version) && $reset;
     require_latlon() if $reset;
-    my $new_version = Node::modify($cid, $id, $version, $to_version, $reset, \%tags, $lat, $lon);
+    my $new_version = Node::modify($cid, $id, $version, $to_version, $reset, \%tags, \%delete_tags, $lat, $lon);
     print "node overwritten with version: $new_version\n" if defined($new_version);
     exit;
 }
@@ -80,6 +83,7 @@ options:
   --lon=<number>
   --key=<string>               \\
   --value=<string>             - can have multiple
+  --delete-key=<string>        /
 EOF
 
 sub process_arguments
@@ -91,6 +95,7 @@ sub process_arguments
 
     die "different number of keys/values" unless @keys == @values;
     @tags{@keys} = @values;
+    @delete_tags{@delete_keys} = (1) x @delete_keys;
 }
 
 sub require_latlon
