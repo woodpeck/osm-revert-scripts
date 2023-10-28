@@ -245,6 +245,7 @@ sub post_web
     $req->content($body) if defined($body); 
     $req->header("Content-type" => "application/x-www-form-urlencoded");
     my $resp = repeat($req);
+    $auth_token = $1 if ($resp->content =~ /<meta name="csrf-token" content="(.*)" \/>/);
     debuglog($req, $resp) if ($prefs->{"debug"});
     return $resp;
 }
