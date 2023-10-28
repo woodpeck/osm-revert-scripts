@@ -11,6 +11,7 @@ my $latest_changeset = 0;
 my $new_changeset = 0;
 my $cid;
 my $latest_version = 0;
+my $reset = 0;
 my ($version, $to_version);
 my ($lat, $lon);
 my @keys;
@@ -23,6 +24,7 @@ my $correct_options = GetOptions(
     "version=i" => \$version,
     "to-version=i" => \$to_version,
     "latest-version!" => \$latest_version,
+    "reset!" => \$reset,
     "lat=f" => \$lat,
     "lon=f" => \$lon,
     "key=s" => \@keys,
@@ -48,13 +50,14 @@ if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 2) && $correct_options)
     exit;
 }
 
-if (($ARGV[0] eq "overwrite") && (scalar(@ARGV) == 2) && $correct_options)
+if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 2) && $correct_options)
 {
     my $id = $ARGV[1];
     process_arguments();
-    require_latlon() unless defined($to_version);
     require_version($id);
-    my $new_version = Node::overwrite($cid, $id, $version, $to_version, \%tags, $lat, $lon);
+    die "can't have both --to-version and --reset" if defined($to_version) && $reset;
+    require_latlon() if $reset;
+    my $new_version = Node::modify($cid, $id, $version, $to_version, $reset, \%tags, $lat, $lon);
     print "node overwritten with version: $new_version\n" if defined($new_version);
     exit;
 }
@@ -63,7 +66,7 @@ print <<EOF;
 Usage: 
   $0 create <options>          create node
   $0 delete <id> <options>     delete node
-  $0 overwrite <id> <options>  create new node version discarding all previous data
+  $0 modify <id> <options>     modify the existing node version
 
 options:
   --changeset=<id>             \\
@@ -72,6 +75,7 @@ options:
   --version=<number>           \\
   --latest-version             - need one for updating
   --to-version=<number>
+  --reset                      delete everything from node prior to modification
   --lat=<number>
   --lon=<number>
   --key=<string>               \\

@@ -127,15 +127,6 @@ sub parse_changes_file
     return !!@changes;
 }
 
-sub parse_elements_string
-{
-    my ($data, $xml) = @_;
-
-    my @elements = parse_elements($data, $xml);
-
-    return !!@elements;
-}
-
 sub parse_elements
 {
     my ($data, $xml) = @_;

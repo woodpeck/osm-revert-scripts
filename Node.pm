@@ -9,6 +9,8 @@ use XML::Twig;
 use OsmApi;
 use OsmData;
 
+our $data = OsmData::blank_data();
+
 sub get_latest_changeset
 {
     my $resp;
@@ -55,7 +57,8 @@ sub get_latest_version
         return undef;
     }
 
-    my $version = get_att_from_xml('node', 'version', $resp->content);
+    my @elements = OsmData::parse_elements($data, $resp->content);
+    my (undef, undef, $version) = @{$elements[0]};
     if (!defined($version))
     {
         print STDERR "cannot get node version\n";
@@ -96,47 +99,30 @@ sub delete
     return $resp->content;
 }
 
-sub overwrite
+sub modify
 {
-    my ($cid, $id, $version, $to_version, $tags, $lat, $lon) = @_;
+    my ($cid, $id, $version, $to_version, $reset, $tags, $lat, $lon) = @_;
     my $resp;
 
-    my ($visible, $edata);
+    my $edata;
     if (defined($to_version))
     {
-        $resp = OsmApi::get("node/".uri_escape($id)."/".uri_escape($to_version));
-        if (!$resp->is_success)
-        {
-            print STDERR "cannot get node version $to_version: ".$resp->status_line."\n";
-            return undef;
-        }
-        my $data = OsmData::blank_data();
-        OsmData::parse_elements_string($data, $resp->content);
-        my $stored_edata = $data->{elements}[OsmData::NODE]{$id}{$to_version};
-        my @tll;
-        (undef, undef, undef, $visible, @tll) = @$stored_edata;
-        if ($visible)
-        {
-            $edata = [
-                $cid, undef, undef, undef, @tll
-            ];
-        }
-        else
-        {
-            print "!($visible)\n";
-            $edata = [
-                $cid, undef, undef, undef, undef, 0, 0
-            ];
-        }
+        $edata = get_edata_for_version($id, $to_version);
+    }
+    elsif ($reset)
+    {
+        $edata = [$cid, undef, undef, 1, $tags, undef, undef];
     }
     else
     {
-        $visible = 1;
-        $edata = [
-            $cid, undef, undef, undef, $tags, $lat * OsmData::SCALE, $lon * OsmData::SCALE
-        ];
+        $edata = get_edata_for_version($id, $version);
     }
+    return unless defined($edata);
 
+    $edata->[OsmData::LAT] = $lat * OsmData::SCALE if defined($lat);
+    $edata->[OsmData::LON] = $lon * OsmData::SCALE if defined($lon);
+
+    my $visible = update_and_extract_visible_from_edata($edata, $cid);
     my $body = get_request_body($id, $version, $edata);
     if ($visible)
     {
@@ -148,13 +134,61 @@ sub overwrite
     }
     if (!$resp->is_success)
     {
-        print STDERR "cannot overwrite node: ".$resp->status_line."\n";
+        print STDERR "cannot modify node: ".$resp->status_line."\n";
         return undef;
     }
     return $resp->content;
 }
 
 # -----
+
+sub get_edata_for_version
+{
+    my ($id, $version) = @_;
+
+    my $edata = get_stored_edata_copy($id, $version);
+    if (!defined($edata))
+    {
+        my $resp = OsmApi::get("node/".uri_escape($id)."/".uri_escape($version));
+        if (!$resp->is_success)
+        {
+            print STDERR "cannot get node version $version: ".$resp->status_line."\n";
+            return undef;
+        }
+        OsmData::parse_elements($data, $resp->content);
+        $edata = get_stored_edata_copy($id, $version);
+    }
+    if (!defined($edata))
+    {
+        print STDERR "cannot get data for node version $version\n";
+        return undef;
+    }
+    return $edata;
+}
+
+sub get_stored_edata_copy
+{
+    my ($id, $version) = @_;
+
+    my $stored_edata = $data->{elements}[OsmData::NODE]{$id}{$version};
+    return unless defined($stored_edata);
+
+    my @copied_edata = @$stored_edata;
+    return \@copied_edata;
+}
+
+sub update_and_extract_visible_from_edata
+{
+    my ($edata, $cid) = @_;
+    my $visible = $edata->[OsmData::VISIBLE];
+    $edata->[OsmData::CHANGESET] = $cid;
+    $edata->[OsmData::TIMESTAMP] = undef;
+    $edata->[OsmData::UID] = undef;
+    $edata->[OsmData::VISIBLE] = undef;
+    $edata->[OsmData::LAT] = 0 unless $visible;
+    $edata->[OsmData::LON] = 0 unless $visible;
+    return $visible;
+}
 
 sub get_request_body
 {

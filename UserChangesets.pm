@@ -410,7 +410,7 @@ sub write_previous
                 die "previous element versions cannot be retrieved: ".$resp->status_line."\n"; # TODO bisection fallback, esp. for redacted elements w/o moderator role
             }
             my $new_data_chunk = OsmData::blank_data();
-            my $any_changes = OsmData::parse_elements_string($new_data_chunk, $resp->content());
+            my $any_changes = OsmData::parse_elements($new_data_chunk, $resp->content());
             $have_changes_to_store ||= $any_changes;
             OsmData::merge_data($new_data, $new_data_chunk);
             OsmData::merge_data($data, $new_data_chunk);
