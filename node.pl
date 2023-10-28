@@ -15,8 +15,8 @@ my $reset = 0;
 my ($version, $to_version);
 my ($lat, $lon);
 my $latlon;
-my (@keys, @values, @tags);
-my (@delete_keys, @delete_values, @delete_tags);
+my (@keys, @values, @tags, @tag_strings);
+my (@delete_keys, @delete_values, @delete_tags, @delete_tag_strings);
 my %tags;
 my %delete_tags;
 my $correct_options = GetOptions(
@@ -33,9 +33,11 @@ my $correct_options = GetOptions(
     "key=s" => \@keys,
     "value=s" => \@values,
     "tag=s" => \@tags,
+    "tags=s" => \@tag_strings,
     "delete-key=s" => \@delete_keys,
     "delete-values=s" => \@delete_values,
     "delete-tag=s" => \@delete_tags,
+    "delete-tags=s" => \@delete_tag_strings,
 );
 
 if (($ARGV[0] eq "create") && (scalar(@ARGV) == 1) && $correct_options)
@@ -90,10 +92,12 @@ options:
 options that can be passed repeatedly:
   --key=<string>
   --value=<string>
-  --tag=<key>=<value>           shortcut for --key=<key> --value=<value>
+  --tag=<key>[=<value>]         shortcut for --key=<key> --value=<value>
+  --tags=<key>=[<value>][,<key>=[<value>]...]
   --delete-key=<string>
   --delete-value=<string>
   --delete-tag=<key>[=<value>]  if value is specified, delete tag if both key and value match
+  --delete-tags=<key>=[<value>][,<key>=[<value>]...]
 EOF
 
 sub process_arguments
@@ -110,15 +114,15 @@ sub process_arguments
         ($lat, $lon) = split /,/, $latlon, 2;
     }
 
-    %tags = process_tags("keys/values", \@keys, \@values, \@tags);
-    %delete_tags = process_tags("delete-keys/values", \@delete_keys, \@delete_values, \@delete_tags);
+    %tags = process_tags("keys/values", \@keys, \@values, \@tags, \@tag_strings);
+    %delete_tags = process_tags("delete-keys/values", \@delete_keys, \@delete_values, \@delete_tags, \@delete_tag_strings);
 }
 
 sub process_tags
 {
-    my ($name, $keys, $values, $tags) = @_;
+    my ($name, $keys, $values, $tags, $tag_strings) = @_;
     die "different number of $name" unless @$keys == @$values;
-    my %tags = map { split /=/, $_, 2 } @$tags;
+    my %tags = map { split /=/, $_, 2 } (@$tags, map { split /,/ } @$tag_strings);
     @tags{@$keys} = @$values;
     return %tags;
 }
