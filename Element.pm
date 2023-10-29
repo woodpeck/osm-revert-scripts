@@ -101,15 +101,25 @@ sub create_way
 
 sub delete
 {
-    my ($cid, $id, $version) = @_;
+    my ($cid, $type, $id, $version) = @_;
 
-    my $body = get_request_body("node", $id, $version, [
-        $cid, undef, undef, undef, undef, 0, 0
+    my @edata_tail;
+    if ($type eq "node")
+    {
+        @edata_tail = (0, 0);
+    }
+    elsif ($type eq "way")
+    {
+        @edata_tail = [];
+    }
+
+    my $body = get_request_body($type, $id, $version, [
+        $cid, undef, undef, undef, undef, @edata_tail
     ]);
-    my $resp = OsmApi::delete("node/".uri_escape($id), $body);
+    my $resp = OsmApi::delete("$type/".uri_escape($id), $body);
     if (!$resp->is_success)
     {
-        print STDERR "cannot delete node: ".$resp->status_line."\n";
+        print STDERR "cannot delete $type: ".$resp->status_line."\n";
         return undef;
     }
     return $resp->content;

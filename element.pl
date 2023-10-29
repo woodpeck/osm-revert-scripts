@@ -63,10 +63,9 @@ if (($ARGV[0] eq "delete") && $correct_options)
 {
     require_type_and_id();
     process_arguments();
-    die "only nodes are currently supported" unless $type eq "node";
     require_version();
-    my $new_version = Element::delete($cid, $id, $version);
-    print "node deleted with version: $new_version\n" if defined($new_version);
+    my $new_version = Element::delete($cid, $type, $id, $version);
+    print "$type deleted with version: $new_version\n" if defined($new_version);
     exit;
 }
 
