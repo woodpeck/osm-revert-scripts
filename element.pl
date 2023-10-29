@@ -14,57 +14,67 @@ my ($version, $to_version);
 my $to_previous_version = 0;
 my ($lat, $lon);
 my $latlon;
+my @nodes;
 my (@keys, @values, @tags, @tag_strings);
 my (@delete_keys, @delete_values, @delete_tags, @delete_tag_strings);
 my %tags;
 my %delete_tags;
 my $correct_options = GetOptions(
-    "changeset|cid=i" => \$cid,
-    "new-changeset!" => \$new_changeset,
+    "changeset|cset|cid=i" => \$cid,
+    "new-changeset|new-cset!" => \$new_changeset,
     "version=i" => \$version,
     "to-version=i" => \$to_version,
-    "to-previous-version!" => \$to_previous_version,
+    "to-previous-version|to-prev-version!" => \$to_previous_version,
     "reset!" => \$reset,
     "lat=f" => \$lat,
     "lon=f" => \$lon,
     "latlon|ll=s" => \$latlon,
+    "node|nd=i" => \@nodes,
     "key=s" => \@keys,
     "value=s" => \@values,
     "tag=s" => \@tags,
     "tags=s" => \@tag_strings,
-    "delete-key=s" => \@delete_keys,
-    "delete-values=s" => \@delete_values,
-    "delete-tag=s" => \@delete_tags,
-    "delete-tags=s" => \@delete_tag_strings,
+    "delete-key|del-key=s" => \@delete_keys,
+    "delete-value|del-value=s" => \@delete_values,
+    "delete-tag|del-tag=s" => \@delete_tags,
+    "delete-tags|del-tags=s" => \@delete_tag_strings,
 );
 
-my $type = $ARGV[1];
-my $id = $ARGV[2];
+my ($id, $type);
 
-if (($ARGV[0] eq "create") && (scalar(@ARGV) == 2) && $correct_options)
+if (($ARGV[0] eq "create") && $correct_options)
 {
-    die "only nodes are currently supported" unless $type eq "node";
+    require_type();
     process_arguments();
-    require_latlon();
-    $id = Element::create($cid, \%tags, $lat, $lon);
-    print "node created: $id\n" if defined($id);
+    if ($type eq "node")
+    {
+        require_latlon();
+        $id = Element::create_node($cid, \%tags, $lat, $lon);
+    }
+    elsif ($type eq "way")
+    {
+        $id = Element::create_way($cid, \%tags, @nodes);
+    }
+    print "$type created: $id\n" if defined($id);
     exit;
 }
 
-if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 3) && $correct_options)
+if (($ARGV[0] eq "delete") && $correct_options)
 {
-    die "only nodes are currently supported" unless $type eq "node";
+    require_type_and_id();
     process_arguments();
+    die "only nodes are currently supported" unless $type eq "node";
     require_version();
     my $new_version = Element::delete($cid, $id, $version);
     print "node deleted with version: $new_version\n" if defined($new_version);
     exit;
 }
 
-if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 3) && $correct_options)
+if (($ARGV[0] eq "modify") && $correct_options)
 {
-    die "only nodes are currently supported" unless $type eq "node";
+    require_type_and_id();
     process_arguments();
+    die "only nodes are currently supported" unless $type eq "node";
     require_version();
     if ($to_previous_version)
     {
@@ -80,9 +90,12 @@ if (($ARGV[0] eq "modify") && (scalar(@ARGV) == 3) && $correct_options)
 
 print <<EOF;
 Usage: 
-  $0 create node <options>         create node
-  $0 delete node <id> <options>    delete node
-  $0 modify node <id> <options>    modify the existing node version
+  $0 create <type> <options>         create osm element
+  $0 delete <type> <id> <options>    delete osm element
+  $0 modify <type> <id> <options>    modify the existing osm element version
+
+type:
+  node or way
 
 options:
   --changeset=<id>                 use specified changeset
@@ -93,11 +106,12 @@ options:
   --to-version=<number>
   --to-previous-version
   --reset                          delete everything from the element prior to modification
-  --lat=<number>
-  --lon=<number>
+  --lat=<number>                   node latitude
+  --lon=<number>                   node longitude
   --ll=<number,number>             shortcut for --lat=<number> --lon=<number>
 
 options that can be passed repeatedly:
+  --node=<id>                      way node
   --key=<string>
   --value=<string>
   --tag=<key>[=<value>]            shortcut for --key=<key> --value=<value>
@@ -108,8 +122,41 @@ options that can be passed repeatedly:
   --delete-tags=<key>=[<value>][,<key>=[<value>]...]
 EOF
 
+sub require_type
+{
+    die "element type required" unless defined($ARGV[1]);
+    parse_type_value($ARGV[1]);
+}
+
+sub require_type_and_id
+{
+    die "element type required" unless defined($ARGV[1]);
+    if ($ARGV[1] =~ /^([a-z]+)(\d+)$/)
+    {
+        parse_type_value($1);
+        $id = $2;
+    }
+    else
+    {
+        parse_type_value($ARGV[1]);
+        die "element id required" unless defined($ARGV[2]);
+        $id = $ARGV[2];
+    }
+}
+
+sub parse_type_value
+{
+    my ($type_value) = @_;
+    $type = "node" if rindex("node", $type_value, 0) == 0;
+    $type = "way" if rindex("way", $type_value, 0) == 0;
+    die "invalid element type '$type_value'" unless defined($type);
+}
+
 sub process_arguments
 {
+    my $type = $ARGV[1];
+    my $id = $ARGV[2];
+
     if (defined($cid))
     {
         die "can't have both specified and new changeset" if $new_changeset;
@@ -152,6 +199,6 @@ sub require_latlon
 
 sub require_version
 {
-    $version = Element::get_latest_version($id) unless defined($version);
+    $version = Element::get_latest_version($type, $id) unless defined($version);
     die unless defined($version);
 }

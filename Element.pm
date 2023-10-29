@@ -47,13 +47,13 @@ sub get_latest_changeset
 
 sub get_latest_version
 {
-    my ($id) = @_;
+    my ($type, $id) = @_;
     my ($resp, $twig);
 
-    $resp = OsmApi::get("nodes?nodes=".uri_escape($id)); # avoid 410 Gone on deleted elements
+    $resp = OsmApi::get("${type}s?${type}s=".uri_escape($id)); # avoid 410 Gone on deleted elements
     if (!$resp->is_success)
     {
-        print STDERR "cannot get node: ".$resp->status_line."\n";
+        print STDERR "cannot get $type: ".$resp->status_line."\n";
         return undef;
     }
 
@@ -61,17 +61,17 @@ sub get_latest_version
     my (undef, undef, $version) = @{$elements[0]};
     if (!defined($version))
     {
-        print STDERR "cannot get node version\n";
+        print STDERR "cannot get $type version\n";
         return undef;
     }
     return $version;
 }
 
-sub create
+sub create_node
 {
     my ($cid, $tags, $lat, $lon) = @_;
 
-    my $body = get_request_body(undef, undef, [
+    my $body = get_request_body("node", undef, undef, [
         $cid, undef, undef, undef, $tags, $lat * OsmData::SCALE, $lon * OsmData::SCALE
     ]);
     my $resp = OsmApi::put("node/create", $body);
@@ -83,11 +83,27 @@ sub create
     return $resp->content;
 }
 
+sub create_way
+{
+    my ($cid, $tags, @nodes) = @_;
+
+    my $body = get_request_body("way", undef, undef, [
+        $cid, undef, undef, undef, $tags, \@nodes
+    ]);
+    my $resp = OsmApi::put("way/create", $body);
+    if (!$resp->is_success)
+    {
+        print STDERR "cannot create way: ".$resp->status_line."\n";
+        return undef;
+    }
+    return $resp->content;
+}
+
 sub delete
 {
     my ($cid, $id, $version) = @_;
 
-    my $body = get_request_body($id, $version, [
+    my $body = get_request_body("node", $id, $version, [
         $cid, undef, undef, undef, undef, 0, 0
     ]);
     my $resp = OsmApi::delete("node/".uri_escape($id), $body);
@@ -129,7 +145,7 @@ sub modify
     }
 
     my $visible = update_and_extract_visible_from_edata($edata, $cid);
-    my $body = get_request_body($id, $version, $edata);
+    my $body = get_request_body("node", $id, $version, $edata);
     if ($visible)
     {
         $resp = OsmApi::put("node/".uri_escape($id), $body);
@@ -198,11 +214,11 @@ sub update_and_extract_visible_from_edata
 
 sub get_request_body
 {
-    my ($id, $version, $edata) = @_;
+    my ($type, $id, $version, $edata) = @_;
     my $body;
     open my $fh, '>', \$body;
     OsmData::print_fh_xml_header($fh);
-    OsmData::print_fh_element($fh, OsmData::NODE, $id, $version, $edata);
+    OsmData::print_fh_element($fh, OsmData::element_type($type), $id, $version, $edata);
     OsmData::print_fh_xml_footer($fh);
     close $fh;
     return $body;
