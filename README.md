@@ -15,6 +15,7 @@ Package Contents
 | `changeset_graph.pl`  | `ChangesetGraph.pm`  | draws changeset dependency graph  |
 | `complex_revert.pl`  |   | reverts a group of interdependent changesets  |
 | `delete.pl`  | `Delete.pm`  | deletes or redacts an object  |
+| `element.pl`  | `Element.pm`  | creates/modifies/deletes an object  |
 | `modify.pl`  | `Modify.pm`  | modifies tags of an object  |
 | `note.pl`  | `Note.pm`  | hides notes  |
 | `quickdelnodes.pl`  |   | deletes many nodes quickly  |
