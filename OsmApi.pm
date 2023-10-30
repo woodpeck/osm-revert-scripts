@@ -312,7 +312,7 @@ sub require_username_and_password
     }
     else
     {
-        use Term::ReadKey;
+        require_readkey_module();
         print 'User name: ';
         $prefs->{username} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
         print "\n";
@@ -321,7 +321,7 @@ sub require_username_and_password
     # read password from terminal if not set
     unless (defined($prefs->{password}))
     {
-        use Term::ReadKey;
+        require_readkey_module();
         print 'Password: ';
         ReadMode('noecho');
         $prefs->{password} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
@@ -374,7 +374,7 @@ sub request_oauth2_token
     die "oauth2 token request requires typing/pasting a code, but STDIN is busy with piped input\ntry running 'tokens.pl request' first to get oauth2 tokens" unless -t STDIN;
     die "Requesting oauth2 tokens requires 'oauth2_client_id' to be set in .osmtoolsrc for custom 'apiurl'." unless (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id});
 
-    use Bytes::Random::Secure qw(random_bytes);
+    require_random_bytes_sub();
 
     my ($token_name, $scope) = @_;
     $scope = "read_prefs write_api write_notes read_gpx write_gpx" unless defined($scope);
@@ -456,6 +456,26 @@ sub set_timeout
 {
     my $to = shift;
     $ua->timeout($to);
+}
+
+sub require_readkey_module
+{
+    eval
+    {
+        require Term::ReadKey;
+        Term::ReadKey->import();
+        1;
+    }
+}
+
+sub require_random_bytes_sub
+{
+    eval
+    {
+        require Bytes::Random::Secure;
+        Bytes::Random::Secure->import(qw(random_bytes));
+        1;
+    }
 }
 
 1;
