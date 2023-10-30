@@ -14,7 +14,7 @@ my ($version, $to_version);
 my $to_previous_version = 0;
 my ($lat, $lon);
 my $latlon;
-my @nodes;
+my (@nodes, @node_strings);
 my (@keys, @values, @tags, @tag_strings);
 my (@delete_keys, @delete_values, @delete_tags, @delete_tag_strings);
 my %tags;
@@ -30,6 +30,7 @@ my $correct_options = GetOptions(
     "lon=f" => \$lon,
     "latlon|ll=s" => \$latlon,
     "node|nd=i" => \@nodes,
+    "nodes|nds=s" => \@node_strings,
     "key=s" => \@keys,
     "value=s" => \@values,
     "tag=s" => \@tags,
@@ -112,6 +113,7 @@ options:
 
 options that can be passed repeatedly:
   --node=<id>                      way node
+  --nodes=<id>[,<id>...]           way nodes
   --key=<string>
   --value=<string>
   --tag=<key>[=<value>]            shortcut for --key=<key> --value=<value>
@@ -177,6 +179,8 @@ sub process_arguments
         die "can't have both --lon and --latlon" if defined($lat);
         ($lat, $lon) = split /,/, $latlon, 2;
     }
+
+    push @nodes, map { split /,/ } @node_strings;
 
     %tags = process_tags("keys/values", \@keys, \@values, \@tags, \@tag_strings);
     %delete_tags = process_tags("delete-keys/values", \@delete_keys, \@delete_values, \@delete_tags, \@delete_tag_strings);
