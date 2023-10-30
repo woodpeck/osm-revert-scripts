@@ -67,33 +67,27 @@ sub get_latest_version
     return $version;
 }
 
-sub create_node
+sub create
 {
-    my ($cid, $tags, $lat, $lon) = @_;
+    my ($cid, $type, $tags, $lat, $lon, @nodes) = @_;
 
-    my $body = get_request_body("node", undef, undef, [
-        $cid, undef, undef, undef, $tags, $lat * OsmData::SCALE, $lon * OsmData::SCALE
-    ]);
-    my $resp = OsmApi::put("node/create", $body);
-    if (!$resp->is_success)
+    my @edata_tail;
+    if ($type eq "node")
     {
-        print STDERR "cannot create node: ".$resp->status_line."\n";
-        return undef;
+        @edata_tail = ($lat * OsmData::SCALE, $lon * OsmData::SCALE);
     }
-    return $resp->content;
-}
+    elsif ($type eq "way")
+    {
+        @edata_tail = (\@nodes);
+    }
 
-sub create_way
-{
-    my ($cid, $tags, @nodes) = @_;
-
-    my $body = get_request_body("way", undef, undef, [
-        $cid, undef, undef, undef, $tags, \@nodes
+    my $body = get_request_body($type, undef, undef, [
+        $cid, undef, undef, undef, $tags, @edata_tail
     ]);
-    my $resp = OsmApi::put("way/create", $body);
+    my $resp = OsmApi::put("$type/create", $body);
     if (!$resp->is_success)
     {
-        print STDERR "cannot create way: ".$resp->status_line."\n";
+        print STDERR "cannot create $type: ".$resp->status_line."\n";
         return undef;
     }
     return $resp->content;

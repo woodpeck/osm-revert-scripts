@@ -46,15 +46,8 @@ if (($ARGV[0] eq "create") && $correct_options)
 {
     require_type();
     process_arguments();
-    if ($type eq "node")
-    {
-        require_latlon();
-        $id = Element::create_node($cid, \%tags, $lat, $lon);
-    }
-    elsif ($type eq "way")
-    {
-        $id = Element::create_way($cid, \%tags, @nodes);
-    }
+    require_latlon() if $type eq "node";
+    $id = Element::create($cid, $type, \%tags, $lat, $lon, @nodes);
     print "$type created: $id\n" if defined($id);
     exit;
 }
