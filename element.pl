@@ -14,8 +14,8 @@ my ($version, $to_version);
 my $to_previous_version = 0;
 my ($lat, $lon);
 my $latlon;
-my (@nodes, @node_strings);
-my @members;
+my ($nodes_arg, @nodes, @node_strings);
+my ($members_arg, @members);
 my (@keys, @values, @tags, @tag_strings);
 my (@delete_keys, @delete_values, @delete_tags, @delete_tag_strings);
 my %tags;
@@ -57,7 +57,7 @@ if (($ARGV[0] eq "create") && $correct_options)
     require_type();
     process_arguments();
     require_latlon() if $type eq "node";
-    $id = Element::create($cid, $type, \%tags, $lat, $lon, \@nodes, \@members);
+    $id = Element::create($cid, $type, \%tags, $lat, $lon, $nodes_arg, $members_arg);
     print "$type created: $id\n" if defined($id);
     exit;
 }
@@ -84,7 +84,7 @@ if (($ARGV[0] eq "modify") && $correct_options)
     }
     die "can't have both to-version and reset" if defined($to_version) && $reset;
     require_latlon() if $reset;
-    my $new_version = Element::modify($cid, $type, $id, $version, $to_version, $reset, \%tags, \%delete_tags, $lat, $lon, \@nodes, \@members);
+    my $new_version = Element::modify($cid, $type, $id, $version, $to_version, $reset, \%tags, \%delete_tags, $lat, $lon, $nodes_arg, $members_arg);
     print "$type overwritten with version: $new_version\n" if defined($new_version);
     exit;
 }
@@ -185,9 +185,18 @@ sub process_arguments
         ($lat, $lon) = split /,/, $latlon, 2;
     }
 
-    push @nodes, map { split /,/ } @node_strings;
+    if (@nodes || @node_strings)
+    {
+        $nodes_arg = [];
+        push @$nodes_arg, @nodes;
+        push @$nodes_arg, map { split /,/ } @node_strings;
+    }
 
-    @members = map { [split /,/, $_, 3] } @members;
+    if (@members)
+    {
+        $members_arg = [];
+        push @$members_arg, map { [split /,/, $_, 3] } @members;
+    }
 
     %tags = process_tags("keys/values", \@keys, \@values, \@tags, \@tag_strings);
     %delete_tags = process_tags("delete-keys/values", \@delete_keys, \@delete_values, \@delete_tags, \@delete_tag_strings);

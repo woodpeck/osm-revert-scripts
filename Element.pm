@@ -174,11 +174,11 @@ sub modify
     }
     elsif ($type eq "way")
     {
-        $edata->[OsmData::NDS] = $nodes;
+        $edata->[OsmData::NDS] = $nodes if defined($nodes);
     }
     elsif ($type eq "relation")
     {
-        $edata->[OsmData::MEMBERS] = $members;
+        $edata->[OsmData::MEMBERS] = $members if defined($members);
     }
 
     $edata->[OsmData::TAGS] = {%{$edata->[OsmData::TAGS]}, %$tags};
