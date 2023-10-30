@@ -136,26 +136,43 @@ sub delete
 
 sub modify
 {
-    my ($cid, $id, $version, $to_version, $reset, $tags, $delete_tags, $lat, $lon) = @_;
+    my ($cid, $type, $id, $version, $to_version, $reset, $tags, $delete_tags, $lat, $lon, @nodes) = @_;
     my $resp;
 
     my $edata;
     if (defined($to_version))
     {
-        $edata = get_edata_for_version($id, $to_version);
+        $edata = get_edata_for_version($type, $id, $to_version);
     }
     elsif ($reset)
     {
-        $edata = [$cid, undef, undef, 1, {}, undef, undef];
+        my @edata_tail;
+        if ($type eq "node")
+        {
+            @edata_tail = (undef, undef);
+        }
+        elsif ($type eq "way")
+        {
+            @edata_tail = [];
+        }
+        $edata = [$cid, undef, undef, 1, {}, @edata_tail];
     }
     else
     {
-        $edata = get_edata_for_version($id, $version);
+        $edata = get_edata_for_version($type, $id, $version);
     }
     return unless defined($edata);
 
-    $edata->[OsmData::LAT] = $lat * OsmData::SCALE if defined($lat);
-    $edata->[OsmData::LON] = $lon * OsmData::SCALE if defined($lon);
+    if ($type eq "node")
+    {
+        $edata->[OsmData::LAT] = $lat * OsmData::SCALE if defined($lat);
+        $edata->[OsmData::LON] = $lon * OsmData::SCALE if defined($lon);
+    }
+    else
+    {
+        $edata->[OsmData::NDS] = \@nodes;
+    }
+
     $edata->[OsmData::TAGS] = {%{$edata->[OsmData::TAGS]}, %$tags};
     foreach my $k (keys %$delete_tags)
     {
@@ -164,18 +181,18 @@ sub modify
     }
 
     my $visible = update_and_extract_visible_from_edata($edata, $cid);
-    my $body = get_request_body("node", $id, $version, $edata);
+    my $body = get_request_body($type, $id, $version, $edata);
     if ($visible)
     {
-        $resp = OsmApi::put("node/".uri_escape($id), $body);
+        $resp = OsmApi::put("$type/".uri_escape($id), $body);
     }
     else
     {
-        $resp = OsmApi::delete("node/".uri_escape($id), $body);
+        $resp = OsmApi::delete("$type/".uri_escape($id), $body);
     }
     if (!$resp->is_success)
     {
-        print STDERR "cannot modify node: ".$resp->status_line."\n";
+        print STDERR "cannot modify $type: ".$resp->status_line."\n";
         return undef;
     }
     return $resp->content;
@@ -185,23 +202,23 @@ sub modify
 
 sub get_edata_for_version
 {
-    my ($id, $version) = @_;
+    my ($type, $id, $version) = @_;
 
-    my $edata = get_stored_edata_copy($id, $version);
+    my $edata = get_stored_edata_copy($type, $id, $version);
     if (!defined($edata))
     {
-        my $resp = OsmApi::get("node/".uri_escape($id)."/".uri_escape($version));
+        my $resp = OsmApi::get("$type/".uri_escape($id)."/".uri_escape($version));
         if (!$resp->is_success)
         {
-            print STDERR "cannot get node version $version: ".$resp->status_line."\n";
+            print STDERR "cannot get $type version $version: ".$resp->status_line."\n";
             return undef;
         }
         OsmData::parse_elements($data, $resp->content);
-        $edata = get_stored_edata_copy($id, $version);
+        $edata = get_stored_edata_copy($type, $id, $version);
     }
     if (!defined($edata))
     {
-        print STDERR "cannot get data for node version $version\n";
+        print STDERR "cannot get data for $type version $version\n";
         return undef;
     }
     return $edata;
@@ -209,9 +226,9 @@ sub get_edata_for_version
 
 sub get_stored_edata_copy
 {
-    my ($id, $version) = @_;
+    my ($type, $id, $version) = @_;
 
-    my $stored_edata = $data->{elements}[OsmData::NODE]{$id}{$version};
+    my $stored_edata = $data->{elements}[OsmData::element_type($type)]{$id}{$version};
     return unless defined($stored_edata);
 
     my @copied_edata = @$stored_edata;

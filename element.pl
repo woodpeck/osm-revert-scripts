@@ -73,7 +73,6 @@ if (($ARGV[0] eq "modify") && $correct_options)
 {
     require_type_and_id();
     process_arguments();
-    die "only nodes are currently supported" unless $type eq "node";
     require_version();
     if ($to_previous_version)
     {
@@ -82,8 +81,8 @@ if (($ARGV[0] eq "modify") && $correct_options)
     }
     die "can't have both to-version and reset" if defined($to_version) && $reset;
     require_latlon() if $reset;
-    my $new_version = Element::modify($cid, $id, $version, $to_version, $reset, \%tags, \%delete_tags, $lat, $lon);
-    print "node overwritten with version: $new_version\n" if defined($new_version);
+    my $new_version = Element::modify($cid, $type, $id, $version, $to_version, $reset, \%tags, \%delete_tags, $lat, $lon, @nodes);
+    print "$type overwritten with version: $new_version\n" if defined($new_version);
     exit;
 }
 
