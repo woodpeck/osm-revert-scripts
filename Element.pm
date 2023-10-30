@@ -84,7 +84,7 @@ sub browse
 
 sub create
 {
-    my ($cid, $type, $tags, $lat, $lon, @nodes) = @_;
+    my ($cid, $type, $tags, $lat, $lon, $nodes, $members) = @_;
 
     my @edata_tail;
     if ($type eq "node")
@@ -93,7 +93,11 @@ sub create
     }
     elsif ($type eq "way")
     {
-        @edata_tail = (\@nodes);
+        @edata_tail = ($nodes);
+    }
+    elsif ($type eq "relation")
+    {
+        @edata_tail = ($members);
     }
 
     my $body = get_request_body($type, undef, undef, [
@@ -117,7 +121,7 @@ sub delete
     {
         @edata_tail = (0, 0);
     }
-    elsif ($type eq "way")
+    elsif ($type eq "way" || $type eq "relation")
     {
         @edata_tail = [];
     }
@@ -136,7 +140,7 @@ sub delete
 
 sub modify
 {
-    my ($cid, $type, $id, $version, $to_version, $reset, $tags, $delete_tags, $lat, $lon, @nodes) = @_;
+    my ($cid, $type, $id, $version, $to_version, $reset, $tags, $delete_tags, $lat, $lon, $nodes, $members) = @_;
     my $resp;
 
     my $edata;
@@ -151,7 +155,7 @@ sub modify
         {
             @edata_tail = (undef, undef);
         }
-        elsif ($type eq "way")
+        elsif ($type eq "way" || $type eq "relation")
         {
             @edata_tail = [];
         }
@@ -168,9 +172,13 @@ sub modify
         $edata->[OsmData::LAT] = $lat * OsmData::SCALE if defined($lat);
         $edata->[OsmData::LON] = $lon * OsmData::SCALE if defined($lon);
     }
-    else
+    elsif ($type eq "way")
     {
-        $edata->[OsmData::NDS] = \@nodes;
+        $edata->[OsmData::NDS] = $nodes;
+    }
+    elsif ($type eq "relation")
+    {
+        $edata->[OsmData::MEMBERS] = $members;
     }
 
     $edata->[OsmData::TAGS] = {%{$edata->[OsmData::TAGS]}, %$tags};
@@ -180,7 +188,7 @@ sub modify
         delete $edata->[OsmData::TAGS]{$k} if !defined($v) || $edata->[OsmData::TAGS]{$k} eq $v;
     }
 
-    my $visible = update_and_extract_visible_from_edata($edata, $cid);
+    my $visible = update_and_extract_visible_from_edata($cid, $type, $edata);
     my $body = get_request_body($type, $id, $version, $edata);
     if ($visible)
     {
@@ -237,14 +245,14 @@ sub get_stored_edata_copy
 
 sub update_and_extract_visible_from_edata
 {
-    my ($edata, $cid) = @_;
+    my ($cid, $type, $edata) = @_;
     my $visible = $edata->[OsmData::VISIBLE];
     $edata->[OsmData::CHANGESET] = $cid;
     $edata->[OsmData::TIMESTAMP] = undef;
     $edata->[OsmData::UID] = undef;
     $edata->[OsmData::VISIBLE] = undef;
-    $edata->[OsmData::LAT] = 0 unless $visible;
-    $edata->[OsmData::LON] = 0 unless $visible;
+    $edata->[OsmData::LAT] = 0 if $type eq "node" && !$visible;
+    $edata->[OsmData::LON] = 0 if $type eq "node" && !$visible;
     return $visible;
 }
 

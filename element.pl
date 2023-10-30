@@ -15,6 +15,7 @@ my $to_previous_version = 0;
 my ($lat, $lon);
 my $latlon;
 my (@nodes, @node_strings);
+my @members;
 my (@keys, @values, @tags, @tag_strings);
 my (@delete_keys, @delete_values, @delete_tags, @delete_tag_strings);
 my %tags;
@@ -31,6 +32,7 @@ my $correct_options = GetOptions(
     "latlon|ll=s" => \$latlon,
     "node|nd=i" => \@nodes,
     "nodes|nds=s" => \@node_strings,
+    "member=s" => \@members,
     "key=s" => \@keys,
     "value=s" => \@values,
     "tag=s" => \@tags,
@@ -55,7 +57,7 @@ if (($ARGV[0] eq "create") && $correct_options)
     require_type();
     process_arguments();
     require_latlon() if $type eq "node";
-    $id = Element::create($cid, $type, \%tags, $lat, $lon, @nodes);
+    $id = Element::create($cid, $type, \%tags, $lat, $lon, \@nodes, \@members);
     print "$type created: $id\n" if defined($id);
     exit;
 }
@@ -82,7 +84,7 @@ if (($ARGV[0] eq "modify") && $correct_options)
     }
     die "can't have both to-version and reset" if defined($to_version) && $reset;
     require_latlon() if $reset;
-    my $new_version = Element::modify($cid, $type, $id, $version, $to_version, $reset, \%tags, \%delete_tags, $lat, $lon, @nodes);
+    my $new_version = Element::modify($cid, $type, $id, $version, $to_version, $reset, \%tags, \%delete_tags, $lat, $lon, \@nodes, \@members);
     print "$type overwritten with version: $new_version\n" if defined($new_version);
     exit;
 }
@@ -114,6 +116,7 @@ options:
 options that can be passed repeatedly:
   --node=<id>                      way node
   --nodes=<id>[,<id>...]           way nodes
+  --member=<type>,<id>,<role>      relation member
   --key=<string>
   --value=<string>
   --tag=<key>[=<value>]            shortcut for --key=<key> --value=<value>
@@ -149,8 +152,10 @@ sub require_type_and_id
 sub parse_type_value
 {
     my ($type_value) = @_;
-    $type = "node" if rindex("node", $type_value, 0) == 0;
-    $type = "way" if rindex("way", $type_value, 0) == 0;
+    foreach ("node", "way", "relation")
+    {
+        $type = $_ if rindex($_, $type_value, 0) == 0;
+    }
     die "invalid element type '$type_value'" unless defined($type);
 }
 
@@ -181,6 +186,8 @@ sub process_arguments
     }
 
     push @nodes, map { split /,/ } @node_strings;
+
+    @members = map { [split /,/, $_, 3] } @members;
 
     %tags = process_tags("keys/values", \@keys, \@values, \@tags, \@tag_strings);
     %delete_tags = process_tags("delete-keys/values", \@delete_keys, \@delete_values, \@delete_tags, \@delete_tag_strings);
