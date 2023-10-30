@@ -67,6 +67,21 @@ sub get_latest_version
     return $version;
 }
 
+sub browse
+{
+    my ($type, $id) = @_;
+
+    my $url = OsmApi::weburl("$type/".uri_escape($id));
+    if ($^O eq "MSWin32")
+    {
+        system "start", $url;
+    }
+    else
+    {
+        system '/usr/bin/open', $url;
+    }
+}
+
 sub create
 {
     my ($cid, $type, $tags, $lat, $lon, @nodes) = @_;

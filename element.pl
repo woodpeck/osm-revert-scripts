@@ -42,6 +42,13 @@ my $correct_options = GetOptions(
 
 my ($id, $type);
 
+if (($ARGV[0] eq "browse") && $correct_options)
+{
+    require_type_and_id();
+    Element::browse($type, $id);
+    exit;
+}
+
 if (($ARGV[0] eq "create") && $correct_options)
 {
     require_type();
@@ -81,13 +88,15 @@ if (($ARGV[0] eq "modify") && $correct_options)
 }
 
 print <<EOF;
-Usage: 
+Usage:
+  $0 browse <type> <id>              open osm element in web browser
   $0 create <type> <options>         create osm element
   $0 delete <type> <id> <options>    delete osm element
   $0 modify <type> <id> <options>    modify the existing osm element version
 
 type:
   node or way
+  type+id can be shortened to letter+number like this: n12345
 
 options:
   --changeset=<id>                 use specified changeset
