@@ -36,18 +36,18 @@ use Progress;
 
 my $override = 0;
 my $show_conflict_details = 0;
-my $revert_type = "top_down";
-my $progress = 0;
+my $revert_type = "bottom_up";
+my $noprogress = 0;
 
-usage() unless GetOptions("override" => \$override, 
+usage() unless GetOptions("override" => \$override,
            "conflict-details" => \$show_conflict_details,
-           "progress" => \$progress,
-           "type" => \$revert_type);
+           "no-progress" => \$noprogress,
+           "type=s" => \$revert_type);
 
 usage() unless ($revert_type eq "top_down" || $revert_type eq "bottom_up");
 
+my $progress = !$noprogress;
 my $comment = $ARGV[0];
-
 usage() if ($comment eq "");
 
 # no user servicable parts below
@@ -78,8 +78,6 @@ my $used_cs = {};
 my $done_count = 0;
 my $max_changeset_size = 9000;
 my $chunk_size = 500;
-
-die unless ($revert_type eq 'top_down' || $revert_type eq 'bottom_up');
 
 open(LOG, "complex_revert.log");
 while(<LOG>)
@@ -139,7 +137,7 @@ while(<STDIN>)
 # doesn't really matter.
 
 foreach my $objecttype(qw/node way relation/)
-{  
+{
     # process objects in each class in random order
     foreach my $id(keys %{$operation->{$objecttype}})
     {
@@ -190,15 +188,17 @@ foreach my $objecttype(qw/node way relation/)
 }
 
 # count stuff for progress bar
+
 my $total_ops_done = 0;
 if ($progress)
 {
     my $total_ops_needed = 0;
     foreach my $objecttype(qw/node way relation/)
-    {  
+    {
         $total_ops_needed += scalar keys %{$restore->{$objecttype}};
         # deletions are faster, hence don't count them as full
         $total_ops_needed += 0.1*scalar keys %{$delete->{$objecttype}};
+        # FIXME nodes are faster than ways, ways faster than relations...?
     }
     Progress::init($total_ops_needed)
 }
@@ -256,7 +256,7 @@ foreach my $id(keys(%$used_cs))
 # revert_bottom_up is the simple method of reverting stuff - first,
 # all nodes are reverted (which may include undeleting), then all ways,
 # then all relations. The disadvantage of this is that if you have
-# 10k delete ways with 100k deleted nodes, the whole process might take
+# 10k deleted ways with 100k deleted nodes, the whole process might take
 # some time, and by the time you start undeleting ways, some mapper
 # might have cleaned up your orphan nodes already.
 
@@ -265,78 +265,127 @@ sub revert_bottom_up
     $current_cs = Changeset::create($comment);
     $used_cs->{$current_cs} = 1;
     $current_count = 0;
-    die ("revert_bottom_up doesn't yet support \$override, use revert_top_down") if ($override);
     foreach my $object(qw/node way relation/)
     {
-        foreach my $id(keys %{$restore->{$object}})
+        # work in chunks of 500 objects because that is safe for a multi-fetch
+        # (URL length limit)
+        my @objects = keys %{$restore->{$object}};
+        while(scalar @objects)
         {
-            Progress::update($total_ops_done++) if ($progress);
-            my ($firstv, $lastv) = split("/", $restore->{$object}->{$id});
-            my $resp = OsmApi::get("$object/$id/$firstv");
-            if (!$resp->is_success)
-            {
-                Progress::log("cannot load version $firstv of $object $id (get): ".$resp->status_line);
-                print LOG "$object $id ERR GET1 ".$resp->code." ".$resp->status_line."\n";
-                next;
-            }
-            my $xml = $resp->content;
+            # chew off the first 500
+            my @batch = splice(@objects, 0, 500);
+            my $previous_content;
 
-            # check if modification is required; current version might be identical to 
-            # what we're planning to revert to?
-            my $resp = OsmApi::get("$object/$id/$lastv");
-            if (!$resp->is_success)
+            while(1)
             {
-                Progress::log("cannot load version $lastv of $object $id (get): ".$resp->status_line);
-                print LOG "$object $id ERR GET2 ".$resp->code." ".$resp->status_line."\n";
-                next;
-            }
-            my $current = $resp->content;
-            if (object_equal($xml, $current))
-            {
-                print LOG "$object $id OK no action necessary to go from v$firstv to v$lastv\n";
-                next;
-            }
-            
-            if ($xml =~ /visible="false"/) 
-            {
-                $delete->{$object}->{$id} =  "$lastv";
-                next;
-            }
-
-            $xml =~ s/changeset="\d+"/changeset="$current_cs"/;
-            $xml =~ s/version="$firstv"/version="$lastv"/;
-
-            $resp = OsmApi::put("$object/$id", $xml);
-            if (!$resp->is_success)
-            {
-                my $b = $resp->content;
-                $b =~ s/\s+/ /g;
-                print LOG "$object $id ERR PUT ".$resp->status_line." $b\n";
-
-                my $message = "cannot restore $object $id to version $firstv (put): ".$resp->status_line;
-                if ($show_conflict_details)
+                # fetch latest versions of these 500 from API
+                my $resp = OsmApi::get("${object}s?${object}s=" . join(",", @batch));
+                if (!$resp->is_success)
                 {
-                    if ($b =~ /server had: (\d+)/)
+                    Progress::die("cannot load batch of ${object}s: ".$resp->status_line);
+                }
+
+                # if we are in a repeat iteration, then we expect the response to
+                # differ from before (else we'd loop endlessly). Need to strip off
+                # the <osm> tag though because it contains a process ID in the
+                # "generator" attribute and hence always differs.
+                my $content_without_osm_tag = $resp->content;
+                $content_without_osm_tag =~ s/<osm [^>]+>//;
+                if ($content_without_osm_tag eq $previous_content)
+                {
+                    Progress::die("no new version information in repeated version download");
+                }
+                $previous_content = $content_without_osm_tag;
+                my $current_versions = parse_multifetch_response($resp->content);
+
+                # now, fetch the old version of each thing that we'd like to
+                # go back to. the join/map construct picks the first number
+                # before the slash from every v1/v2 combination.
+                my $resp = OsmApi::get("${object}s?${object}s=" . join(",",
+                    map({ my ($a,$b) = split("/", $restore->{$object}->{$_}); $_."v$a" } @batch)));
+                if (!$resp->is_success)
+                {
+                    Progress::die("cannot load batch of ${object}s: ".$resp->status_line);
+                }
+                my $sane_versions = parse_multifetch_response($resp->content);
+
+                # build a changeset that contains modifications
+                my $osc = "";
+                foreach my $id(@batch)
+                {
+                    my ($firstv, $lastv) = split("/", $restore->{$object}->{$id});
+
+                    if ($sane_versions->{$id}->{'xml'} =~ /visible="false"/)
                     {
-                        my $resp = OsmApi::get("$object/$id/$1");
-                        if ($resp->is_success)
+                        # the version we want to go to is deleted;
+                        # which means we're wrong here. schedule for deletion.
+                        # this might be better handled differently.
+                        $delete->{$object}->{$id} =  "$lastv";
+                        $total_ops_done--;
+                        next;
+                    }
+
+                    if (object_equal($current_versions->{$id}->{'xml'}, $sane_versions->{$id}->{'xml'}))
+                    {
+                        # no action needed.
+                        print LOG "$object $id OK no action necessary to go from v$firstv to v$lastv\n";
+                        next;
+                    }
+
+                    if ($lastv != $current_versions->{$id}->{'v'})
+                    {
+                        # version on server is higher than expected.
+                        if ($override)
                         {
-                            my $cur_xml = $resp->content;
-                            my $user; 
-                            $user = $1 if ($cur_xml =~ / user="([^"]*)"/);
-                            $message .= " [interim ";
-                            $message .= (object_equal($xml, $cur_xml) ? "revert" : "modification");
-                            $message .= " by $user]";
-                            # fixme record this case as ok in complex_revert if interim revert
+                            $lastv = $current_versions->{$id}->{'v'};
+                            $current_versions->{$id}->{'xml'} =~ / user="([^"]+)"/;
+                            Progress::log("interim modification by user $1 on $object $id - overriding");
+                        }
+                        else
+                        {
+                            $current_versions->{$id}->{'xml'} =~ / user="([^"]+)"/;
+                            Progress::log("interim modification by user $1 on $object $id - skipping this");
+                            next;
+                        }
+                    }
+                    my $xml = $sane_versions->{$id}->{'xml'};
+                    $xml =~ s/changeset="\d+"/changeset="$current_cs"/;
+                    $xml =~ s/version="$firstv"/version="$lastv"/;
+                    $osc .= $xml;
+                    $current_count++;
+                }
+                if ($osc ne "")
+                {
+                    $osc = "<osmChange version='0.6'>\n<modify>\n" . $osc . "</modify>\n</osmChange>\n";
+                    OsmApi::set_timeout(7200);
+                    my $resp = OsmApi::post("changeset/$current_cs/upload", $osc);
+                    if (!$resp->is_success)
+                    {
+                        if ($resp->status_code == 409)
+                        {
+                            # could be a version conflict. a re-run might fix the issue
+                            next;
+                        }
+                        else
+                        {
+                            Progress::die("cannot upload batch of objects: ".$resp->status_line);
                         }
                     }
                 }
-                Progress::log($message);
-                next;
-            }
-            print LOG "$object $id OK revert to v$firstv\n";
+                last;
 
-            if ($current_count++ > $max_changeset_size)
+            } # retry loop
+
+            Progress::update($total_ops_done+=scalar(@batch)) if ($progress);
+
+            foreach my $id(@batch)
+            {
+                my ($firstv, $lastv) = split("/", $restore->{$object}->{$id});
+                print LOG "$object $id OK revert to v$firstv\n";
+            }
+
+            # ensure 500 places left in changeset
+            if ($current_count > $max_changeset_size-500)
             {
                 Changeset::close($current_cs);
                 $current_cs = Changeset::create($comment);
@@ -400,8 +449,8 @@ sub revert_top_down_recursive
             }
         }
     }
-    
-    # check if modification is required; current version might be identical to 
+
+    # check if modification is required; current version might be identical to
     # what we're planning to revert to?
     my $resp = OsmApi::get("$object/$id/$lastv");
     if (!$resp->is_success)
@@ -416,8 +465,8 @@ sub revert_top_down_recursive
         print LOG "$object $id OK no action necessary to go from v$firstv to v$lastv\n";
         return;
     }
-            
-    if ($xml =~ /visible="false"/) 
+
+    if ($xml =~ /visible="false"/)
     {
         $delete->{$object}->{$id} =  "$lastv";
         next;
@@ -455,7 +504,7 @@ sub revert_top_down_recursive
                     if ($resp->is_success)
                     {
                         my $cur_xml = $resp->content;
-                        my $user; 
+                        my $user;
                         $user = $1 if ($cur_xml =~ / user="([^"]*)"/);
                         $message .= " [interim ";
                         $message .= (object_equal($xml, $cur_xml) ? "revert" : "modification");
@@ -564,9 +613,7 @@ sub handle_delete_soft
                     }
                     else
                     {
-                        Progress::log("cannot upload changeset: ".$resp->status_line);
-                        Progress::log($resp->content);
-                        die;
+                        Progress::die("cannot upload changeset: ".$resp->status_line);
                         # fixme should react to "precondition failed" or "gone" events by
                         # excluding object from batch rather than stopping
                     }
@@ -656,3 +703,23 @@ sub get_user_for_object_version($)
     return undef;
 }
 
+sub parse_multifetch_response($)
+{
+    my $xml = shift;
+    my $result = {};
+    my $id;
+
+    foreach (split(/\n/, $xml))
+    {
+        if (/<(node|way|relation)/)
+        {
+            / id="(\d+)"/ or die;
+            $id = $1;
+            / version="(\d+)"/ or die;
+            my $version = $1;
+            $result->{$id} = { 'v' => $version, 'xml' => '' };
+        }
+        $result->{$id}->{'xml'} .= "$_\n" if (defined($id) && !/<\/osm>/);
+    }
+    return $result;
+}
