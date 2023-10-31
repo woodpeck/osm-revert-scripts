@@ -2,7 +2,6 @@
 
 package OsmData;
 
-use Math::Round qw(round);
 use HTTP::Date qw(str2time);
 use HTML::Entities qw(encode_entities);
 use File::Path qw(make_path);
@@ -141,8 +140,8 @@ sub parse_elements
                 if ($edata[VISIBLE])
                 {
                     push @edata,
-                        round(SCALE * $element_twig->att('lat')),
-                        round(SCALE * $element_twig->att('lon'));
+                        int SCALE * $element_twig->att('lat'),
+                        int SCALE * $element_twig->att('lon');
                 }
                 $data->{elements}[$type]{$id}{$version} = \@edata;
             },
