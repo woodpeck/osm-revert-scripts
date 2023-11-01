@@ -9,25 +9,25 @@ Package Contents
 
 | Script  | Module  | Description  |
 |---|---|---|
-| `batch_redaction.pl`  | `BatchRedaction.pm`  | applies redactions to a list of elements  |
-| `block.pl` | `Block.pm`  | creates user blocks  |
-| `changeset.pl`  | `Changeset.pm`  | opens and closes changesets  |
-| `changeset_graph.pl`  | `ChangesetGraph.pm`  | draws changeset dependency graph  |
-| `complex_revert.pl`  |   | reverts a group of interdependent changesets  |
-| `delete.pl`  | `Delete.pm`  | deletes or redacts an object  |
-| `element.pl`  | `Element.pm`  | creates/modifies/deletes an object  |
-| `modify.pl`  | `Modify.pm`  | modifies tags of an object  |
-| `note.pl`  | `Note.pm`  | hides notes  |
-| `quickdelnodes.pl`  |   | deletes many nodes quickly  |
-| `redaction.pl`  | `Redaction.pm`  | creates and applies redactions  |
-| `revert.pl`  | `Revert.pm`  | reverts a whole changeset  |
-| `trace.pl`  | `Trace.pm`  | uploads gpx traces  |
-| `tokens.pl`  |   | requests oauth2 login tokens  |
-| `undelete.pl`  | `Undelete.pm`  | undeletes an object; see comment in-file for differences to undo  |
-| `undo.pl`  | `Undo.pm`  | undoes one change to one object  |
-| `user_changesets.pl`  | `UserChangesets.pm`  | bulk downloads changesets by given user; there are also simpler shell script versions listed below  |
-| `download_changesets.sh`  |   | bulk downloads changesets by given user name  |
-| `download_changesets_uid.sh`  |   | bulk downloads changesets by given user id  |
+| [`batch_redaction.pl`](blob/master/batch_redaction.pl)  | [`BatchRedaction.pm`](blob/master/BatchRedaction.pm)  | applies redactions to a list of elements  |
+| [`block.pl`](blob/master/block.pl) | [`Block.pm`](blob/master/Block.pm)  | creates user blocks  |
+| [`changeset.pl`](blob/master/changeset.pl)  | [`Changeset.pm`](blob/master/Changeset.pm)  | opens and closes changesets  |
+| [`changeset_graph.pl`](blob/master/changeset_graph.pl)  | [`ChangesetGraph.pm`](blob/master/ChangesetGraph.pm)  | draws changeset dependency graph  |
+| [`complex_revert.pl`](blob/master/complex_revert.pl)  |   | reverts a group of interdependent changesets  |
+| [`delete.pl`](blob/master/delete.pl)  | [`Delete.pm`](blob/master/Delete.pm)  | deletes or redacts an object  |
+| [`element.pl`](blob/master/element.pl)  | [`Element.pm`](blob/master/Element.pm)  | creates/modifies/deletes an object  |
+| [`modify.pl`](blob/master/modify.pl)  | [`Modify.pm`](blob/master/Modify.pm)  | modifies tags of an object  |
+| [`note.pl`](blob/master/note.pl)  | [`Note.pm`](blob/master/Note.pm)  | hides notes  |
+| [`quickdelnodes.pl`](blob/master/quickdelnodes.pl)  |   | deletes many nodes quickly  |
+| [`redaction.pl`](blob/master/redaction.pl)  | [`Redaction.pm`](blob/master/Redaction.pm)  | creates and applies redactions  |
+| [`revert.pl`](blob/master/revert.pl)  | [`Revert.pm`](blob/master/Revert.pm)  | reverts a whole changeset  |
+| [`trace.pl`](blob/master/trace.pl)  | [`Trace.pm`](blob/master/Trace.pm)  | uploads gpx traces  |
+| [`tokens.pl`](blob/master/tokens.pl)  |   | requests oauth2 login tokens  |
+| [`undelete.pl`](blob/master/undelete.pl)  | [`Undelete.pm`](blob/master/Undelete.pm)  | undeletes an object; see comment in-file for differences to undo  |
+| [`undo.pl`](blob/master/undo.pl)  | [`Undo.pm`](blob/master/Undo.pm)  | undoes one change to one object  |
+| [`user_changesets.pl`](blob/master/user_changesets.pl)  | [`UserChangesets.pm`](blob/master/UserChangesets.pm)  | bulk downloads changesets by given user; there are also simpler shell script versions listed below  |
+| [`download_changesets.sh`](blob/master/download_changesets.sh)  |   | bulk downloads changesets by given user name  |
+| [`download_changesets_uid.sh`](blob/master/download_changesets_uid.sh)  |   | bulk downloads changesets by given user id  |
 
 Design "Philosophy"
 -------------------
