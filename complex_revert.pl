@@ -578,7 +578,7 @@ sub handle_delete_soft
                 $num_to_delete = $chunk_size;
             }
             my @to_process = splice(@idlist, 0, $num_to_delete);
-            Progress::log(sprintf("deleting a chunk of %d %s", scalar(@to_process), $object));
+            # Progress::log(sprintf("deleting a chunk of %d %s", scalar(@to_process), $object));
             Progress::update($total_ops_done+=0.1*scalar(@to_process)) if($progress);
 
             while(1)
