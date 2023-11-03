@@ -13,6 +13,7 @@ package Undo;
 use strict;
 use warnings;
 
+use Util;
 use OsmApi;
 
 # undoes one change by one user (or within one changeset)
@@ -38,15 +39,16 @@ use OsmApi;
 #      ids as keys, with any non-null value)
 #      (this may be undef)
 #   $changeset: id of changeset to use for undo operation
+#   $force: 1 if subsequent changes should be overridden
 # return:
 #   success=1 failure=undef no action necessary=0
 
 sub undo
 {
-    my ($what, $id, $undo_user, $undo_changeset, $undo_version, $changeset) = @_;
+    my ($what, $id, $undo_user, $undo_changeset, $undo_version, $changeset, $force) = @_;
 
     my ($action, $xml) = 
-        determine_undo_action($what, $id, $undo_user, $undo_changeset, $undo_version, $changeset);
+        determine_undo_action($what, $id, $undo_user, $undo_changeset, $undo_version, $changeset, $force);
 
     return 0 unless defined ($action);
 
@@ -109,7 +111,7 @@ sub undo
 
 sub determine_undo_action
 {
-    my ($what, $id, $undo_users, $undo_changesets, $undo_versions, $changeset) = @_;
+    my ($what, $id, $undo_users, $undo_changesets, $undo_versions, $changeset, $force) = @_;
 
     # backwards compatibility
     if (ref($undo_users) ne "HASH" && defined($undo_users))
@@ -130,13 +132,13 @@ sub determine_undo_action
     my $undo=0; 
     my $copy=0;
     my $out = "";
+    my $current_xml = "";
     my $lastedit;
     my $lastcs;
     my $undo_version;
     my $restore_version;
     my $override_version;
     my $override = 0;
-    my $force = 0; # if this is set to 1, any object touched by the undo userwill be reverted even if there are later modifications by others
 
     my $resp = OsmApi::get("$what/$id/history");
     if (!$resp->is_success)
@@ -149,6 +151,7 @@ sub determine_undo_action
     { 
         if (/<$what/) 
         { 
+            $current_xml = "";
             /\sid="([^"]+)"/ or die; 
                 die unless $id eq $1; 
             /\sversion="([^"]+)"/ or die; 
@@ -165,7 +168,7 @@ sub determine_undo_action
             } 
             else 
             {
-                print "user=$user not in undo_users\ncs=$cs not in undo_cs\nver=$version not in undo_ver\n";
+                #print "user=$user not in undo_users\ncs=$cs not in undo_cs\nver=$version not in undo_ver\n";
                 if ($undo && $force)
                 {
                     $override = 1;
@@ -187,10 +190,16 @@ sub determine_undo_action
             $out.=$_ . "\n"; 
             $copy=0 if (/<\/$what/);
         } 
+        $current_xml .= "$_\n";
     }; 
 
     if ($undo || $override)
     {
+        if (Util::object_equal($out, $current_xml))
+        {
+            print STDERR "$what $id: no change necessary as v$restore_version equals current\n";
+            return undef;
+        }
         if ($override)
         {
             $undo_version = $override_version unless ($undo_version > $override_version);

@@ -33,6 +33,7 @@ use Changeset;
 use OsmApi;
 use Getopt::Long;
 use Progress;
+use Util;
 
 my $override = 0;
 my $show_conflict_details = 0;
@@ -325,7 +326,7 @@ sub revert_bottom_up
                         next;
                     }
 
-                    if (object_equal($current_versions->{$id}->{'xml'}, $sane_versions->{$id}->{'xml'}))
+                    if (Util::object_equal($current_versions->{$id}->{'xml'}, $sane_versions->{$id}->{'xml'}))
                     {
                         # no action needed.
                         print LOG "$object $id OK no action necessary to go from v$firstv to v$lastv\n";
@@ -460,7 +461,7 @@ sub revert_top_down_recursive
         return;
     }
     my $current = $resp->content;
-    if (object_equal($xml, $current))
+    if (Util::object_equal($xml, $current))
     {
         print LOG "$object $id OK no action necessary to go from v$firstv to v$lastv\n";
         return;
@@ -507,7 +508,7 @@ sub revert_top_down_recursive
                         my $user;
                         $user = $1 if ($cur_xml =~ / user="([^"]*)"/);
                         $message .= " [interim ";
-                        $message .= (object_equal($xml, $cur_xml) ? "revert" : "modification");
+                        $message .= (Util::object_equal($xml, $cur_xml) ? "revert" : "modification");
                         $message .= " by $user]";
                         # fixme record this case as ok in complex_revert if interim revert
                     }
@@ -630,59 +631,6 @@ sub handle_delete_soft
             }
         }
     }
-}
-
-# tests if two OSM objects (in XML represenation) are the same,
-# using a primitive "canonicalization"
-sub object_equal
-{
-    my ($a, $b) = @_;
-    return (canonicalize($a) eq canonicalize($b));
-}
-
-# primitive canonicalization of XML representation into a string
-# that disregards ordering of tags, whitespace, and other unimportant
-# stuff
-sub canonicalize
-{
-    my $o = shift;
-    my @unordered;
-    my @ordered;
-    foreach (split(/\n/, $o))
-    {
-        if (/nd\s+ref=['"](\d+)/)
-        {
-            push(@ordered, "n$1");
-        }
-        elsif (/member.*type=["']([^"']+)/)
-        {
-            my $t=$1;
-            /ref=['"](\d+)/;
-            my $i=$1;
-            /role=['"]([^"']+)/;
-            my $r=$1;
-            push(@ordered, "m$t/$i/$r");
-        }
-        elsif (/<tag .*k=["']([^"']+)/)
-        {
-            my $k=$1;
-            /v=['"]([^"']+)/;
-            my $v=$1;
-            push(@unordered, "t$k/$v");
-        }
-        elsif (/<(node|way|relation)/)
-        {
-            my $ty=$1;
-            my $la;
-            my $lo;
-            my $vi;
-            $la = $1 if (/lat=['"]([^"']+)/);
-            $lo = $1 if (/lon=['"]([^"']+)/);
-            $vi = $1 if (/visible=['"]([^"']+)/);
-            push(@ordered, "$ty/$vi/$la/$lo");
-        }
-    }
-    return join("::", @ordered) . "::" . join("::", sort(@unordered));
 }
 
 sub get_user_for_object_version($)

@@ -8,17 +8,24 @@ use warnings;
 use FindBin;
 use lib $FindBin::Bin;
 use Undo;
+use Getopt::Long;
 
-if (scalar(@ARGV) != 4 || $ARGV[0] !~ /^(node|way|relation)$/)
+my $force = 0;
+
+usage() unless GetOptions("force" => \$force);
+usage() unless (scalar(@ARGV) == 4 && $ARGV[0] =~ /^(node|way|relation)$/);
+
+sub usage
 {
     print <<EOF;
-usage: $0 <node|way|relation> <id> <username|changeset> <changeset>
+usage: $0 [--force] <node|way|relation> <id> <username|changeset> <changeset>
 
 where 
   id : OSM id of the object to revert
   username, changeset : username (alphanumeric) or changeset (numeric) 
      of the change to revert
   changeset : id of changeset to use for revert action
+  when --force is given, overrides subsequent changes
 EOF
     exit;
 }
@@ -43,6 +50,6 @@ else
     } 
 }
 
-exit 1 if (!defined(Undo::undo($what, $id, $undo_user, $undo_changeset, undef, $changeset)));
+exit 1 if (!defined(Undo::undo($what, $id, $undo_user, $undo_changeset, undef, $changeset, $force)));
 exit 0
 
