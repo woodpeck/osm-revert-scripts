@@ -362,14 +362,23 @@ sub revert_bottom_up
                     my $resp = OsmApi::post("changeset/$current_cs/upload", $osc);
                     if (!$resp->is_success)
                     {
-                        if ($resp->status_code == 409)
+                        if ($resp->code == 409)
                         {
                             # could be a version conflict. a re-run might fix the issue
                             next;
                         }
+                        elsif ($resp->code == 412 && $resp->decoded_content =~ /(way|relation)\s+(\d+)\s+requires/mi)
+                        {
+                            my ($what, $which) = ($1, $2);
+                            # referential integrity issue
+
+                            Progress::log("precondition failed for $what $which, trying without");
+                            @batch = grep { $_ != $which } @batch;
+                            next;
+                        }
                         else
                         {
-                            Progress::die("cannot upload batch of objects: ".$resp->status_line);
+                            Progress::die("cannot upload batch of objects: ".$resp->status_line."\n".$resp->decoded_content);
                         }
                     }
                 }
