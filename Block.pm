@@ -25,8 +25,8 @@ sub create
     my ($user, $reason, $duration, $needsview) = @_;
 
     my $resp = OsmApi::post_web("user_blocks", 
-        "display_name=".uri_escape($user).
-        "&user_block[reason]=".uri_escape($reason).
+        "display_name=".uri_escape_utf8($user).
+        "&user_block[reason]=".uri_escape_utf8($reason).
         "&user_block_period=".uri_escape($duration).
         "&user_block[needs_view]=".sprintf("%d", $needsview));
 
