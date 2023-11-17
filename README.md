@@ -106,6 +106,11 @@ Register osmtools as a oauth2 app
 
 You don't need to register *osmtools* on `api06.dev.openstreetmap.org`, `api.openstreetmap.org` and `www.openhistoricalmap.org` servers. The scripts have app ids built in for these servers. You can set `oauth2_client_id` to an empty value to refuse to use oauth2 on these servers and go back to basic login/password authorization.
 
+Windows Usage Notes
+-------------------
+
+When using the download_changesets.sh script on Windows with cygwin, it may be necessary to convert the file using the dos2unix command. [See this StackExchange answer for more information](https://stackoverflow.com/a/11617204).
+
 SCRAPE SCRAPE SCRAPE
 --------------------
 
