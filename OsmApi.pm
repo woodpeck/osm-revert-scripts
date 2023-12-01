@@ -12,13 +12,14 @@ package OsmApi;
 
 use strict;
 use warnings;
+use Module::Load::Conditional qw[can_load];
 use LWP::UserAgent;
 use MIME::Base64 qw(encode_base64 encode_base64url);
 use HTTP::Cookies;
 use URI::Escape;
-use File::HomeDir;
 use Digest::SHA qw(sha256);
 
+our $prefs_path;
 our $prefs;
 our $prefs_eol = 1;
 our $ua;
@@ -40,10 +41,18 @@ our $translated_weburls = {
 
 INIT
 {
+    if (can_load(modules => {'File::HomeDir' => undef}))
+    {
+        $prefs_path = File::HomeDir::home()."/.osmtoolsrc";
+    }
+    else
+    {
+        $prefs_path = $ENV{HOME}."/.osmtoolsrc";
+    }
 
     $prefs = { "dryrun" => 1 };
 
-    open (PREFS, home()."/.osmtoolsrc") or die "cannot open ". home()."/.osmtoolsrc";
+    open (PREFS, $prefs_path) or die "cannot open $prefs_path";
     while(<PREFS>)
     {
         if (/^([^=]*)=(.*)/)
@@ -60,7 +69,7 @@ INIT
     
     foreach my $required("apiurl")
     {
-        die home()."/.osmtoolsrc does not have $required" unless defined($prefs->{$required});
+        die "$prefs_path does not have $required" unless defined($prefs->{$required});
     }
 
     if (!defined($prefs->{instance}))
@@ -262,7 +271,7 @@ sub weburl
 sub append_pref
 {
     my $pref_name = shift;
-    open(PREFS, ">>".home()."/.osmtoolsrc");
+    open(PREFS, ">>$prefs_path");
     printf PREFS "\n" unless $prefs_eol;
     printf PREFS "$pref_name=".$prefs->{$pref_name};
     close(PREFS);
@@ -331,7 +340,7 @@ sub require_username_and_password
 
     foreach my $required("username","password")
     {
-        die home()."/.osmtoolsrc does not have $required" unless defined($prefs->{$required});
+        die "$prefs_path does not have $required" unless defined($prefs->{$required});
     }
 }
 
