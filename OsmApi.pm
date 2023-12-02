@@ -383,13 +383,22 @@ sub request_oauth2_token
     die "oauth2 token request requires typing/pasting a code, but STDIN is busy with piped input\ntry running 'tokens.pl request' first to get oauth2 tokens" unless -t STDIN;
     die "Requesting oauth2 tokens requires 'oauth2_client_id' to be set in .osmtoolsrc for custom 'apiurl'." unless (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id});
 
-    require_random_bytes_sub();
-
     my ($token_name, $scope) = @_;
     $scope = "read_prefs write_api write_notes read_gpx write_gpx" unless defined($scope);
 
+    my $code_verifier_bytes;
+    if (can_load(modules => {'Bytes::Random::Secure' => undef}))
+    {
+        $code_verifier_bytes = Bytes::Random::Secure::random_bytes(48);
+    }
+    else
+    {
+        $code_verifier_bytes = join "", map({ chr(int(rand() * 256)) } 1..48);
+        print "WARNING: Using unsecure random number generator to generate PKCE code verifier, consider installing Bytes::Random::Secure module\n";
+    }
+
     my $redirect_uri = "urn:ietf:wg:oauth:2.0:oob";
-    my $code_verifier = encode_base64url random_bytes(48);
+    my $code_verifier = encode_base64url $code_verifier_bytes;
     my $code_challenge = encode_base64url sha256($code_verifier);
     my $request_code_url = "$prefs->{weburl}oauth2/authorize?" .
         "client_id=" . uri_escape($prefs->{oauth2_client_id}) .
@@ -473,16 +482,6 @@ sub require_readkey_module
     {
         require Term::ReadKey;
         Term::ReadKey->import();
-        1;
-    }
-}
-
-sub require_random_bytes_sub
-{
-    eval
-    {
-        require Bytes::Random::Secure;
-        Bytes::Random::Secure->import(qw(random_bytes));
         1;
     }
 }
