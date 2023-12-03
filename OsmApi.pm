@@ -310,32 +310,33 @@ sub add_credentials
 
 sub require_username_and_password
 {
-    # read user name from terminal if not set
-    if (defined($prefs->{username}))
+    if (can_load(modules => {'Term::ReadKey' => undef}, autoload => 1))
     {
-        # only print user name if we're about to read password interactively
+        if (defined($prefs->{username}))
+        {
+            # only print user name if we're about to read password interactively
+            unless (defined($prefs->{password}))
+            {
+                print 'User name: ' . $prefs->{username} . "\n"
+            }
+        }
+        else
+        {
+            # read user name from terminal if not set
+            print 'User name: ';
+            $prefs->{username} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
+            print "\n";
+        }
+
         unless (defined($prefs->{password}))
         {
-            print 'User name: ' . $prefs->{username} . "\n"
+            # read password from terminal if not set
+            print 'Password: ';
+            ReadMode('noecho');
+            $prefs->{password} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
+            ReadMode('restore');
+            print "\n";
         }
-    }
-    else
-    {
-        require_readkey_module();
-        print 'User name: ';
-        $prefs->{username} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
-        print "\n";
-    }
-
-    # read password from terminal if not set
-    unless (defined($prefs->{password}))
-    {
-        require_readkey_module();
-        print 'Password: ';
-        ReadMode('noecho');
-        $prefs->{password} = $1 if (ReadLine(0) =~ /^(.*)\n$/);
-        ReadMode('restore');
-        print "\n";
     }
 
     foreach my $required("username","password")
@@ -474,16 +475,6 @@ sub set_timeout
 {
     my $to = shift;
     $ua->timeout($to);
-}
-
-sub require_readkey_module
-{
-    eval
-    {
-        require Term::ReadKey;
-        Term::ReadKey->import();
-        1;
-    }
 }
 
 1;
