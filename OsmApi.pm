@@ -385,7 +385,7 @@ sub request_oauth2_token
     die "Requesting oauth2 tokens requires 'oauth2_client_id' to be set in .osmtoolsrc for custom 'apiurl'." unless (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id});
 
     my ($token_name, $scope) = @_;
-    $scope = "read_prefs write_api write_notes read_gpx write_gpx" unless defined($scope);
+    $scope = "read_prefs write_api write_notes read_gpx write_gpx write_redactions" unless defined($scope);
 
     my $code_verifier_bytes;
     if (can_load(modules => {'Bytes::Random::Secure' => undef}))
