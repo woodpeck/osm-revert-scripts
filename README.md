@@ -51,6 +51,32 @@ When in doubt, discuss things on the mailing list before you act (see [lists.ope
 
 These scripts do not have safety nets. Be sure that you feel confident to fix anything you might break. If you do not know your PUTs from your GETs, if you do not know the details of [API 0.6](https://wiki.openstreetmap.org/wiki/API_v0.6), or know what changesets are and how they work, then DO NOT USE THIS SOFTWARE.
 
+Installation
+------------
+
+Clone the repository or copy its contents:
+
+    git clone https://github.com/woodpeck/osm-revert-scripts
+
+### Linux
+
+You may need to install extra perl modules. On Ubuntu 22.04 they are:
+
+- [Bytes::Random::Secure](https://metacpan.org/pod/Bytes::Random::Secure) if you're going to request OAuth2 tokens, which you probably will
+  ```
+  sudo apt install libbytes-random-secure-perl
+  ```
+- [Term::ReadKey](https://metacpan.org/pod/Term::ReadKey) if you're going to type in login/password, which you probably won't
+  ```
+  sudo apt install libterm-readkey-perl
+  ```
+
+### Windows
+
+[Strawberry Perl](https://strawberryperl.com/) comes with all required modules included.
+
+When using the download_changesets.sh script on Windows with cygwin, it may be necessary to convert the file using the dos2unix command. [See this StackExchange answer for more information](https://stackoverflow.com/a/11617204).
+
 Configuration
 -------------
 
@@ -105,11 +131,6 @@ Register osmtools as a oauth2 app
 7. Add `oauth2_client_id=...` with the application *Client ID* to your `.osmtoolsrc` file.
 
 You don't need to register *osmtools* on `api06.dev.openstreetmap.org`, `api.openstreetmap.org` and `www.openhistoricalmap.org` servers. The scripts have app ids built in for these servers. You can set `oauth2_client_id` to an empty value to refuse to use oauth2 on these servers and go back to basic login/password authorization.
-
-Windows Usage Notes
--------------------
-
-When using the download_changesets.sh script on Windows with cygwin, it may be necessary to convert the file using the dos2unix command. [See this StackExchange answer for more information](https://stackoverflow.com/a/11617204).
 
 SCRAPE SCRAPE SCRAPE
 --------------------
