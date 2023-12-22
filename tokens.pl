@@ -11,23 +11,25 @@ if ($ARGV[0] eq "request")
     my $primary = 1;
     my $secondary = 1;
     my $scope;
+    my $no_scope;
     my $correct_options = GetOptions(
         "primary!" => \$primary,
         "secondary!" => \$secondary,
-        "scope=s" => \$scope
+        "scope=s" => \$scope,
+        "no-scope=s" => \$no_scope
     );
     if ($correct_options)
     {
         if ($primary)
         {
             my $login_message = "Login with your osm account that has full permissions.\n";
-            request_token($scope, "oauth2_token", "primary", $login_message);
+            request_token($scope, $no_scope, "oauth2_token", "primary", $login_message);
         }
         if ($secondary)
         {
             my $login_message = "Login with your bot/mechanical edit account.\n";
             $login_message .= "Altenatively, if you want to use only one account, interrupt the script.\n" if $primary;
-            request_token($scope, "oauth2_token_secondary", "secondary", $login_message);
+            request_token($scope, $no_scope, "oauth2_token_secondary", "secondary", $login_message);
         }
         exit;
     }
@@ -52,24 +54,25 @@ if ($ARGV[0] eq "check")
 
 print <<EOF;
 Usage: 
-  $0 request <options>    request oauth2 tokens
-  $0 check <options>      check details of stored tokens
+  $0 request <options>                 request oauth2 tokens
+  $0 check <options>                   check details of stored tokens
 
 request options:
-  --no-primary            don't request primary token
-  --no-secondary          don't request secondary token
-  --scope <space-separated permissions>
+  --no-primary                                don't request primary token
+  --no-secondary                              don't request secondary token
+  --scope <space-separated permissions>       include permissions
+  --no-scope <space-separated permissions>    exclude permissions
 
 check options:
-  --no-user-details       don't check user details
-  --no-introspect         don't check token with /oauth2/introspect endpoint
-  --permissions           check permissions with /api/0.6/permissions endpoint
+  --no-user-details                           don't check user details
+  --no-introspect                             don't check token with /oauth2/introspect endpoint
+  --permissions                               check permissions with /api/0.6/permissions endpoint
 EOF
 exit;
 
 sub request_token
 {
-    my ($scope, $token_name, $token_title, $login_message) = @_;
+    my ($scope, $no_scope, $token_name, $token_title, $login_message) = @_;
 
     if (OsmApi::check_oauth2_token($token_name))
     {
@@ -78,7 +81,7 @@ sub request_token
     else
     {
         print "\n=== Requesting the $token_title token. ===\n\n$login_message";
-        OsmApi::request_oauth2_token($token_name, $scope);
+        OsmApi::request_oauth2_token($token_name, $scope, $no_scope);
     }
 }
 

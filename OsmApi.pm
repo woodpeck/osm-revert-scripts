@@ -384,8 +384,13 @@ sub request_oauth2_token
     die "oauth2 token request requires typing/pasting a code, but STDIN is busy with piped input\ntry running 'tokens.pl request' first to get oauth2 tokens" unless -t STDIN;
     die "Requesting oauth2 tokens requires 'oauth2_client_id' to be set in .osmtoolsrc for custom 'apiurl'." unless (defined($prefs->{oauth2_client_id}) && $prefs->{oauth2_client_id});
 
-    my ($token_name, $scope) = @_;
+    my ($token_name, $scope, $no_scope) = @_;
     $scope = "read_prefs write_api write_notes read_gpx write_gpx write_redactions" unless defined($scope);
+    if (defined($no_scope))
+    {
+        my %excluded_scopes = map { $_ => 1 } split /\s+/, $no_scope;
+        $scope = join " ", grep { !$excluded_scopes{$_} } split /\s+/, $scope;
+    }
 
     my $code_verifier_bytes;
     if (can_load(modules => {'Bytes::Random::Secure' => undef}))
