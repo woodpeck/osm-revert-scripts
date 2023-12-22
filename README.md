@@ -98,7 +98,11 @@ The next step is usually to request authorization tokens. This request will happ
 
     tokens.pl request
 
-You will be prompted to open a link to a confirmation page, then to copy the code. The received tokens will be saved to `.osmtoolsrc`.
+You will be prompted to open a link to a confirmation page, then to copy the code. The received tokens will be saved to `.osmtoolsrc`. 
+
+On older versions of *openstreetmap-website* you may encounter an error message "The requested scope is invalid, unknown, or malformed." This is because they don't have the `write_redactions` permission separated from `write_api`. In this case you have to exclude this permission from your token request by running:
+
+    tokens.pl request --no-scope=write_redactions
 
 Alternatively, if you want to avoid using oauth2, registering an application, setting up ids and tokens, you may use basic authorization. In this case you have to provide your username and password. Some operation require username and password anyway, see the "SCRAPE" section below.
 
@@ -127,7 +131,7 @@ Register osmtools as a oauth2 app
     - *Read private GPS traces*
     - *Upload GPS traces*
     - *Modify notes*
-    - *Redact map data*
+    - *Redact map data* - this permission may be missing on older *openstreetmap-website* deployments that have it combined with *Modify the map*
 6. Click *Register* or *Create Oauth2 application* below the registration form.
 7. Add `oauth2_client_id=...` with the application *Client ID* to your `.osmtoolsrc` file.
 
