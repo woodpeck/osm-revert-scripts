@@ -2,7 +2,7 @@
 
 use strict;
 use FindBin;
-use lib $FindBin::Bin;
+use lib "$FindBin::Bin/lib";
 use Getopt::Long;
 use List::Util qw(pairmap);
 use URI::Escape;

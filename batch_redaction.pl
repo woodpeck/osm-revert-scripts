@@ -2,7 +2,7 @@
 
 use strict;
 use FindBin;
-use lib $FindBin::Bin;
+use lib "$FindBin::Bin/lib";
 use BatchRedaction;
 
 if (($ARGV[0] eq "view") && (scalar(@ARGV) == 2))

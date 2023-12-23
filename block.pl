@@ -5,7 +5,7 @@
 
 use strict;
 use FindBin;
-use lib $FindBin::Bin;
+use lib "$FindBin::Bin/lib";
 use Block;
 
 if (($ARGV[0] eq "create") && (scalar(@ARGV) == 4))
