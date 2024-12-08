@@ -9,6 +9,7 @@ Package Contents
 
 | Script  | Module  | Description  |
 |---|---|---|
+| [`api.pl`](api.pl)  |   | makes arbitrary api requests with auth headers  |
 | [`batch_redaction.pl`](batch_redaction.pl)  | [`BatchRedaction.pm`](lib/BatchRedaction.pm)  | applies redactions to a list of elements  |
 | [`block.pl`](block.pl) | [`Block.pm`](lib/Block.pm)  | creates user blocks  |
 | [`changeset.pl`](changeset.pl)  | [`Changeset.pm`](lib/Changeset.pm)  | opens and closes changesets  |
