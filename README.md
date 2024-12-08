@@ -9,7 +9,6 @@ Package Contents
 
 | Script  | Module  | Description  |
 |---|---|---|
-| [`api.pl`](api.pl)  |   | makes arbitrary api requests with auth headers  |
 | [`batch_redaction.pl`](batch_redaction.pl)  | [`BatchRedaction.pm`](lib/BatchRedaction.pm)  | applies redactions to a list of elements  |
 | [`block.pl`](block.pl) | [`Block.pm`](lib/Block.pm)  | creates user blocks  |
 | [`changeset.pl`](changeset.pl)  | [`Changeset.pm`](lib/Changeset.pm)  | opens and closes changesets  |
@@ -19,6 +18,7 @@ Package Contents
 | [`element.pl`](element.pl)  | [`Element.pm`](lib/Element.pm)  | creates/modifies/deletes an object  |
 | [`modify.pl`](modify.pl)  | [`Modify.pm`](lib/Modify.pm)  | modifies tags of an object  |
 | [`note.pl`](note.pl)  | [`Note.pm`](lib/Note.pm)  | hides notes  |
+| [`osm_api.pl`](osm_api.pl)  | [`OsmApi.pm`](lib/OsmApi.pm)  | makes arbitrary OSM API requests with auth headers  |
 | [`quickdelnodes.pl`](quickdelnodes.pl)  |   | deletes many nodes quickly  |
 | [`redaction.pl`](redaction.pl)  | [`Redaction.pm`](lib/Redaction.pm)  | creates and applies redactions  |
 | [`revert.pl`](revert.pl)  | [`Revert.pm`](lib/Revert.pm)  | reverts a whole changeset  |
