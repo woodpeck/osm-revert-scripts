@@ -54,11 +54,19 @@ Usage:
   $0 post <path> < input_file    POST request
   $0 put <path> < input_file     PUT request
 
-<path> is relative to (server)/api/0.6/. For example, this command gets trace #23:
-  $0 get gpx/23
+<path> is relative to (server)/api/0.6/
+
+Examples:
+  get trace #23:
+    $0 get gpx/23
+  post a "test comment" comment for changeset #123 using cURL:
+    $0 curl -d "text=test comment" changeset/123/comment
+  upload a private trace file "filename.gpx" with description "some trace" using cURL:
+    $0 curl -F "description=some trace" -F file=\@filename.gpx gpx/create
 
 Enable debug output in .osmtoolsrc to see the results, for example:
   debug=1
   debug_response_headers=1
   debug_response_body=1
+Or use cURL with its options, for example -v.
 EOF
