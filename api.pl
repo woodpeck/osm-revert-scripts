@@ -5,6 +5,15 @@ use FindBin;
 use lib "$FindBin::Bin/lib";
 use OsmApi;
 
+if (($ARGV[0] eq "curl") && (scalar(@ARGV) >= 2))
+{
+    shift @ARGV;
+    my $token = OsmApi::read_existing_oauth2_token(1);
+    my $path = pop @ARGV;
+    my $url = $OsmApi::prefs->{apiurl} . $path;
+    exec "curl", "--oauth2-bearer", $token, @ARGV, $url;
+}
+
 if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 2))
 {
     my $path = $ARGV[1];
@@ -39,6 +48,7 @@ if (($ARGV[0] eq "put") && (scalar(@ARGV) == 2))
 
 print <<EOF;
 Usage:
+  $0 curl <path>                 run cURL with proper --oauth2-bearer and url
   $0 delete <path>               DELETE request
   $0 get <path>                  GET request
   $0 post <path> < input_file    POST request
