@@ -5,6 +5,13 @@ use FindBin;
 use lib "$FindBin::Bin/lib";
 use OsmApi;
 
+if (($ARGV[0] eq "delete") && (scalar(@ARGV) == 2))
+{
+    my $path = $ARGV[1];
+    OsmApi::delete($path, undef, 1);
+    exit;
+}
+
 if (($ARGV[0] eq "get") && (scalar(@ARGV) == 2))
 {
     my $path = $ARGV[1];
@@ -23,8 +30,9 @@ if (($ARGV[0] eq "put") && (scalar(@ARGV) == 2))
 
 print <<EOF;
 Usage:
-  $0 get <path>                 get request
-  $0 put <path> < input_file    put request
+  $0 delete <path>              DELETE request
+  $0 get <path>                 GET request
+  $0 put <path> < input_file    PUT request
 
 <path> is relative to (server)/api/0.6/. For example, this command gets trace #23:
   $0 get gpx/23
