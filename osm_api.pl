@@ -48,11 +48,11 @@ if (($ARGV[0] eq "put") && (scalar(@ARGV) == 2))
 
 print <<EOF;
 Usage:
-  $0 curl <path>                 run cURL with proper --oauth2-bearer and url
-  $0 delete <path>               DELETE request
-  $0 get <path>                  GET request
-  $0 post <path> < input_file    POST request
-  $0 put <path> < input_file     PUT request
+  $0 curl <curl options> <path>    run cURL with proper --oauth2-bearer and url
+  $0 delete <path>                 DELETE request
+  $0 get <path>                    GET request
+  $0 post <path> < input_file      POST request
+  $0 put <path> < input_file       PUT request
 
 <path> is relative to (server)/api/0.6/
 
