@@ -77,6 +77,8 @@ request options:
 
 <permissions>:
   space-separated list of osm permissions like write_api
+default value for --scope is:
+  "@{[ OsmApi::DEFAULT_SCOPE ]}"
 
 check options:
   --no-user-details               don't check user details
