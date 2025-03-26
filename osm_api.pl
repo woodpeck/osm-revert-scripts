@@ -18,14 +18,20 @@ sub run_verb($&)
 {
     my $verb = shift;
     my $sub = shift;
-    if (($ARGV[0] eq $verb) && (scalar(@ARGV) == 2 || (scalar(@ARGV) == 3 && $ARGV[2] eq "-")))
+    if (($ARGV[0] eq $verb) && (scalar(@ARGV) == 2 || scalar(@ARGV) == 3))
     {
         my $path = $ARGV[1];
+        my $filename = $ARGV[2];
         my $body;
-        if ($ARGV[2] eq "-")
+        if ($filename eq "-")
         {
-          $body = "";
-          while(<STDIN>) { $body .= $_; }
+            $body = "";
+            while(<STDIN>) { $body .= $_; }
+        }
+        elsif (defined($filename))
+        {
+            open my $fh, '<', $filename;
+            while(<$fh>) { $body .= $_; }
         }
         &$sub($path, $body, 1);
         exit;
@@ -40,15 +46,16 @@ run_verb "put", \&OsmApi::put;
 print <<EOF;
 Usage:
   $0 curl <curl options> <path>    run cURL with proper --oauth2-bearer and url
-  $0 delete <path> [-]             DELETE request
-  $0 get <path> [-]                GET request
-  $0 post <path> [-]               POST request
-  $0 put <path> [-]                PUT request
+  $0 delete <path> [<filename>]    DELETE request
+  $0 get <path> [<filename>]       GET request
+  $0 post <path> [<filename>]      POST request
+  $0 put <path> [<filename>]       PUT request
 
 <path> is relative to (server)/api/0.6/
 
-delete, get, post and put have an optional last argument "-" to read the request body from stdin,
-otherwise an empty body is sent
+<filename> is optional, file contents is sent as request body
+  "-" as filename reads body from stdin
+  skip filename to send request without body
 
 Examples:
   get trace #23:
