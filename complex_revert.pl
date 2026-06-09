@@ -39,13 +39,19 @@ my $override = 0;
 my $show_conflict_details = 0;
 my $revert_type = "bottom_up";
 my $noprogress = 0;
+my $nocomment = 0;
+my $ratelimit_sleep = 1800;
+my $retries = 10;
 
 usage() unless GetOptions("override" => \$override,
            "conflict-details" => \$show_conflict_details,
            "no-progress" => \$noprogress,
+           "no-comment" => \$nocomment,
+           "sleep=i" => \$ratelimit_sleep,
            "type=s" => \$revert_type);
 
 usage() unless ($revert_type eq "top_down" || $revert_type eq "bottom_up");
+usage() unless ($ratelimit_sleep >= 60);
 
 my $progress = !$noprogress;
 my $comment = $ARGV[0];
@@ -59,10 +65,13 @@ sub usage()
 Usage: $0 [flags] comment
 (expects full changesets to be reverted on stdin)
 flags:
-   --conflict-details   when revert fails due to version conflict, show other user
-   --override           override subsequent changes in case of version conflict
-   --progress           report on completion percentage
-   --type=t             select revert type (default is top_down, otherwise bottom_up)
+   --conflict-details   on revert failure due to conflict, show other user
+   --override           override subsequent changes in case of conflict
+   --no-progress        don't show progress bar
+   --no-comment         don't add comments to reverted changesets
+   --sleep=n            time (seconds) to sleep between retries when rate
+                        limited (min 60, default 1800)
+   --type=t             revert type (default is top_down, otherwise bottom_up)
 EOF
     exit 0;
 }
@@ -142,6 +151,9 @@ foreach my $objecttype(qw/node way relation/)
     # process objects in each class in random order
     foreach my $id(keys %{$operation->{$objecttype}})
     {
+        # don't process if already in log
+        next if defined($done->{$objecttype}->{$id});
+
         # for each object, determine the first and last version
         # (first = lowest version number, last = highest)
         # we have seen, as well as the corresponding first and
@@ -228,7 +240,7 @@ if ($progress)
 }
 
 # We're done! Now just add comments to all the affected changesets.
-#exit(0);
+exit(0) if ($nocomment);
 
 my $msg = "This changeset has been reverted fully or in part by changeset";
 $msg .= "s" if (scalar(keys(%$used_cs))>1);
@@ -277,7 +289,7 @@ sub revert_bottom_up
             my @batch = splice(@objects, 0, 500);
             my $previous_content;
 
-            while(1)
+            while(scalar @batch)
             {
                 # fetch latest versions of these 500 from API
                 my $resp = OsmApi::get("${object}s?${object}s=" . join(",", @batch));
@@ -365,6 +377,12 @@ sub revert_bottom_up
                         if ($resp->code == 409)
                         {
                             # could be a version conflict. a re-run might fix the issue
+                            next;
+                        }
+                        elsif ($resp->code == 429)
+                        {
+                            # rate limited. sleep & retry
+                            sleep $ratelimit_sleep;
                             next;
                         }
                         elsif ($resp->code == 412 && $resp->decoded_content =~ /(way|relation)\s+(\d+)\s+requires/mi)
