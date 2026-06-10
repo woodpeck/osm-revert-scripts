@@ -379,7 +379,7 @@ sub revert_bottom_up
                             # could be a version conflict. a re-run might fix the issue
                             next;
                         }
-                        elsif ($resp->code == 429)
+                        elsif ($resp->code == 429 or $resp->code == 503)
                         {
                             # rate limited. sleep & retry
                             sleep $ratelimit_sleep;
@@ -623,6 +623,12 @@ sub handle_delete_soft
 
                 if (!$resp->is_success)
                 {
+                    if ($resp->code == 429 or $resp->code == 503)
+                    {
+                        # rate limited. sleep & retry
+                        sleep $ratelimit_sleep;
+                        next;
+                    }
                     my $c = $resp->content;
                     if ($c =~ /Version mismatch: Provided \d+, server had: (\d+) of \S+ (\d+)/)
                     {
