@@ -275,7 +275,7 @@ foreach my $id(keys(%$used_cs))
 
 sub revert_bottom_up
 {
-    $current_cs = Changeset::create($comment);
+    $current_cs = create_changeset_with_retry($comment);
     $used_cs->{$current_cs} = 1;
     $current_count = 0;
     foreach my $object(qw/node way relation/)
@@ -379,9 +379,10 @@ sub revert_bottom_up
                             # could be a version conflict. a re-run might fix the issue
                             next;
                         }
-                        elsif ($resp->code == 429)
+                        elsif ($resp->code == 429 or $resp->code == 503)
                         {
                             # rate limited. sleep & retry
+                            Progress::log("HTTP status ".$resp->code." on changeset upload, sleeping");
                             sleep $ratelimit_sleep;
                             next;
                         }
@@ -416,7 +417,7 @@ sub revert_bottom_up
             if ($current_count > $max_changeset_size-500)
             {
                 Changeset::close($current_cs);
-                $current_cs = Changeset::create($comment);
+                $current_cs = create_changeset_with_retry($comment);
                 $used_cs->{$current_cs} = 1;
                 $current_count = 0;
             }
@@ -429,7 +430,7 @@ sub revert_bottom_up
 
 sub revert_top_down
 {
-    $current_cs = Changeset::create($comment);
+    $current_cs = create_changeset_with_retry($comment);
     $used_cs->{$current_cs} = 1;
     print LOG "changeset $current_cs created\n";
     $current_count = 0;
@@ -559,12 +560,36 @@ sub revert_top_down_recursive
     if ($current_count++ > $max_changeset_size)
     {
         Changeset::close($current_cs);
-    	print LOG "changeset $current_cs created\n";
-        $current_cs = Changeset::create($comment);
+    	print LOG "changeset $current_cs closed\n";
+        $current_cs = create_changeset_with_retry($comment);
         $used_cs->{$current_cs} = 1;
         $current_count = 0;
     }
     return;
+}
+
+sub create_changeset_with_retry
+{
+    my $comment = shift;
+    while(1)
+    {
+        my $resp = Changeset::create($comment, 1);
+        if ($resp->is_success)
+        {
+            return $resp->content;
+        }
+        elsif ($resp->code == 429 or $resp->code == 503)
+        {
+            # rate limited. sleep & retry
+            Progress::log("HTTP status ".$resp->code." on changeset creation, sleeping");
+            sleep $ratelimit_sleep;
+            next;
+        }
+        else
+        {
+            Progress::die("cannot create changeset: ".$resp->status_line."\n".$resp->decoded_content);
+        }
+    }
 }
 
 sub ensure_room_in_cs
@@ -578,7 +603,7 @@ sub ensure_room_in_cs
             Changeset::close($current_cs);
     	    print LOG "changeset $current_cs closed\n";
         }
-        $current_cs = Changeset::create($comment);
+        $current_cs = create_changeset_with_retry($comment);
     	print LOG "changeset $current_cs created\n";
         $used_cs->{$current_cs} = 1;
         $current_count = 0;
@@ -623,6 +648,13 @@ sub handle_delete_soft
 
                 if (!$resp->is_success)
                 {
+                    if ($resp->code == 429 or $resp->code == 503)
+                    {
+                        # rate limited. sleep & retry
+                        Progress::log("HTTP status ".$resp->code." on changeset upload, sleeping");
+                        sleep $ratelimit_sleep;
+                        next;
+                    }
                     my $c = $resp->content;
                     if ($c =~ /Version mismatch: Provided \d+, server had: (\d+) of \S+ (\d+)/)
                     {

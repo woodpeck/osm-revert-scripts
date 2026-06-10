@@ -23,9 +23,12 @@ use URI::Escape;
 sub create
 {
     my $commit_comment = shift;
+    my $raw_response = shift;
 
     my $resp = OsmApi::put("changeset/create", "<osm version='0.6'>".
         xmlnode(-1, $commit_comment). "</osm>");
+
+    return $resp if ($raw_response);
 
     if (!$resp->is_success)
     {
@@ -34,6 +37,8 @@ sub create
     }
     return $resp->content();
 }
+
+
 
 
 # -----------------------------------------------------------------------------
