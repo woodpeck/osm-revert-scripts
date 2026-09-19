@@ -23,7 +23,7 @@ my @regular_commands = (
 if ($ARGV[0] eq "create")
 {
     my $cs = Changeset::create($ARGV[1]);
-    print "changeset created: $cs\n" if defined($cs);
+    print "$cs\n" if defined($cs);
     exit;
 }
 
